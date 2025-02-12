@@ -1,0 +1,89 @@
+paths project: 
+
+cd C:\Users\mhaxh\OneDrive\Desktop\vf_dashboard_2025
+npm start
+
+backend:
+
+cd C:\Users\mhaxh\OneDrive\Desktop\vf_dashboard_2025\restaurant-backend
+
+
+
+psql pass:
+
+Mateo13141*
+port 5432
+
+
+
+First we start the backend server which connects to the PostgreSQL data we input with this cmd command
+
+go to directory of backend server
+
+type: node server.js
+
+
+Then we start the react app by going to the dashboard
+then doing npm start to launch react app which connects with the backend server.js which holds the data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Working GitHub Versions CMD 
+
+Add the folder if already not done with this code:
+
+git init
+
+Then we choose reposity url or make a new repositry and use that url, well be using exisiting One
+
+
+git remote add origin https://github.com/MateoHaxhi07/Restaurant_Dashboard
+
+
+
+First line uploads all changes made to all files on GitHub
+
+git add .
+
+
+Second thing we need to do is commit the changes on GitHub with this code and a message, which shows everything changed
+
+git commit -m "ADded test folder"
+
+
+Send your new version to GitHub:
+
+
+git push origin main
+
+
+
+
+Fourth  we need to creates a tag with a release version of all the files with changes and a message
+
+
+git tag -a v1.0.11 -m "Added Test Folder and new changes"
+
+
+
+Push the tag to GitHub to get older folder zip
+
+
+git push origin v1.0.0
+
+
+
+
+
