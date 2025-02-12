@@ -7,15 +7,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connect to PostgreSQL
 const pool = new Pool({
-  user: "postgres",           // Replace with your PostgreSQL username
-  host: "localhost",
-  database: "restaurant_db",  // Your database name
-  password: "Mateo13141*",     // Your PostgreSQL password
-  port: 5432,
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: process.env.PGPORT,
 });
-
 // Endpoint for all data with dynamic filters
 app.get("/sales/all-data", async (req, res) => {
   try {
