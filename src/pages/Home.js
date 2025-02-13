@@ -12,7 +12,6 @@ import {
   StatLabel,
   StatNumber,
   StatHelpText,
-  Stack,
   Flex,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
@@ -20,7 +19,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
-
 
 // Use the same API base as your Home.js
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -99,8 +97,6 @@ const Home = () => {
   const [categories, setCategories] = useState([]);
 
   // ---------- FETCH FUNCTIONS ----------
-
-  // 1) Fetch total sales
   const fetchTotalSales = async () => {
     try {
       const url = `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -120,7 +116,6 @@ const Home = () => {
     }
   };
 
-  // 2) Fetch total quantity
   const fetchTotalQuantity = async () => {
     try {
       const url = `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -140,7 +135,6 @@ const Home = () => {
     }
   };
 
-  // 3) Fetch average article price
   const fetchAvgArticlePrice = async () => {
     try {
       const url = `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -160,7 +154,6 @@ const Home = () => {
     }
   };
 
-  // 4) Fetch order count
   const fetchOrderCount = async () => {
     try {
       const url = `${API_URL}/sales/order-count?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -180,7 +173,6 @@ const Home = () => {
     }
   };
 
-  // 5) Fetch most sold items
   const fetchMostSoldItems = async () => {
     try {
       const url = `${API_URL}/sales/most-sold-items?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -200,7 +192,6 @@ const Home = () => {
     }
   };
 
-  // 6) Fetch most sold items by price
   const fetchMostSoldItemsByPrice = async () => {
     try {
       const url = `${API_URL}/sales/most-sold-items-by-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -220,7 +211,6 @@ const Home = () => {
     }
   };
 
-  // 7) Fetch daily sales (for the chart)
   const fetchDailySales = async () => {
     try {
       const url = `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -314,7 +304,6 @@ const Home = () => {
   };
 
   // ---------- USE EFFECTS ----------
-  // On mount, fetch initial dropdown data
   useEffect(() => {
     fetchSellers();
     fetchSellerCategoriesOptions();
@@ -322,7 +311,6 @@ const Home = () => {
     fetchArticleNamesOptions();
   }, []);
 
-  // Re-fetch metrics whenever filters change
   useEffect(() => {
     fetchTotalSales();
     fetchTotalQuantity();
@@ -360,7 +348,7 @@ const Home = () => {
     fetchSalesBySellerCategory();
   }, [startDate, endDate]);
 
-  // Inject custom styles for DatePicker with cleanup
+  // Inject custom DatePicker styles with cleanup
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -419,78 +407,78 @@ const Home = () => {
 
       {/* Top Metrics */}
       <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={4} mb={6}>
-  <GridItem>
-    <Card bg="gray.800">
-      <CardBody>
-        <Stat>
-          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-            Total Sales
-          </StatLabel>
-          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-            {parseFloat(totalSales).toLocaleString()} ALL
-          </StatNumber>
-          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-            Based on selected filters
-          </StatHelpText>
-        </Stat>
-      </CardBody>
-    </Card>
-  </GridItem>
+        <GridItem>
+          <Card bg="gray.800">
+            <CardBody>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+                  Total Sales
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+                  {parseFloat(totalSales).toLocaleString()} ALL
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+                  Based on selected filters
+                </StatHelpText>
+              </Stat>
+            </CardBody>
+          </Card>
+        </GridItem>
 
-  <GridItem>
-    <Card bg="gray.800">
-      <CardBody>
-        <Stat>
-          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-            Total Quantity
-          </StatLabel>
-          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-            {parseFloat(totalQuantity).toFixed(0)}
-          </StatNumber>
-          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-            Based on selected filters
-          </StatHelpText>
-        </Stat>
-      </CardBody>
-    </Card>
-  </GridItem>
+        <GridItem>
+          <Card bg="gray.800">
+            <CardBody>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+                  Total Quantity
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+                  {parseFloat(totalQuantity).toFixed(0)}
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+                  Based on selected filters
+                </StatHelpText>
+              </Stat>
+            </CardBody>
+          </Card>
+        </GridItem>
 
-  <GridItem>
-    <Card bg="gray.800">
-      <CardBody>
-        <Stat>
-          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-            Avg. Article Price
-          </StatLabel>
-          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-            {parseFloat(avgArticlePrice).toLocaleString()} ALL
-          </StatNumber>
-          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-            Calculated from total sales/quantity
-          </StatHelpText>
-        </Stat>
-      </CardBody>
-    </Card>
-  </GridItem>
+        <GridItem>
+          <Card bg="gray.800">
+            <CardBody>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+                  Avg. Article Price
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+                  {parseFloat(avgArticlePrice).toLocaleString()} ALL
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+                  Calculated from total sales/quantity
+                </StatHelpText>
+              </Stat>
+            </CardBody>
+          </Card>
+        </GridItem>
 
-  <GridItem>
-    <Card bg="gray.800">
-      <CardBody>
-        <Stat>
-          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-            Transactions
-          </StatLabel>
-          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-            {orderCount}
-          </StatNumber>
-          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-            Unique orders by datetime
-          </StatHelpText>
-        </Stat>
-      </CardBody>
-    </Card>
-  </GridItem>
-</Grid>
+        <GridItem>
+          <Card bg="gray.800">
+            <CardBody>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+                  Transactions
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+                  {orderCount}
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+                  Unique orders by datetime
+                </StatHelpText>
+              </Stat>
+            </CardBody>
+          </Card>
+        </GridItem>
+      </Grid>
 
       {/* Filter Section */}
       <Card bg="gray.800" mb={6}>
@@ -652,98 +640,24 @@ const Home = () => {
         </Box>
       </Box>
 
-      
-
-     {/* Most Sold Items + Pie Chart Side by Side */}
-    <Grid gap={6} templateColumns={{ base: "1fr", md: "repeat(1, 1fr)" }}>
-      <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
-        <CardBody>
-          <Heading
-            size="md"
-            mb={4}
-            color="white"
-            fontWeight="bold"
-            textAlign="center"
-          >
-            Most Sold Items
-          </Heading>
-
-          {/* Nested grid: Left side (lists), Right side (pie chart) */}
-          <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
-            {/* Left column: By Quantity & By Total Sales */}
-            <Box>
-              <Heading
-                size="sm"
-                mb={3}
-                color="white"
-                textAlign="center"
-                borderBottom="2px solid white"
-                pb={2}
-              >
-                By Quantity
-              </Heading>
-              <Stack spacing={2}>
-                {mostSoldItems.length > 0 ? (
-                  mostSoldItems.map((item, index) => (
-                    <Box
-                      key={index}
-                      color="white"
-                      fontWeight="bold"
-                      bg="gray.800"
-                      p={2}
-                      borderRadius="md"
-                    >
-                      {index + 1}. {item.Article_Name}:{" "}
-                      {Math.floor(item.total_quantity).toLocaleString()}
-                    </Box>
-                  ))
-                ) : (
-                  <Box color="gray.300" textAlign="center">
-                    No data available
-                  </Box>
-                )}
-              </Stack>
-
-              <Heading
-                size="sm"
-                mt={6}
-                mb={3}
-                color="white"
-                textAlign="center"
-                borderBottom="2px solid white"
-                pb={2}
-              >
-                By Total Sales
-              </Heading>
-              <Stack spacing={2}>
-                {mostSoldItemsByPrice.length > 0 ? (
-                  mostSoldItemsByPrice.map((item, index) => (
-                    <Box
-                      key={index}
-                      color="white"
-                      fontWeight="bold"
-                      bg="gray.800"
-                      p={2}
-                      borderRadius="md"
-                    >
-                      {index + 1}. {item.Article_Name}:{" "}
-                      {Number(item.total_price).toLocaleString()} ALL
-                    </Box>
-                  ))
-                ) : (
-                  <Box color="gray.300" textAlign="center">
-                    No data available
-                  </Box>
-                )}
-              </Stack>
-            </Box>
-
-            {/* Right column: Pie Chart */}
+      {/* Pie Chart Section */}
+      <Grid gap={6} templateColumns="1fr">
+        <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
+          <CardBody>
+            <Heading
+              size="md"
+              mb={4}
+              color="white"
+              fontWeight="bold"
+              textAlign="center"
+            >
+              Sales by Seller Category
+            </Heading>
             <Box height="300px" mb={6}>
               <ResponsivePie
                 data={pieData}
                 margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
-                innerRadius={0.4}
+                innerRadius={0}  
                 padAngle={0.7}
                 cornerRadius={3}
                 colors={{ scheme: "set3" }}
@@ -789,23 +703,10 @@ const Home = () => {
                 ]}
               />
             </Box>
-          </Grid>
-        </CardBody>
-      </Card>
-    </Grid>
-  </Box>
-
-
-
-
-
-
-
-
-
-
-
-
+          </CardBody>
+        </Card>
+      </Grid>
+    </Box>
   );
 };
 
