@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
+const port = process.env.PORT || 5000;
 
 const app = express();
 app.use(cors());
@@ -12,6 +13,9 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false,
   },
+});
+app.get('/', (req, res) => {
+  res.send('Welcome to the Restaurant API');
 });
 
 // Endpoint for all data with dynamic filters
@@ -480,6 +484,6 @@ app.get("/sales/daily-sales", async (req, res) => {
   }
 });
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
