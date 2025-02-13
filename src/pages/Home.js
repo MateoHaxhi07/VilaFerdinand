@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
+import { useEffect } from 'react';
 import {
   Box,
   Heading,
@@ -282,6 +283,31 @@ const Home = () => {
     fetchArticleNames();
   }, []);
 
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .react-datepicker__input-container input {
+        background-color: #2D3748 !important;
+        color: #FFF !important;
+        border: 1px solid #4A5568 !important;
+        padding: 8px;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .react-datepicker {
+        background-color: #2D3748 !important;
+        color: #FFF !important;
+      }
+      .react-datepicker__day-name,
+      .react-datepicker__day,
+      .react-datepicker__time-name {
+        color: #FFF !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
+
   // 2) Re-fetch metrics whenever filters change
   useEffect(() => {
     fetchTotalSales();
@@ -325,25 +351,25 @@ const Home = () => {
   // ---------- RENDER ----------
   return (
     <Box bg="gray.900" minH="100vh" p={4} color="gray.100">
-      <Heading mb={6} textAlign="center">
+      <Heading mb={6} textAlign="center" fontWeight="bold">
         Restaurant Dashboard
       </Heading>
-
+  
       {/* Top Metrics */}
       <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={6}>
         <GridItem>
           <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel>Total Sales</StatLabel>
-                <StatNumber>
-                  {parseFloat(totalSales).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  })}{" "}
-                  ALL
+                <StatLabel color="white" fontWeight="bold">
+                  Total Sales
+                </StatLabel>
+                <StatNumber color="white" fontWeight="bold">
+                  {parseFloat(totalSales).toLocaleString()} ALL
                 </StatNumber>
-                <StatHelpText>Based on selected filters</StatHelpText>
+                <StatHelpText color="white" fontWeight="bold">
+                  Based on selected filters
+                </StatHelpText>
               </Stat>
             </CardBody>
           </Card>
@@ -352,9 +378,15 @@ const Home = () => {
           <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel>Total Quantity</StatLabel>
-                <StatNumber>{parseFloat(totalQuantity).toFixed(0)}</StatNumber>
-                <StatHelpText>Based on selected filters</StatHelpText>
+                <StatLabel color="white" fontWeight="bold">
+                  Total Quantity
+                </StatLabel>
+                <StatNumber color="white" fontWeight="bold">
+                  {parseFloat(totalQuantity).toFixed(0)}
+                </StatNumber>
+                <StatHelpText color="white" fontWeight="bold">
+                  Based on selected filters
+                </StatHelpText>
               </Stat>
             </CardBody>
           </Card>
@@ -363,15 +395,13 @@ const Home = () => {
           <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel>Avg. Article Price</StatLabel>
-                <StatNumber>
-                  {parseFloat(avgArticlePrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  })}{" "}
-                  ALL
+                <StatLabel color="white" fontWeight="bold">
+                  Avg. Article Price
+                </StatLabel>
+                <StatNumber color="white" fontWeight="bold">
+                  {parseFloat(avgArticlePrice).toLocaleString()} ALL
                 </StatNumber>
-                <StatHelpText>
+                <StatHelpText color="white" fontWeight="bold">
                   Calculated from total sales/quantity
                 </StatHelpText>
               </Stat>
@@ -382,116 +412,120 @@ const Home = () => {
           <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel>Transactions</StatLabel>
-                <StatNumber>{orderCount}</StatNumber>
-                <StatHelpText>Unique orders by datetime</StatHelpText>
+                <StatLabel color="white" fontWeight="bold">
+                  Transactions
+                </StatLabel>
+                <StatNumber color="white" fontWeight="bold">
+                  {orderCount}
+                </StatNumber>
+                <StatHelpText color="white" fontWeight="bold">
+                  Unique orders by datetime
+                </StatHelpText>
               </Stat>
             </CardBody>
           </Card>
         </GridItem>
       </Grid>
-
+  
       {/* Filter Section */}
       <Card bg="gray.800" mb={6}>
         <CardBody>
-          <Heading size="md" mb={4}>
+          <Heading size="md" mb={4} color="orange" fontWeight="bold">
             Filters
           </Heading>
           <Flex wrap="wrap" gap={4}>
             {/* Date Range */}
             <Box>
-              <Box mb={2}>Start Date</Box>
-              <DatePicker
-                selected={startDate}
-                onChange={setStartDate}
-                portalId="root-portal"
-              />
-            </Box>
-            <Box>
-              <Box mb={2}>End Date</Box>
-              <DatePicker
-                selected={endDate}
-                onChange={setEndDate}
-                portalId="root-portal"
-              />
-            </Box>
+    <Box mb={2} color="white" fontWeight="bold">
+      Start Date
+    </Box>
+    <DatePicker
+      selected={startDate}
+      onChange={setStartDate}
+      portalId="root-portal"
+      className="dark-datepicker"
+    />
+  </Box>
+  
+  <Box>
+    <Box mb={2} color="white" fontWeight="bold">
+      End Date
+    </Box>
+    <DatePicker
+      selected={endDate}
+      onChange={setEndDate}
+      portalId="root-portal"
+      className="dark-datepicker"
+    />
+  </Box>
+  
             {/* Seller */}
             <Box minW="200px">
-              <Box mb={2}>Seller</Box>
+              <Box mb={2} color="white" fontWeight="bold">
+                Seller
+              </Box>
               <Select
                 isMulti
                 options={sellers}
                 onChange={setSelectedSellers}
                 placeholder="Select sellers"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedSellers}
               />
             </Box>
             {/* Seller Category */}
             <Box minW="200px">
-              <Box mb={2}>Seller Category</Box>
+              <Box mb={2} color="white" fontWeight="bold">
+                Seller Category
+              </Box>
               <Select
                 isMulti
                 options={sellerCategories}
                 onChange={setSelectedSellerCategories}
                 placeholder="Select categories"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedSellerCategories}
               />
             </Box>
             {/* Article Name */}
             <Box minW="200px">
-              <Box mb={2}>Article Name</Box>
+              <Box mb={2} color="white" fontWeight="bold">
+                Article Name
+              </Box>
               <Select
                 isMulti
                 options={articleNames}
                 onChange={setSelectedArticleNames}
                 placeholder="Select articles"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedArticleNames}
               />
             </Box>
             {/* Category */}
             <Box minW="200px">
-              <Box mb={2}>Category</Box>
+              <Box mb={2} color="white" fontWeight="bold">
+                Category
+              </Box>
               <Select
                 isMulti
                 options={categories}
                 onChange={setSelectedCategories}
                 placeholder="Select categories"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedCategories}
               />
-            </Box>
-            {/* Fetch Button */}
-            <Box alignSelf="flex-end">
-              <Button
-                colorScheme="teal"
-                onClick={() => {
-                  // Force re-fetch if user wants to manually click
-                  fetchTotalSales();
-                  fetchTotalQuantity();
-                  fetchAvgArticlePrice();
-                  fetchOrderCount();
-                  fetchMostSoldItems();
-                  fetchMostSoldItemsByPrice();
-                  fetchDailySales();
-                }}
-              >
-                Fetch Data
-              </Button>
             </Box>
           </Flex>
         </CardBody>
       </Card>
-
+  
       {/* Chart Section */}
-      <Box bg="gray.800" p={4} borderRadius="md" mb={6}>
-        <Heading size="md" mb={4}>
+      <Box bg="gray.900" p={4} borderRadius="md" mb={6}>
+        <Heading size="md" mb={4} color="white" fontWeight="bold">
           Daily Sales
         </Heading>
         <Box height="400px">
@@ -553,43 +587,58 @@ const Home = () => {
           />
         </Box>
       </Box>
-
+  
       {/* Most Sold Items */}
       <Grid gap={6} templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}>
-        <Card bg="gray.800">
-          <CardBody>
-            <Heading size="md" mb={4}>
-              Most Sold Items
-            </Heading>
-            <Stack spacing={2}>
-              {mostSoldItems.map((item, index) => (
-                <Box key={index}>
-                  {item.Article_Name}: {item.total_quantity}
+        {/* Combined Most Sold Items Card */}
+  <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
+    <CardBody>
+      <Heading size="md" mb={4} color="white" fontWeight="bold" textAlign="center">
+        Most Sold Items
+      </Heading>
+  
+      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
+        {/* Left Column: Most Sold Items by Quantity */}
+        <Box>
+    <Heading size="sm" mb={3} color="white" textAlign="center" borderBottom="2px solid white" pb={2}>
+      By Quantity
+    </Heading>
+    <Stack spacing={2}>
+      {mostSoldItems.length > 0 ? (
+        mostSoldItems.map((item, index) => (
+          <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
+            {index + 1}. {item.Article_Name}: {Math.floor(item.total_quantity).toLocaleString()} 
+          </Box>
+        ))
+      ) : (
+        <Box color="gray.300" textAlign="center">No data available</Box>
+      )}
+    </Stack>
+  </Box>
+  
+        {/* Right Column: Most Sold Items by Price */}
+        <Box>
+          <Heading size="sm" mb={3} color="white" textAlign="center" borderBottom="2px solid white" pb={2}>
+            By Total Sales
+          </Heading>
+          <Stack spacing={2}>
+            {mostSoldItemsByPrice.length > 0 ? (
+              mostSoldItemsByPrice.map((item, index) => (
+                <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
+                  {index + 1}. {item.Article_Name}: {Number(item.total_price).toLocaleString()} ALL
                 </Box>
-              ))}
-            </Stack>
-          </CardBody>
-        </Card>
-        <Card bg="gray.800">
-          <CardBody>
-            <Heading size="md" mb={4}>
-              Most Sold Items by Price
-            </Heading>
-            <Stack spacing={2}>
-              {mostSoldItemsByPrice.map((item, index) => (
-                <Box key={index}>
-                  {item.Article_Name}: $
-                  {typeof item.total_price === "number"
-                    ? item.total_price.toFixed(2)
-                    : item.total_price}
-                </Box>
-              ))}
-            </Stack>
-          </CardBody>
-        </Card>
+              ))
+            ) : (
+              <Box color="gray.300" textAlign="center">No data available</Box>
+            )}
+          </Stack>
+        </Box>
+      </Grid>
+    </CardBody>
+  </Card>
       </Grid>
     </Box>
   );
-};
-
-export default Home;
+  };
+  
+  export default Home;
