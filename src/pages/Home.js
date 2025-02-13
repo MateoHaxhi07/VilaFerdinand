@@ -12,8 +12,6 @@ import {
   StatLabel,
   StatNumber,
   StatHelpText,
-  Stack,
-  Select as ChakraSelect,
   Flex,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
@@ -22,7 +20,7 @@ import Select from "react-select";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
 
-// Use environment variable for API URL
+// Use the same API base as your Home.js
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const Home = () => {
@@ -51,28 +49,57 @@ const Home = () => {
   const [dailySales, setDailySales] = useState([]);
   const [pieData, setPieData] = useState([]);
 
-  // ---------- LOCAL STATE (for filters & pagination) ----------
+  // ---------- CUSTOM SELECT STYLES ----------
+  const customSelectStyles = {
+    control: (base, state) => ({
+      ...base,
+      backgroundColor: "#2D3748",
+      borderColor: state.isFocused ? "#63B3ED" : "#4A5568",
+      color: "#fff",
+      fontWeight: "bold",
+      minHeight: "40px",
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: "#2D3748",
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused ? "#4A5568" : "#2D3748",
+      color: "#fff",
+      fontWeight: "bold",
+    }),
+    singleValue: (base) => ({
+      ...base,
+      color: "#fff",
+      fontWeight: "bold",
+    }),
+    multiValue: (base) => ({
+      ...base,
+      backgroundColor: "#4A5568",
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      color: "#fff",
+      fontWeight: "bold",
+    }),
+    placeholder: (base) => ({
+      ...base,
+      color: "#A0AEC0",
+      fontWeight: "bold",
+    }),
+  };
+
+  // Dropdown options state
   const [sellers, setSellers] = useState([]);
   const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
   const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [limit, setLimit] = useState(50);
-  const [offset, setOffset] = useState(0);
-
-  // ---------- UTILITY: Adjust dates to cover full day ----------
-  const getAdjustedDates = () => {
-    const adjustedStart = new Date(startDate);
-    adjustedStart.setHours(0, 0, 0, 0);
-    const adjustedEnd = new Date(endDate);
-    adjustedEnd.setHours(23, 59, 59, 999);
-    return { adjustedStart, adjustedEnd };
-  };
 
   // ---------- FETCH FUNCTIONS ----------
   const fetchTotalSales = async () => {
     try {
-      const { adjustedStart, adjustedEnd } = getAdjustedDates();
-      const url = `${API_URL}/sales/total-sales?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -91,8 +118,7 @@ const Home = () => {
 
   const fetchTotalQuantity = async () => {
     try {
-      const { adjustedStart, adjustedEnd } = getAdjustedDates();
-      const url = `${API_URL}/sales/total-quantity?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -111,8 +137,7 @@ const Home = () => {
 
   const fetchAvgArticlePrice = async () => {
     try {
-      const { adjustedStart, adjustedEnd } = getAdjustedDates();
-      const url = `${API_URL}/sales/avg-article-price?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -131,8 +156,7 @@ const Home = () => {
 
   const fetchOrderCount = async () => {
     try {
-      const { adjustedStart, adjustedEnd } = getAdjustedDates();
-      const url = `${API_URL}/sales/order-count?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/order-count?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -151,8 +175,7 @@ const Home = () => {
 
   const fetchMostSoldItems = async () => {
     try {
-      const { adjustedStart, adjustedEnd } = getAdjustedDates();
-      const url = `${API_URL}/sales/most-sold-items?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/most-sold-items?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -171,8 +194,7 @@ const Home = () => {
 
   const fetchMostSoldItemsByPrice = async () => {
     try {
-      const { adjustedStart, adjustedEnd } = getAdjustedDates();
-      const url = `${API_URL}/sales/most-sold-items-by-price?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/most-sold-items-by-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -191,8 +213,7 @@ const Home = () => {
 
   const fetchDailySales = async () => {
     try {
-      const { adjustedStart, adjustedEnd } = getAdjustedDates();
-      const url = `${API_URL}/sales/daily-sales?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -307,7 +328,27 @@ const Home = () => {
     selectedCategories,
   ]);
 
-  // Inject custom styles for DatePicker with cleanup
+  // Fetch pie chart data for seller category sales
+  useEffect(() => {
+    const fetchSalesBySellerCategory = async () => {
+      try {
+        const url = `${API_URL}/sales/sales-by-seller-category?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const formattedData = data.map((item) => ({
+          id: item["Seller Category"] || "Unknown",
+          label: item["Seller Category"] || "Unknown",
+          value: parseFloat(item.total_sales),
+        }));
+        setPieData(formattedData);
+      } catch (error) {
+        console.error("Error fetching sales by seller category:", error);
+      }
+    };
+    fetchSalesBySellerCategory();
+  }, [startDate, endDate]);
+
+  // Inject custom DatePicker styles with cleanup
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -356,12 +397,6 @@ const Home = () => {
       </Box>
     </Box>
   );
-
-  // ---------- HANDLE LIMIT CHANGE ----------
-  const handleLimitChange = (event) => {
-    setLimit(parseInt(event.target.value, 10));
-    setOffset(0);
-  };
 
   // ---------- RENDER ----------
   return (
@@ -487,7 +522,7 @@ const Home = () => {
                 onChange={setSelectedSellers}
                 placeholder="Select sellers"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedSellers}
               />
             </Box>
@@ -502,7 +537,7 @@ const Home = () => {
                 onChange={setSelectedSellerCategories}
                 placeholder="Select categories"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedSellerCategories}
               />
             </Box>
@@ -517,7 +552,7 @@ const Home = () => {
                 onChange={setSelectedArticleNames}
                 placeholder="Select articles"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedArticleNames}
               />
             </Box>
@@ -532,7 +567,7 @@ const Home = () => {
                 onChange={setSelectedCategories}
                 placeholder="Select categories"
                 menuPortalTarget={document.body}
-                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                styles={customSelectStyles}
                 value={selectedCategories}
               />
             </Box>
@@ -605,74 +640,72 @@ const Home = () => {
         </Box>
       </Box>
 
-      {/* Table Section */}
-      <Box p={{ base: 2, md: 5 }}>
-        <Heading as="h1" size={{ base: "lg", md: "xl" }} mb={{ base: 4, md: 5 }}>
-          Most Sold Items by Total Article Price
-        </Heading>
-        <Flex justifyContent="space-between" mb={{ base: 3, md: 4 }}>
-          <ChakraSelect width={{ base: "150px", md: "200px" }} value={limit} onChange={handleLimitChange}>
-            <option value={50}>50 rows</option>
-            <option value={200}>200 rows</option>
-            <option value={500}>500 rows</option>
-          </ChakraSelect>
-        </Flex>
-        {data.length > 0 ? (
-          <>
-            <TableContainer>
-              <Table variant="striped" colorScheme="teal">
-                <Thead>
-                  <Tr>
-                    <Th fontSize={{ base: "sm", md: "md" }}>Ranking</Th>
-                    <Th fontSize={{ base: "sm", md: "md" }}>Article Name</Th>
-                    <Th fontSize={{ base: "sm", md: "md" }}>Total Quantity Sold</Th>
-                    <Th fontSize={{ base: "sm", md: "md" }}>Total Article Price (ALL)</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {data.map((row, index) => {
-                    // Calculate normalized ranking (best rank gets value 1, worst gets 0)
-                    const rank = index + 1;
-                    const normalized = data.length > 1 ? (data.length - rank) / (data.length - 1) : 1;
-                    const bucket = Math.min(Math.floor(normalized * 5), 4);
-                    const heatmapColor = ["#FF0000", "#FF7F00", "#FFFF00", "#7FFF00", "#00FF00"][bucket];
-                    return (
-                      <Tr key={index}>
-                        {/* Ranking column without heatmap */}
-                        <Td fontSize={{ base: "xs", md: "sm" }}>{rank}</Td>
-                        {/* Article Name column without heatmap */}
-                        <Td fontSize={{ base: "xs", md: "sm" }}>{row.Article_Name}</Td>
-                        {/* Total Quantity Sold column with heatmap */}
-                        <Td fontSize={{ base: "xs", md: "sm" }} bg={heatmapColor}>
-                          {row.total_quantity ? Number(row.total_quantity).toLocaleString() : '-'}
-                        </Td>
-                        {/* Total Article Price column with heatmap */}
-                        <Td fontSize={{ base: "xs", md: "sm" }} bg={heatmapColor}>
-                          {row.total_price ? Number(row.total_price).toLocaleString() : '-'} ALL
-                        </Td>
-                      </Tr>
-                    );
-                  })}
-                </Tbody>
-              </Table>
-            </TableContainer>
-            <Flex mt={{ base: 3, md: 4 }} justifyContent="space-between">
-              <Button onClick={handleLoadLess} isDisabled={offset === 0} size={{ base: "sm", md: "md" }}>
-                Previous
-              </Button>
-              <Button onClick={handleLoadMore} isDisabled={data.length < limit} size={{ base: "sm", md: "md" }}>
-                Next
-              </Button>
-            </Flex>
-          </>
-        ) : (
-          <Box mt={{ base: 3, md: 4 }}>
-            <Heading as="h2" size={{ base: "md", md: "lg" }}>
-              No data available
+      {/* Pie Chart Section */}
+      <Grid gap={6} templateColumns="1fr">
+        <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
+          <CardBody>
+            <Heading
+              size="md"
+              mb={4}
+              color="white"
+              fontWeight="bold"
+              textAlign="center"
+            >
+              Sales by Seller Category
             </Heading>
-          </Box>
-        )}
-      </Box>
+            <Box height="300px" mb={6}>
+              <ResponsivePie
+                data={pieData}
+                margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+                innerRadius={0}  
+                padAngle={0.7}
+                cornerRadius={3}
+                colors={{ scheme: "set3" }}
+                borderWidth={1}
+                borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
+                radialLabelsSkipAngle={10}
+                radialLabelsTextColor="#ffffff"
+                radialLabelsLinkColor="#ffffff"
+                sliceLabelsSkipAngle={10}
+                sliceLabelsTextColor="#000000"
+                tooltip={({ datum }) => (
+                  <Box p="8px" bg="white" border="1px solid #ccc">
+                    <strong style={{ color: "black", fontWeight: "bold" }}>
+                      {datum.id}
+                    </strong>
+                    <br />
+                    <Box as="span" fontWeight="bold" color="black">
+                      {datum.value.toLocaleString()} ALL
+                    </Box>
+                  </Box>
+                )}
+                sliceLabel={(datum) => (
+                  <text style={{ fontWeight: "bold", fill: "black" }}>
+                    {datum.id}
+                  </text>
+                )}
+                legends={[
+                  {
+                    anchor: "bottom",
+                    direction: "row",
+                    justify: false,
+                    translateX: 0,
+                    translateY: 56,
+                    itemsSpacing: 4,
+                    itemWidth: 100,
+                    itemHeight: 18,
+                    itemTextColor: "#ffffff",
+                    itemDirection: "left-to-right",
+                    itemOpacity: 1,
+                    symbolSize: 18,
+                    symbolShape: "circle",
+                  },
+                ]}
+              />
+            </Box>
+          </CardBody>
+        </Card>
+      </Grid>
     </Box>
   );
 };
