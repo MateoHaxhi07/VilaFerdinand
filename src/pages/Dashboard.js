@@ -140,7 +140,7 @@ const Dashboard = () => {
   return (
     <Box p={5}>
       <Heading as="h1" size="lg" mb={5}>
-        Dashboard
+        All Data 
       </Heading>
       <Flex justifyContent="space-between" mb={4}>
         <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>

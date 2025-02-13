@@ -46,6 +46,9 @@ const MostSoldItemsByPrice = () => {
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
 
+  // Heatmap colors from worst (red) to best (green)
+  const heatmapColors = ["#FF0000", "#FF7F00", "#FFFF00", "#7FFF00", "#00FF00"];
+
   // Fetch most sold items by total article price with filters & pagination
   const fetchData = async (limit, offset) => {
     try {
@@ -215,18 +218,35 @@ const MostSoldItemsByPrice = () => {
                 </Tr>
               </Thead>
               <Tbody>
-                {data.map((row, index) => (
-                  <Tr key={index}>
-                    <Td fontSize={{ base: "xs", md: "sm" }}>{index + 1}</Td>
-                    <Td fontSize={{ base: "xs", md: "sm" }}>{row.Article_Name}</Td>
-                    <Td fontSize={{ base: "xs", md: "sm" }}>
-                      {row.total_quantity ? Number(row.total_quantity).toLocaleString() : '-'}
-                    </Td>
-                    <Td fontSize={{ base: "xs", md: "sm" }}>
-                      {row.total_price ? Number(row.total_price).toLocaleString() : '-'} ALL
-                    </Td>
-                  </Tr>
-                ))}
+                {data.map((row, index) => {
+                  // Calculate normalized ranking (best rank gets value 1, worst gets 0)
+                  const rank = index + 1;
+                  const normalized = data.length > 1 ? (data.length - rank) / (data.length - 1) : 1;
+                  const bucket = Math.min(Math.floor(normalized * 5), 4);
+                  const heatmapColor = heatmapColors[bucket];
+                  return (
+                    <Tr key={index}>
+                      <Td fontSize={{ base: "xs", md: "sm" }}>
+                        <Box
+                          width="20px"
+                          height="20px"
+                          bg={heatmapColor}
+                          borderRadius="full"
+                          display="inline-block"
+                          mr={2}
+                        />
+                        {rank}
+                      </Td>
+                      <Td fontSize={{ base: "xs", md: "sm" }}>{row.Article_Name}</Td>
+                      <Td fontSize={{ base: "xs", md: "sm" }}>
+                        {row.total_quantity ? Number(row.total_quantity).toLocaleString() : '-'}
+                      </Td>
+                      <Td fontSize={{ base: "xs", md: "sm" }}>
+                        {row.total_price ? Number(row.total_price).toLocaleString() : '-'} ALL
+                      </Td>
+                    </Tr>
+                  );
+                })}
               </Tbody>
             </Table>
           </TableContainer>
