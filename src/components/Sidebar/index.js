@@ -18,7 +18,10 @@ const SidebarContent = ({ onClick }) => (
       Home
     </Button>
     <Button as={Link} to="/dashboard" w="100%" onClick={onClick}>
-      Dashboard
+      Database
+    </Button>
+    <Button as={Link} to="/most-sold-items-by-price" w="100%" onClick={onClick}>
+      Ranking
     </Button>
   </VStack>
 );
