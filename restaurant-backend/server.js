@@ -16,9 +16,7 @@ const pool = new Pool({
     rejectUnauthorized: false,
   },
 });
-app.get('/', (req, res) => {
-  res.send('Welcome to the Restaurant API');
-});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../build', 'index.html'));
 });
