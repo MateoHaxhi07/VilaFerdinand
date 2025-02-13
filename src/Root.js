@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 // Import your new page component
 import MostSoldItemsByPrice from './pages/MostSoldItemsByPrice';
+import DailyExpenses from './pages/DailyExpenses'; // Import the DailyExpenses component
 
 const Root = () => (
   <ChakraProvider>
@@ -14,6 +15,7 @@ const Root = () => (
         <Route path="dashboard" element={<Dashboard />} />
         {/* New route for the new page */}
         <Route path="most-sold-items-by-price" element={<MostSoldItemsByPrice />} />
+        <Route path="daily-expenses" element={<DailyExpenses />} /> {/* Add a route for the DailyExpenses component */}
       </Route>
     </Routes>
   </ChakraProvider>
