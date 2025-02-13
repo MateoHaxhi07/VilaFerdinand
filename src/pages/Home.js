@@ -96,7 +96,6 @@ const Home = () => {
 
   // ---------- FETCH FUNCTIONS ----------
 
-  // 1) Fetch total sales
   const fetchTotalSales = async () => {
     try {
       const url = `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -116,7 +115,6 @@ const Home = () => {
     }
   };
 
-  // 2) Fetch total quantity
   const fetchTotalQuantity = async () => {
     try {
       const url = `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -136,7 +134,6 @@ const Home = () => {
     }
   };
 
-  // 3) Fetch average article price
   const fetchAvgArticlePrice = async () => {
     try {
       const url = `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -156,7 +153,6 @@ const Home = () => {
     }
   };
 
-  // 4) Fetch order count
   const fetchOrderCount = async () => {
     try {
       const url = `${API_URL}/sales/order-count?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -176,7 +172,6 @@ const Home = () => {
     }
   };
 
-  // 7) Fetch daily sales (for the chart)
   const fetchDailySales = async () => {
     try {
       const url = `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
@@ -451,7 +446,7 @@ const Home = () => {
           </Heading>
           <Flex wrap="wrap" gap={4}>
             {/* Date Range */}
-            <Box>
+            <Box w={{ base: "100%", md: "200px" }}>
               <Box mb={2} color="white" fontWeight="bold">
                 Start Date
               </Box>
@@ -462,7 +457,7 @@ const Home = () => {
                 className="dark-datepicker"
               />
             </Box>
-            <Box>
+            <Box w={{ base: "100%", md: "200px" }}>
               <Box mb={2} color="white" fontWeight="bold">
                 End Date
               </Box>
@@ -475,7 +470,7 @@ const Home = () => {
             </Box>
 
             {/* Seller */}
-            <Box minW="200px">
+            <Box w={{ base: "100%", md: "200px" }}>
               <Box mb={2} color="white" fontWeight="bold">
                 Seller
               </Box>
@@ -490,7 +485,7 @@ const Home = () => {
               />
             </Box>
             {/* Seller Category */}
-            <Box minW="200px">
+            <Box w={{ base: "100%", md: "200px" }}>
               <Box mb={2} color="white" fontWeight="bold">
                 Seller Category
               </Box>
@@ -505,7 +500,7 @@ const Home = () => {
               />
             </Box>
             {/* Article Name */}
-            <Box minW="200px">
+            <Box w={{ base: "100%", md: "200px" }}>
               <Box mb={2} color="white" fontWeight="bold">
                 Article Name
               </Box>
@@ -520,7 +515,7 @@ const Home = () => {
               />
             </Box>
             {/* Category */}
-            <Box minW="200px">
+            <Box w={{ base: "100%", md: "200px" }}>
               <Box mb={2} color="white" fontWeight="bold">
                 Category
               </Box>
@@ -602,7 +597,6 @@ const Home = () => {
           />
         </Box>
       </Box>
-      {/* Removed Most Sold Items section */}
     </Box>
   );
 };
