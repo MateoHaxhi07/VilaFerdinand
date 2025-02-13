@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useEffect } from 'react';
+
 import {
   Box,
   Heading,
