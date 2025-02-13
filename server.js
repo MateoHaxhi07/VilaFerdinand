@@ -235,8 +235,7 @@ app.get("/sales/most-sold-items", async (req, res) => {
     }
     query += `
       GROUP BY "Article_Name"
-      ORDER BY total_quantity DESC
-      LIMIT 10;
+      ORDER BY total_quantity DESC;
     `;
     const result = await pool.query(query, params);
     res.json(result.rows);
