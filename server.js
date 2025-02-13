@@ -19,7 +19,16 @@ const pool = new Pool({
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../build', 'index.html'));
+  
 });
+
+// Serve the React app for all other routes (React Router)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../build', 'index.html'));
+});
+
+
+
 // Endpoint for all data with dynamic filters
 app.get("/sales/all-data", async (req, res) => {
   try {
