@@ -1,4 +1,14 @@
-import { Box, Button, Drawer, DrawerOverlay, DrawerCloseButton, DrawerHeader, DrawerBody, DrawerContent, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Drawer,
+  DrawerOverlay,
+  DrawerCloseButton,
+  DrawerHeader,
+  DrawerBody,
+  DrawerContent,
+  VStack
+} from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
@@ -11,10 +21,11 @@ const SidebarContent = ({ onClick }) => (
       Dashboard
     </Button>
   </VStack>
-)
+);
 
 const Sidebar = ({ isOpen, variant, onClose }) => {
   return variant === 'sidebar' ? (
+    // Fixed sidebar variant
     <Box
       position="fixed"
       left={0}
@@ -22,25 +33,27 @@ const Sidebar = ({ isOpen, variant, onClose }) => {
       w="240px"
       top={0}
       h="100%"
-      bg="#fff"
+      bg="gray.800"        // <-- Updated background color
       borderRight="1px solid #ddd"
     >
       <SidebarContent onClick={onClose} />
     </Box>
   ) : (
+    // Drawer variant
     <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
       <DrawerOverlay>
-        <DrawerContent>
-          <DrawerCloseButton />
-          <DrawerHeader>Loopple Chakra</DrawerHeader>
+        <DrawerContent bg="gray.800" color="white">
+          {/* Make sure the close button is visible against dark background */}
+          <DrawerCloseButton color="white" />
+          <DrawerHeader borderBottomWidth="1px">Loopple Chakra</DrawerHeader>
           <DrawerBody>
             <SidebarContent onClick={onClose} />
           </DrawerBody>
         </DrawerContent>
       </DrawerOverlay>
     </Drawer>
-  )
-}
+  );
+};
 
 Sidebar.propTypes = {
   onClose: PropTypes.func.isRequired,
