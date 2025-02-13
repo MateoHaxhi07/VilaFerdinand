@@ -294,50 +294,78 @@ const Home = () => {
     <div>
       <h1 style={{ color: "white" }}>Home Page</h1>
       <Grid templateColumns="repeat(4, 1fr)" gap={6} mb="6">
-        {/* Total Sales */}
+
+
+
+
+        {/* Total Sales */} 
         <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
+          <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel color="white">Total Sales</StatLabel>
-                <StatNumber color="white">{parseFloat(totalSales).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ALL</StatNumber>
-                <StatHelpText color="white">Based on selected filters</StatHelpText>
+                <StatLabel>Total Sales</StatLabel>
+                <StatNumber>
+                  {parseFloat(totalSales).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}{" "}
+                  ALL
+                </StatNumber>
+                <StatHelpText>Based on selected filters</StatHelpText>
               </Stat>
             </CardBody>
           </Card>
         </GridItem>
+ 
+
+
         {/* Total Quantity */}
+
         <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
+          <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel color="white">Total Quantity</StatLabel>
-                <StatNumber color="white">{parseFloat(totalQuantity).toFixed(0)}</StatNumber>
-                <StatHelpText color="white">Based on selected filters</StatHelpText>
+                <StatLabel>Total Quantity</StatLabel>
+                <StatNumber>
+                  {parseFloat(totalQuantity).toFixed(0)}
+                </StatNumber>
+                <StatHelpText>Based on selected filters</StatHelpText>
               </Stat>
             </CardBody>
           </Card>
         </GridItem>
+
+
         {/* Average Article Price */}
         <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
+          <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel color="white">Avg. Article Price</StatLabel>
-                <StatNumber color="white">{parseFloat(avgArticlePrice).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ALL</StatNumber>
-                <StatHelpText color="white">Calculated from total sales/quantity</StatHelpText>
+                <StatLabel>Avg. Article Price</StatLabel>
+                <StatNumber>
+                  {parseFloat(avgArticlePrice).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}{" "}
+                  ALL
+                </StatNumber>
+                <StatHelpText>
+                  Calculated from total sales/quantity
+                </StatHelpText>
               </Stat>
             </CardBody>
           </Card>
         </GridItem>
+
+
         {/* Order Count */}
         <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
+          <Card bg="gray.800">
             <CardBody>
               <Stat>
-                <StatLabel color="white">Transactions</StatLabel>
-                <StatNumber color="white">{orderCount}</StatNumber>
-                <StatHelpText color="white">Unique orders by datetime</StatHelpText>
+                <StatLabel>Transactions</StatLabel>
+                <StatNumber>{orderCount}</StatNumber>
+                <StatHelpText>Unique orders by datetime</StatHelpText>
               </Stat>
             </CardBody>
           </Card>
@@ -364,24 +392,7 @@ const Home = () => {
                     <DatePicker selected={endDate} onChange={setEndDate} portalId="root-portal" />
                   </Box>
                 </Box>
-                <Button
-                  onClick={() => {
-                    fetchTotalSales();
-                    fetchTotalQuantity();
-                    fetchAvgArticlePrice();
-                    fetchOrderCount();
-                    fetchMostSoldItems();
-                    fetchMostSoldItemsByPrice();
-                    fetchArticleNames();
-                    fetchCategories();
-                    fetchSellers();
-                    fetchDailySales();
-                  }}
-                  colorScheme="teal"
-                  mt={4}
-                >
-                  Fetch Data
-                </Button>
+              
               </Stat>
             </CardBody>
           </Card>
@@ -582,35 +593,39 @@ const Home = () => {
       {/* Most Sold Items Sections */}
       <Grid gap={6} mb="6" templateColumns={{ base: "repeat(1,1fr)", lg: "repeat(2,1fr)" }}>
         <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white">Most Sold Items</StatLabel>
-                {mostSoldItems.map((item, index) => (
-                  <Box key={index} color="white">
-                    {item.Article_Name}: {item.total_quantity}
-                  </Box>
-                ))}
-              </Stat>
-            </CardBody>
-          </Card>
+        <Card bg="gray.800">
+          <CardBody>
+            <Heading size="md" mb={4}>
+              Most Sold Items
+            </Heading>
+            <Stack spacing={2}>
+              {mostSoldItems.map((item, index) => (
+                <Box key={index}>
+                  {item.Article_Name}: {item.total_quantity}
+                </Box>
+              ))}
+            </Stack>
+          </CardBody>
+        </Card>
         </GridItem>
         <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white">Most Sold Items by Price</StatLabel>
-                {mostSoldItemsByPrice.map((item, index) => (
-                  <Box key={index} color="white">
-                    {item.Article_Name}: $
-                    {typeof item.total_price === "number"
-                      ? item.total_price.toFixed(2)
-                      : item.total_price}
-                  </Box>
-                ))}
-              </Stat>
-            </CardBody>
-          </Card>
+        <Card bg="gray.800">
+          <CardBody>
+            <Heading size="md" mb={4}>
+              Most Sold Items by Price
+            </Heading>
+            <Stack spacing={2}>
+              {mostSoldItemsByPrice.map((item, index) => (
+                <Box key={index}>
+                  {item.Article_Name}: $
+                  {typeof item.total_price === "number"
+                    ? item.total_price.toFixed(2)
+                    : item.total_price}
+                </Box>
+              ))}
+            </Stack>
+          </CardBody>
+        </Card>
         </GridItem>
       </Grid>
     </div>
