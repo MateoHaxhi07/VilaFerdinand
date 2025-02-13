@@ -21,6 +21,47 @@ import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { ResponsiveBar } from "@nivo/bar";
 
+
+const customSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: '#2D3748',
+    borderColor: state.isFocused ? '#63B3ED' : '#4A5568',
+    color: '#fff',
+    fontWeight: 'bold',
+    minHeight: '40px',
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: '#2D3748',
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? '#4A5568' : '#2D3748',
+    color: '#fff',
+    fontWeight: 'bold',
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: '#fff',
+    fontWeight: 'bold',
+  }),
+  multiValue: (base) => ({
+    ...base,
+    backgroundColor: '#4A5568',
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    color: '#fff',
+    fontWeight: 'bold',
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: '#A0AEC0',
+    fontWeight: 'bold',
+  }),
+};
+
 // Use the same API base as your Home.js
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
