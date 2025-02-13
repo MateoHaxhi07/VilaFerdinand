@@ -1,29 +1,23 @@
-import psycopg2
+import requests
 
-# Replace with your external Render PostgreSQL URL
-DATABASE_URL = "postgresql://restaurant_db_mg7q_user:d9Zslmf92niOQETVqJaTb2n1Rxg0niYg@dpg-cumpfg8gph6c7387r200-a.frankfurt-postgres.render.com/restaurant_db_mg7q"
+# Replace with your actual deployed endpoint URL:
+# e.g., https://restaurant-api-s6sq.onrender.com/sales/total-sales
+# including any required query parameters (startDate, endDate, etc.)
+endpoint_url = "https://restaurant-api-s6sq.onrender.com/sales/total-sales?startDate=2023-01-01&endDate=2023-01-31"
 
 try:
-    # Connect to the database with SSL enabled
-    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-    cur = conn.cursor()
+    print(f"Making GET request to: {endpoint_url}")
+    response = requests.get(endpoint_url)
 
-    # Run a simple test query
-    cur.execute("SELECT 1;")
-    result = cur.fetchone()
-    print("Test query result:", result)
+    # Raise an exception if the request was unsuccessful (4xx or 5xx)
+    response.raise_for_status()
 
-    # Retrieve and print top 50 rows from the "sales" table
-    print("\nTop 50 rows from the 'sales' table:")
-    cur.execute('SELECT * FROM "sales" LIMIT 50;')
-    rows = cur.fetchall()
-    for row in rows:
-        print(row)
+    # Attempt to parse JSON
+    data = response.json()
+    print("✅ Request succeeded. Response data:")
+    print(data)
 
-    print("\n✅ Connection and data retrieval successful!")
-except Exception as e:
-    print("❌ Error connecting to the external database:", e)
-finally:
-    if 'conn' in locals() and conn:
-        cur.close()
-        conn.close()
+except requests.exceptions.RequestException as e:
+    print("❌ Request failed:", e)
+except ValueError:
+    print("❌ Response was not valid JSON.")
