@@ -22,7 +22,7 @@ import Select from "react-select";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
 
-// Use the same API base as your Home.js
+// Use environment variable for API URL
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const Home = () => {
@@ -51,54 +51,15 @@ const Home = () => {
   const [dailySales, setDailySales] = useState([]);
   const [pieData, setPieData] = useState([]);
 
-  // ---------- CUSTOM SELECT STYLES ----------
-  const customSelectStyles = {
-    control: (base, state) => ({
-      ...base,
-      backgroundColor: "#2D3748",
-      borderColor: state.isFocused ? "#63B3ED" : "#4A5568",
-      color: "#fff",
-      fontWeight: "bold",
-      minHeight: "40px",
-    }),
-    menu: (base) => ({
-      ...base,
-      backgroundColor: "#2D3748",
-    }),
-    option: (base, state) => ({
-      ...base,
-      backgroundColor: state.isFocused ? "#4A5568" : "#2D3748",
-      color: "#fff",
-      fontWeight: "bold",
-    }),
-    singleValue: (base) => ({
-      ...base,
-      color: "#fff",
-      fontWeight: "bold",
-    }),
-    multiValue: (base) => ({
-      ...base,
-      backgroundColor: "#4A5568",
-    }),
-    multiValueLabel: (base) => ({
-      ...base,
-      color: "#fff",
-      fontWeight: "bold",
-    }),
-    placeholder: (base) => ({
-      ...base,
-      color: "#A0AEC0",
-      fontWeight: "bold",
-    }),
-  };
-
-  // Dropdown options state
+  // ---------- LOCAL STATE (for filters & pagination) ----------
   const [sellers, setSellers] = useState([]);
   const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
   const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [limit, setLimit] = useState(50);
+  const [offset, setOffset] = useState(0);
 
-  // Utility: Adjust start and end dates for full-day coverage
+  // ---------- UTILITY: Adjust dates to cover full day ----------
   const getAdjustedDates = () => {
     const adjustedStart = new Date(startDate);
     adjustedStart.setHours(0, 0, 0, 0);
@@ -396,6 +357,12 @@ const Home = () => {
     </Box>
   );
 
+  // ---------- HANDLE LIMIT CHANGE ----------
+  const handleLimitChange = (event) => {
+    setLimit(parseInt(event.target.value, 10));
+    setOffset(0);
+  };
+
   // ---------- RENDER ----------
   return (
     <Box bg="gray.900" minH="100vh" p={4} color="gray.100">
@@ -520,7 +487,7 @@ const Home = () => {
                 onChange={setSelectedSellers}
                 placeholder="Select sellers"
                 menuPortalTarget={document.body}
-                styles={customSelectStyles}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
                 value={selectedSellers}
               />
             </Box>
@@ -535,7 +502,7 @@ const Home = () => {
                 onChange={setSelectedSellerCategories}
                 placeholder="Select categories"
                 menuPortalTarget={document.body}
-                styles={customSelectStyles}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
                 value={selectedSellerCategories}
               />
             </Box>
@@ -550,7 +517,7 @@ const Home = () => {
                 onChange={setSelectedArticleNames}
                 placeholder="Select articles"
                 menuPortalTarget={document.body}
-                styles={customSelectStyles}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
                 value={selectedArticleNames}
               />
             </Box>
@@ -565,7 +532,7 @@ const Home = () => {
                 onChange={setSelectedCategories}
                 placeholder="Select categories"
                 menuPortalTarget={document.body}
-                styles={customSelectStyles}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
                 value={selectedCategories}
               />
             </Box>
@@ -638,7 +605,7 @@ const Home = () => {
         </Box>
       </Box>
 
-      {/* Table Sectiondd */}
+      {/* Table Section */}
       <Box p={{ base: 2, md: 5 }}>
         <Heading as="h1" size={{ base: "lg", md: "xl" }} mb={{ base: 4, md: 5 }}>
           Most Sold Items by Total Article Price
@@ -671,22 +638,16 @@ const Home = () => {
                     const heatmapColor = ["#FF0000", "#FF7F00", "#FFFF00", "#7FFF00", "#00FF00"][bucket];
                     return (
                       <Tr key={index}>
-                        <Td fontSize={{ base: "xs", md: "sm" }}>
-                          <Box
-                            width="20px"
-                            height="20px"
-                            bg={heatmapColor}
-                            borderRadius="full"
-                            display="inline-block"
-                            mr={2}
-                          />
-                          {rank}
-                        </Td>
+                        {/* Ranking column without heatmap */}
+                        <Td fontSize={{ base: "xs", md: "sm" }}>{rank}</Td>
+                        {/* Article Name column without heatmap */}
                         <Td fontSize={{ base: "xs", md: "sm" }}>{row.Article_Name}</Td>
-                        <Td fontSize={{ base: "xs", md: "sm" }}>
+                        {/* Total Quantity Sold column with heatmap */}
+                        <Td fontSize={{ base: "xs", md: "sm" }} bg={heatmapColor}>
                           {row.total_quantity ? Number(row.total_quantity).toLocaleString() : '-'}
                         </Td>
-                        <Td fontSize={{ base: "xs", md: "sm" }}>
+                        {/* Total Article Price column with heatmap */}
+                        <Td fontSize={{ base: "xs", md: "sm" }} bg={heatmapColor}>
                           {row.total_price ? Number(row.total_price).toLocaleString() : '-'} ALL
                         </Td>
                       </Tr>
