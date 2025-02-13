@@ -26,6 +26,12 @@ const FooterNav = () => {
         <Button as={Link} to="/most-sold-items-by-price" variant="ghost" color="white">
           Me Te Shiturat
         </Button>
+        <Button as={Link} to="/most-sold-items-by-price" variant="ghost" color="white">
+          Me Te Shiturat
+        </Button>
+        <Button as={Link} to="/daily-expenses" variant="ghost" color="white"> {/* Add a new button for the DailyExpenses page */}
+          Daily Expenses
+        </Button>
       </HStack>
     </Box>
   );
