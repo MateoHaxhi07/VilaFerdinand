@@ -21,7 +21,7 @@ while True:  # Keep running the scripts in a loop
 
     # Run remaining scripts
     subprocess.Popen(["python", scripts[2]])
-    subprocess.Popen(["python", scripts[3]])
+
 
     print("Scripts completed. Waiting 5 minutes before rerunning...")
 
