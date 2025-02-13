@@ -418,76 +418,79 @@ const Home = () => {
       </Heading>
 
       {/* Top Metrics */}
-      <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={6}>
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white" fontWeight="bold">
-                  Total Sales
-                </StatLabel>
-                <StatNumber color="white" fontWeight="bold">
-                  {parseFloat(totalSales).toLocaleString()} ALL
-                </StatNumber>
-                <StatHelpText color="white" fontWeight="bold">
-                  Based on selected filters
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white" fontWeight="bold">
-                  Total Quantity
-                </StatLabel>
-                <StatNumber color="white" fontWeight="bold">
-                  {parseFloat(totalQuantity).toFixed(0)}
-                </StatNumber>
-                <StatHelpText color="white" fontWeight="bold">
-                  Based on selected filters
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white" fontWeight="bold">
-                  Avg. Article Price
-                </StatLabel>
-                <StatNumber color="white" fontWeight="bold">
-                  {parseFloat(avgArticlePrice).toLocaleString()} ALL
-                </StatNumber>
-                <StatHelpText color="white" fontWeight="bold">
-                  Calculated from total sales/quantity
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white" fontWeight="bold">
-                  Transactions
-                </StatLabel>
-                <StatNumber color="white" fontWeight="bold">
-                  {orderCount}
-                </StatNumber>
-                <StatHelpText color="white" fontWeight="bold">
-                  Unique orders by datetime
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </Grid>
+      <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={4} mb={6}>
+  <GridItem>
+    <Card bg="gray.800">
+      <CardBody>
+        <Stat>
+          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+            Total Sales
+          </StatLabel>
+          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+            {parseFloat(totalSales).toLocaleString()} ALL
+          </StatNumber>
+          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+            Based on selected filters
+          </StatHelpText>
+        </Stat>
+      </CardBody>
+    </Card>
+  </GridItem>
+
+  <GridItem>
+    <Card bg="gray.800">
+      <CardBody>
+        <Stat>
+          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+            Total Quantity
+          </StatLabel>
+          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+            {parseFloat(totalQuantity).toFixed(0)}
+          </StatNumber>
+          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+            Based on selected filters
+          </StatHelpText>
+        </Stat>
+      </CardBody>
+    </Card>
+  </GridItem>
+
+  <GridItem>
+    <Card bg="gray.800">
+      <CardBody>
+        <Stat>
+          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+            Avg. Article Price
+          </StatLabel>
+          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+            {parseFloat(avgArticlePrice).toLocaleString()} ALL
+          </StatNumber>
+          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+            Calculated from total sales/quantity
+          </StatHelpText>
+        </Stat>
+      </CardBody>
+    </Card>
+  </GridItem>
+
+  <GridItem>
+    <Card bg="gray.800">
+      <CardBody>
+        <Stat>
+          <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
+            Transactions
+          </StatLabel>
+          <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
+            {orderCount}
+          </StatNumber>
+          <StatHelpText fontSize="sm" color="white" fontWeight="bold">
+            Unique orders by datetime
+          </StatHelpText>
+        </Stat>
+      </CardBody>
+    </Card>
+  </GridItem>
+</Grid>
 
       {/* Filter Section */}
       <Card bg="gray.800" mb={6}>
