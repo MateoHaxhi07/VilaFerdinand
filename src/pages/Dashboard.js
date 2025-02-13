@@ -1,4 +1,3 @@
-// Dashboard.js
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
@@ -196,44 +195,54 @@ const Dashboard = () => {
           />
         </GridItem>
       </Grid>
-      <TableContainer>
-        <Table variant="striped" colorScheme="teal">
-          <Thead>
-            <Tr>
-              <Th>Seller</Th>
-              <Th>Article Name</Th>
-              <Th>Category</Th>
-              <Th>Quantity</Th>
-              <Th>Article Price</Th>
-              <Th>Total Article Price</Th>
-              <Th>Datetime</Th>
-              <Th>Seller Category</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {data.map((row, index) => (
-              <Tr key={index}>
-                <Td>{row.Seller}</Td>
-                <Td>{row.Article_Name}</Td>
-                <Td>{row.Category}</Td>
-                <Td>{row.Quantity}</Td>
-                <Td>${parseFloat(row.Article_Price).toFixed(2)}</Td>
-                <Td>${parseFloat(row.Total_Article_Price).toFixed(2)}</Td>
-                <Td>{new Date(row.Datetime).toLocaleString()}</Td>
-                <Td>{row["Seller Category"]}</Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      </TableContainer>
-      <Flex mt={4} justifyContent="space-between">
-        <Button onClick={handleLoadLess} isDisabled={offset === 0}>
-          Previous
-        </Button>
-        <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
-          Next
-        </Button>
-      </Flex>
+      {data.length > 0 ? (
+        <>
+          <TableContainer>
+            <Table variant="striped" colorScheme="teal">
+              <Thead>
+                <Tr>
+                  <Th>Seller</Th>
+                  <Th>Article Name</Th>
+                  <Th>Category</Th>
+                  <Th>Quantity</Th>
+                  <Th>Article Price</Th>
+                  <Th>Total Article Price</Th>
+                  <Th>Datetime</Th>
+                  <Th>Seller Category</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {data.map((row, index) => (
+                  <Tr key={index}>
+                    <Td>{row.Seller}</Td>
+                    <Td>{row.Article_Name}</Td>
+                    <Td>{row.Category}</Td>
+                    <Td>{row.Quantity}</Td>
+                    <Td>${parseFloat(row.Article_Price).toFixed(2)}</Td>
+                    <Td>${parseFloat(row.Total_Article_Price).toFixed(2)}</Td>
+                    <Td>{new Date(row.Datetime).toLocaleString()}</Td>
+                    <Td>{row["Seller Category"]}</Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+          <Flex mt={4} justifyContent="space-between">
+            <Button onClick={handleLoadLess} isDisabled={offset === 0}>
+              Previous
+            </Button>
+            <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
+              Next
+            </Button>
+          </Flex>
+        </>
+      ) : (
+        <Box mt={4}>
+          <Heading as="h2" size="md">
+            No data available
+          </Heading>
+        </Box>
+      )}
     </Box>
   );
 };
