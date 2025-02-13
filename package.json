@@ -10,6 +10,7 @@
     "@emotion/styled": "11.10.5",
     "@nivo/bar": "^0.88.0",
     "@nivo/line": "^0.88.0",
+    "concurrently": "^9.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -24,7 +25,9 @@
     "react-select": "^5.10.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "concurrently \"npm run start-frontend\" \"npm run start-backend\"",
+    "start-frontend": "react-scripts start",
+    "start-backend": "node restaurant-backend/server.js",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"

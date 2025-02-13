@@ -31,8 +31,6 @@ app.get("/sales/all-data", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
-    // Adjust endDate to include the entire day
-    const adjustedEndDate = moment(endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
 
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
