@@ -12,6 +12,7 @@ import {
   StatLabel,
   StatNumber,
   StatHelpText,
+  Stack,
   Flex,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
@@ -96,10 +97,20 @@ const Home = () => {
   const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [categories, setCategories] = useState([]);
 
+  // Utility: Adjust start and end dates for full-day coverage
+  const getAdjustedDates = () => {
+    const adjustedStart = new Date(startDate);
+    adjustedStart.setHours(0, 0, 0, 0);
+    const adjustedEnd = new Date(endDate);
+    adjustedEnd.setHours(23, 59, 59, 999);
+    return { adjustedStart, adjustedEnd };
+  };
+
   // ---------- FETCH FUNCTIONS ----------
   const fetchTotalSales = async () => {
     try {
-      const url = `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+      const { adjustedStart, adjustedEnd } = getAdjustedDates();
+      const url = `${API_URL}/sales/total-sales?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -118,7 +129,8 @@ const Home = () => {
 
   const fetchTotalQuantity = async () => {
     try {
-      const url = `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+      const { adjustedStart, adjustedEnd } = getAdjustedDates();
+      const url = `${API_URL}/sales/total-quantity?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -137,7 +149,8 @@ const Home = () => {
 
   const fetchAvgArticlePrice = async () => {
     try {
-      const url = `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+      const { adjustedStart, adjustedEnd } = getAdjustedDates();
+      const url = `${API_URL}/sales/avg-article-price?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -156,7 +169,8 @@ const Home = () => {
 
   const fetchOrderCount = async () => {
     try {
-      const url = `${API_URL}/sales/order-count?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+      const { adjustedStart, adjustedEnd } = getAdjustedDates();
+      const url = `${API_URL}/sales/order-count?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -175,7 +189,8 @@ const Home = () => {
 
   const fetchMostSoldItems = async () => {
     try {
-      const url = `${API_URL}/sales/most-sold-items?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+      const { adjustedStart, adjustedEnd } = getAdjustedDates();
+      const url = `${API_URL}/sales/most-sold-items?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -194,7 +209,8 @@ const Home = () => {
 
   const fetchMostSoldItemsByPrice = async () => {
     try {
-      const url = `${API_URL}/sales/most-sold-items-by-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+      const { adjustedStart, adjustedEnd } = getAdjustedDates();
+      const url = `${API_URL}/sales/most-sold-items-by-price?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -213,7 +229,8 @@ const Home = () => {
 
   const fetchDailySales = async () => {
     try {
-      const url = `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+      const { adjustedStart, adjustedEnd } = getAdjustedDates();
+      const url = `${API_URL}/sales/daily-sales?startDate=${adjustedStart.toISOString()}&endDate=${adjustedEnd.toISOString()}&sellers=${selectedSellers
         .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map((cat) => cat.value)
@@ -328,27 +345,7 @@ const Home = () => {
     selectedCategories,
   ]);
 
-  // Fetch pie chart data for seller category sales
-  useEffect(() => {
-    const fetchSalesBySellerCategory = async () => {
-      try {
-        const url = `${API_URL}/sales/sales-by-seller-category?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        const formattedData = data.map((item) => ({
-          id: item["Seller Category"] || "Unknown",
-          label: item["Seller Category"] || "Unknown",
-          value: parseFloat(item.total_sales),
-        }));
-        setPieData(formattedData);
-      } catch (error) {
-        console.error("Error fetching sales by seller category:", error);
-      }
-    };
-    fetchSalesBySellerCategory();
-  }, [startDate, endDate]);
-
-  // Inject custom DatePicker styles with cleanup
+  // Inject custom styles for DatePicker with cleanup
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -640,72 +637,80 @@ const Home = () => {
         </Box>
       </Box>
 
-      {/* Pie Chart Section */}
-      <Grid gap={6} templateColumns="1fr">
-        <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
-          <CardBody>
-            <Heading
-              size="md"
-              mb={4}
-              color="white"
-              fontWeight="bold"
-              textAlign="center"
-            >
-              Sales by Seller Category
+      {/* Table Section */}
+      <Box p={{ base: 2, md: 5 }}>
+        <Heading as="h1" size={{ base: "lg", md: "xl" }} mb={{ base: 4, md: 5 }}>
+          Most Sold Items by Total Article Price
+        </Heading>
+        <Flex justifyContent="space-between" mb={{ base: 3, md: 4 }}>
+          <ChakraSelect width={{ base: "150px", md: "200px" }} value={limit} onChange={handleLimitChange}>
+            <option value={50}>50 rows</option>
+            <option value={200}>200 rows</option>
+            <option value={500}>500 rows</option>
+          </ChakraSelect>
+        </Flex>
+        {data.length > 0 ? (
+          <>
+            <TableContainer>
+              <Table variant="striped" colorScheme="teal">
+                <Thead>
+                  <Tr>
+                    <Th fontSize={{ base: "sm", md: "md" }}>Rank</Th>
+                    <Th fontSize={{ base: "sm", md: "md" }}>Article Name</Th>
+                    <Th fontSize={{ base: "sm", md: "md" }}>Total Quantity Sold</Th>
+                    <Th fontSize={{ base: "sm", md: "md" }}>Total Article Price (ALL)</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {data.map((row, index) => {
+                    // Calculate normalized ranking (best rank gets value 1, worst gets 0)
+                    const rank = index + 1;
+                    const normalized = data.length > 1 ? (data.length - rank) / (data.length - 1) : 1;
+                    const bucket = Math.min(Math.floor(normalized * 5), 4);
+                    const heatmapColor = ["#FF0000", "#FF7F00", "#FFFF00", "#7FFF00", "#00FF00"][bucket];
+                    return (
+                      <Tr key={index}>
+                        <Td fontSize={{ base: "xs", md: "sm" }}>
+                          <Box
+                            width="20px"
+                            height="20px"
+                            bg={heatmapColor}
+                            borderRadius="full"
+                            display="inline-block"
+                            mr={2}
+                          />
+                          {rank}
+                        </Td>
+                        <Td fontSize={{ base: "xs", md: "sm" }}>{row.Article_Name}</Td>
+                        <Td fontSize={{ base: "xs", md: "sm" }}>
+                          {row.total_quantity ? Number(row.total_quantity).toLocaleString() : '-'}
+                        </Td>
+                        <Td fontSize={{ base: "xs", md: "sm" }}>
+                          {row.total_price ? Number(row.total_price).toLocaleString() : '-'} ALL
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                </Tbody>
+              </Table>
+            </TableContainer>
+            <Flex mt={{ base: 3, md: 4 }} justifyContent="space-between">
+              <Button onClick={handleLoadLess} isDisabled={offset === 0} size={{ base: "sm", md: "md" }}>
+                Previous
+              </Button>
+              <Button onClick={handleLoadMore} isDisabled={data.length < limit} size={{ base: "sm", md: "md" }}>
+                Next
+              </Button>
+            </Flex>
+          </>
+        ) : (
+          <Box mt={{ base: 3, md: 4 }}>
+            <Heading as="h2" size={{ base: "md", md: "lg" }}>
+              No data available
             </Heading>
-            <Box height="300px" mb={6}>
-              <ResponsivePie
-                data={pieData}
-                margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
-                innerRadius={0}  
-                padAngle={0.7}
-                cornerRadius={3}
-                colors={{ scheme: "set3" }}
-                borderWidth={1}
-                borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
-                radialLabelsSkipAngle={10}
-                radialLabelsTextColor="#ffffff"
-                radialLabelsLinkColor="#ffffff"
-                sliceLabelsSkipAngle={10}
-                sliceLabelsTextColor="#000000"
-                tooltip={({ datum }) => (
-                  <Box p="8px" bg="white" border="1px solid #ccc">
-                    <strong style={{ color: "black", fontWeight: "bold" }}>
-                      {datum.id}
-                    </strong>
-                    <br />
-                    <Box as="span" fontWeight="bold" color="black">
-                      {datum.value.toLocaleString()} ALL
-                    </Box>
-                  </Box>
-                )}
-                sliceLabel={(datum) => (
-                  <text style={{ fontWeight: "bold", fill: "black" }}>
-                    {datum.id}
-                  </text>
-                )}
-                legends={[
-                  {
-                    anchor: "bottom",
-                    direction: "row",
-                    justify: false,
-                    translateX: 0,
-                    translateY: 56,
-                    itemsSpacing: 4,
-                    itemWidth: 100,
-                    itemHeight: 18,
-                    itemTextColor: "#ffffff",
-                    itemDirection: "left-to-right",
-                    itemOpacity: 1,
-                    symbolSize: 18,
-                    symbolShape: "circle",
-                  },
-                ]}
-              />
-            </Box>
-          </CardBody>
-        </Card>
-      </Grid>
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };
