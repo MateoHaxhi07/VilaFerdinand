@@ -8,7 +8,7 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../build')));
+app.use(express.static(path.join(__dirname, 'build')));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -18,15 +18,13 @@ const pool = new Pool({
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../build', 'index.html'));
-  
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 // Serve the React app for all other routes (React Router)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../build', 'index.html'));
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
-
 
 
 // Endpoint for all data with dynamic filters
