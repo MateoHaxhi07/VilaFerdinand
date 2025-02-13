@@ -69,6 +69,19 @@ docker run --name vilaferdinand_container -d vilaferdinand:latest
 
 Working GitHub Versions CMD 
 
+
+
+check what github remote v you already
+
+git remote -v
+
+If we want to change remote repo
+
+
+git remote set-url origin https://github.com/your-username/new-repo.git
+
+
+
 Add the folder if already not done with this code:
 
 git init

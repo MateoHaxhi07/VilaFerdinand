@@ -19,6 +19,9 @@ import {
 } from '@chakra-ui/react';
 import Select from 'react-select';
 
+// Use environment variable for API URL
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 const Dashboard = () => {
   const {
     startDate,
@@ -46,14 +49,20 @@ const Dashboard = () => {
   // Build URL dynamically with filters
   const fetchData = async (limit, offset) => {
     try {
-      let url = `http://localhost:5000/sales/all-data?limit=${limit}&offset=${offset}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-      url += `&sellers=${selectedSellers.map((seller) => seller.value).join(',')}`;
-      url += `&sellerCategories=${selectedSellerCategories.map((cat) => cat.value).join(',')}`;
-      url += `&articleNames=${selectedArticleNames.map((article) => article.value).join(',')}`;
-      url += `&categories=${selectedCategories.map((cat) => cat.value).join(',')}`;
+      // Debugging filters
+      console.log("Filters:", { startDate, endDate, selectedSellers, selectedSellerCategories, selectedArticleNames, selectedCategories });
+      
+      let url = `${API_URL}/sales/all-data?limit=${limit}&offset=${offset}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      url += `&sellers=${selectedSellers.map(seller => seller.value).join(',')}`;
+      url += `&sellerCategories=${selectedSellerCategories.map(cat => cat.value).join(',')}`;
+      url += `&articleNames=${selectedArticleNames.map(article => article.value).join(',')}`;
+      url += `&categories=${selectedCategories.map(cat => cat.value).join(',')}`;
+      console.log("Fetching URL:", url);
       const response = await fetch(url);
       const result = await response.json();
-      setData(result);
+      console.log("API response:", result);
+      // If the API returns { data: [...] } then use result.data; otherwise, assume result is the array.
+      setData(Array.isArray(result) ? result : result.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -62,9 +71,9 @@ const Dashboard = () => {
   // Fetch filter options
   const fetchSellers = async () => {
     try {
-      const response = await fetch('http://localhost:5000/sales/sellers');
+      const response = await fetch(`${API_URL}/sales/sellers`);
       const result = await response.json();
-      setSellers(result.map((seller) => ({ value: seller, label: seller })));
+      setSellers(result.map(seller => ({ value: seller, label: seller })));
     } catch (error) {
       console.error('Error fetching sellers:', error);
     }
@@ -72,9 +81,9 @@ const Dashboard = () => {
 
   const fetchSellerCategories = async () => {
     try {
-      const response = await fetch('http://localhost:5000/sales/seller-categories');
+      const response = await fetch(`${API_URL}/sales/seller-categories`);
       const result = await response.json();
-      setSellerCategories(result.map((cat) => ({ value: cat, label: cat })));
+      setSellerCategories(result.map(cat => ({ value: cat, label: cat })));
     } catch (error) {
       console.error('Error fetching seller categories:', error);
     }
@@ -82,9 +91,9 @@ const Dashboard = () => {
 
   const fetchArticleNames = async () => {
     try {
-      const response = await fetch('http://localhost:5000/sales/article-names');
+      const response = await fetch(`${API_URL}/sales/article-names`);
       const result = await response.json();
-      setArticleNames(result.map((article) => ({ value: article, label: article })));
+      setArticleNames(result.map(article => ({ value: article, label: article })));
     } catch (error) {
       console.error('Error fetching article names:', error);
     }
@@ -92,9 +101,9 @@ const Dashboard = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:5000/sales/categories');
+      const response = await fetch(`${API_URL}/sales/categories`);
       const result = await response.json();
-      setCategories(result.map((cat) => ({ value: cat, label: cat })));
+      setCategories(result.map(cat => ({ value: cat, label: cat })));
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
