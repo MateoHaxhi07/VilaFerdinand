@@ -33,6 +33,33 @@ then doing npm start to launch react app which connects with the backend server.
 
 
 
+Working with container files
+
+
+first we need to create image, then use that image with a container
+\
+Navigate first to correct directory
+cd "C:\Users\mhaxh\OneDrive\Desktop\VilaFerdinand\restaurant-cron-jobs"
+
+
+Then we clear cached images and contatiners so it doesnt use old ones
+
+docker system prune -af
+
+
+Rebuild the image with no cache
+
+docker build --no-cache -t vilaferdinand:latest .
+
+
+Run Updated Container with logs
+
+docker run --name vilaferdinand_container -d vilaferdinand:latest
+
+
+
+
+
 
 
 
