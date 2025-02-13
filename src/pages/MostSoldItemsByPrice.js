@@ -215,23 +215,23 @@ const MostSoldItemsByPrice = () => {
                 </Tr>
               </Thead>
               <Tbody>
-                {data.map((row, index) => (
-                  <Tr key={index}>
-                    <Td>{offset + index + 1}</Td>
-                    <Td>{row.Article_Name}</Td>
-                    <Td>
-                      {row.total_quantity
-                        ? Number(row.total_quantity).toLocaleString()
-                        : '-'}
-                    </Td>
-                    <Td>
-                      {row.total_price
-                        ? Number(row.total_price).toLocaleString()
-                        : '-'}
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
+  {data.map((row, index) => (
+    <Tr key={index}>
+      <Td>{index + 1}</Td>
+      <Td>{row.Article_Name}</Td>
+      <Td>
+        {row.total_quantity
+          ? Number(row.total_quantity).toLocaleString()
+          : '-'}
+      </Td>
+      <Td>
+        {row.total_price
+          ? Number(row.total_price).toLocaleString()
+          : '-'} ALL
+      </Td>
+    </Tr>
+  ))}
+</Tbody>
             </Table>
           </TableContainer>
           <Flex mt={4} justifyContent="space-between">
