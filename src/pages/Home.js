@@ -650,119 +650,147 @@ const Home = () => {
 
       
 
-      {/* Most Sold Items */}
-      <Grid gap={6} templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}>
-        <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
-          <CardBody>
-            <Heading size="md" mb={4} color="white" fontWeight="bold" textAlign="center">
-              Most Sold Items
-            </Heading>
-            <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
-              {/* By Quantity */}
-              <Box>
-                <Heading
-                  size="sm"
-                  mb={3}
-                  color="white"
-                  textAlign="center"
-                  borderBottom="2px solid white"
-                  pb={2}
-                >
-                  By Quantity
-                </Heading>
-                <Stack spacing={2}>
-                  {mostSoldItems.length > 0 ? (
-                    mostSoldItems.map((item, index) => (
-                      <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
-                        {index + 1}. {item.Article_Name}: {Math.floor(item.total_quantity).toLocaleString()}
-                      </Box>
-                    ))
-                  ) : (
-                    <Box color="gray.300" textAlign="center">
-                      No data available
-                    </Box>
-                  )}
-                </Stack>
-              </Box>
-              {/* By Total Sales */}
-              <Box>
-                <Heading
-                  size="sm"
-                  mb={3}
-                  color="white"
-                  textAlign="center"
-                  borderBottom="2px solid white"
-                  pb={2}
-                >
-                  By Total Sales
-                </Heading>
-                <Stack spacing={2}>
-                  {mostSoldItemsByPrice.length > 0 ? (
-                    mostSoldItemsByPrice.map((item, index) => (
-                      <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
-                        {index + 1}. {item.Article_Name}: {Number(item.total_price).toLocaleString()} ALL
-                      </Box>
-                    ))
-                  ) : (
-                    <Box color="gray.300" textAlign="center">
-                      No data available
-                    </Box>
-                  )}
-                </Stack>
-              </Box>
+     {/* Most Sold Items + Pie Chart Side by Side */}
+    <Grid gap={6} templateColumns={{ base: "1fr", md: "repeat(1, 1fr)" }}>
+      <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
+        <CardBody>
+          <Heading
+            size="md"
+            mb={4}
+            color="white"
+            fontWeight="bold"
+            textAlign="center"
+          >
+            Most Sold Items
+          </Heading>
 
+          {/* Nested grid: Left side (lists), Right side (pie chart) */}
+          <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
+            {/* Left column: By Quantity & By Total Sales */}
+            <Box>
+              <Heading
+                size="sm"
+                mb={3}
+                color="white"
+                textAlign="center"
+                borderBottom="2px solid white"
+                pb={2}
+              >
+                By Quantity
+              </Heading>
+              <Stack spacing={2}>
+                {mostSoldItems.length > 0 ? (
+                  mostSoldItems.map((item, index) => (
+                    <Box
+                      key={index}
+                      color="white"
+                      fontWeight="bold"
+                      bg="gray.800"
+                      p={2}
+                      borderRadius="md"
+                    >
+                      {index + 1}. {item.Article_Name}:{" "}
+                      {Math.floor(item.total_quantity).toLocaleString()}
+                    </Box>
+                  ))
+                ) : (
+                  <Box color="gray.300" textAlign="center">
+                    No data available
+                  </Box>
+                )}
+              </Stack>
 
-              <Box height="300px" mb={6}>
-  <ResponsivePie
-    data={pieData}
-    margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
-    innerRadius={0.4}
-    padAngle={0.7}
-    cornerRadius={3}
-    colors={{ scheme: "set3" }}
-    borderWidth={1}
-    borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
-    radialLabelsSkipAngle={10}
-    radialLabelsTextColor="#ffffff"
-    radialLabelsLinkColor="#ffffff"
-    sliceLabelsSkipAngle={10}
-    sliceLabelsTextColor="#000000"
-    tooltip={({ datum }) => (
-      <Box p="8px" bg="white" border="1px solid #ccc">
-        <strong style={{ color: "black", fontWeight: "bold" }}>{datum.id}</strong>
-        <br />
-        <Box as="span" fontWeight="bold" color="black">
-          {datum.value.toLocaleString()} ALL
-        </Box>
-      </Box>
-    )}
-    sliceLabel={(datum) => (
-      <text style={{ fontWeight: "bold", fill: "black" }}>{datum.id}</text>
-    )}
-    legends={[
-      {
-        anchor: "bottom",
-        direction: "row",
-        justify: false,
-        translateX: 0,
-        translateY: 56,
-        itemsSpacing: 4,
-        itemWidth: 100,
-        itemHeight: 18,
-        itemTextColor: "#ffffff",
-        itemDirection: "left-to-right",
-        itemOpacity: 1,
-        symbolSize: 18,
-        symbolShape: "circle",
-      },
-    ]}
-  />
-</Box>
-            </Grid>
-          </CardBody>
-        </Card>
-      </Grid>
-    </Box>
+              <Heading
+                size="sm"
+                mt={6}
+                mb={3}
+                color="white"
+                textAlign="center"
+                borderBottom="2px solid white"
+                pb={2}
+              >
+                By Total Sales
+              </Heading>
+              <Stack spacing={2}>
+                {mostSoldItemsByPrice.length > 0 ? (
+                  mostSoldItemsByPrice.map((item, index) => (
+                    <Box
+                      key={index}
+                      color="white"
+                      fontWeight="bold"
+                      bg="gray.800"
+                      p={2}
+                      borderRadius="md"
+                    >
+                      {index + 1}. {item.Article_Name}:{" "}
+                      {Number(item.total_price).toLocaleString()} ALL
+                    </Box>
+                  ))
+                ) : (
+                  <Box color="gray.300" textAlign="center">
+                    No data available
+                  </Box>
+                )}
+              </Stack>
+            </Box>
+
+            {/* Right column: Pie Chart */}
+            <Box height="300px" mb={6}>
+              <ResponsivePie
+                data={pieData}
+                margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+                innerRadius={0.4}
+                padAngle={0.7}
+                cornerRadius={3}
+                colors={{ scheme: "set3" }}
+                borderWidth={1}
+                borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
+                radialLabelsSkipAngle={10}
+                radialLabelsTextColor="#ffffff"
+                radialLabelsLinkColor="#ffffff"
+                sliceLabelsSkipAngle={10}
+                sliceLabelsTextColor="#000000"
+                tooltip={({ datum }) => (
+                  <Box p="8px" bg="white" border="1px solid #ccc">
+                    <strong style={{ color: "black", fontWeight: "bold" }}>
+                      {datum.id}
+                    </strong>
+                    <br />
+                    <Box as="span" fontWeight="bold" color="black">
+                      {datum.value.toLocaleString()} ALL
+                    </Box>
+                  </Box>
+                )}
+                sliceLabel={(datum) => (
+                  <text style={{ fontWeight: "bold", fill: "black" }}>
+                    {datum.id}
+                  </text>
+                )}
+                legends={[
+                  {
+                    anchor: "bottom",
+                    direction: "row",
+                    justify: false,
+                    translateX: 0,
+                    translateY: 56,
+                    itemsSpacing: 4,
+                    itemWidth: 100,
+                    itemHeight: 18,
+                    itemTextColor: "#ffffff",
+                    itemDirection: "left-to-right",
+                    itemOpacity: 1,
+                    symbolSize: 18,
+                    symbolShape: "circle",
+                  },
+                ]}
+              />
+            </Box>
+          </Grid>
+        </CardBody>
+      </Card>
+    </Grid>
+  </Box>
+
 
 
 
