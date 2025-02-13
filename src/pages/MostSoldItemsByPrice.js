@@ -145,18 +145,18 @@ const MostSoldItemsByPrice = () => {
   };
 
   return (
-    <Box p={5}>
-      <Heading as="h1" size="lg" mb={5}>
+    <Box p={{ base: 2, md: 5 }}>
+      <Heading as="h1" size={{ base: "lg", md: "xl" }} mb={{ base: 4, md: 5 }}>
         Most Sold Items by Total Article Price
       </Heading>
-      <Flex justifyContent="space-between" mb={4}>
-        <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
+      <Flex justifyContent="space-between" mb={{ base: 3, md: 4 }}>
+        <ChakraSelect width={{ base: "150px", md: "200px" }} value={limit} onChange={handleLimitChange}>
           <option value={50}>50 rows</option>
           <option value={200}>200 rows</option>
           <option value={500}>500 rows</option>
         </ChakraSelect>
       </Flex>
-      <Grid gap={4} mb={4} templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(4, 1fr)' }}>
+      <Grid gap={{ base: 2, md: 4 }} mb={{ base: 3, md: 4 }} templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(4, 1fr)' }}>
         <GridItem>
           <Select
             isMulti
@@ -208,44 +208,40 @@ const MostSoldItemsByPrice = () => {
             <Table variant="striped" colorScheme="teal">
               <Thead>
                 <Tr>
-                  <Th>Rank</Th>
-                  <Th>Article Name</Th>
-                  <Th>Total Quantity Sold</Th>
-                  <Th>Total Article Price (ALL)</Th>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Rank</Th>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Article Name</Th>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Total Quantity Sold</Th>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Total Article Price (ALL)</Th>
                 </Tr>
               </Thead>
               <Tbody>
-  {data.map((row, index) => (
-    <Tr key={index}>
-      <Td>{index + 1}</Td>
-      <Td>{row.Article_Name}</Td>
-      <Td>
-        {row.total_quantity
-          ? Number(row.total_quantity).toLocaleString()
-          : '-'}
-      </Td>
-      <Td>
-        {row.total_price
-          ? Number(row.total_price).toLocaleString()
-          : '-'} ALL
-      </Td>
-    </Tr>
-  ))}
-</Tbody>
+                {data.map((row, index) => (
+                  <Tr key={index}>
+                    <Td fontSize={{ base: "xs", md: "sm" }}>{index + 1}</Td>
+                    <Td fontSize={{ base: "xs", md: "sm" }}>{row.Article_Name}</Td>
+                    <Td fontSize={{ base: "xs", md: "sm" }}>
+                      {row.total_quantity ? Number(row.total_quantity).toLocaleString() : '-'}
+                    </Td>
+                    <Td fontSize={{ base: "xs", md: "sm" }}>
+                      {row.total_price ? Number(row.total_price).toLocaleString() : '-'} ALL
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
             </Table>
           </TableContainer>
-          <Flex mt={4} justifyContent="space-between">
-            <Button onClick={handleLoadLess} isDisabled={offset === 0}>
+          <Flex mt={{ base: 3, md: 4 }} justifyContent="space-between">
+            <Button onClick={handleLoadLess} isDisabled={offset === 0} size={{ base: "sm", md: "md" }}>
               Previous
             </Button>
-            <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
+            <Button onClick={handleLoadMore} isDisabled={data.length < limit} size={{ base: "sm", md: "md" }}>
               Next
             </Button>
           </Flex>
         </>
       ) : (
-        <Box mt={4}>
-          <Heading as="h2" size="md">
+        <Box mt={{ base: 3, md: 4 }}>
+          <Heading as="h2" size={{ base: "md", md: "lg" }}>
             No data available
           </Heading>
         </Box>
