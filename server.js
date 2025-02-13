@@ -4,7 +4,6 @@ const cors = require("cors");
 const { Pool } = require("pg");
 const port = process.env.PORT || 5000;
 const path = require('path');
-const adjustedEndDate = endDate;
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -37,7 +36,7 @@ app.get("/sales/all-data", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
-
+    const adjustedEndDate = endDate;
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
