@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
+  Box,
+  Heading,
   Grid,
   GridItem,
   Card,
@@ -9,16 +11,16 @@ import {
   StatLabel,
   StatNumber,
   StatHelpText,
-  Box,
   Button,
+  Stack,
+  Flex,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
-import { ResponsiveLine } from "@nivo/line";
 import { ResponsiveBar } from "@nivo/bar";
 
-// Define the API base URL from the environment variable (or fallback to localhost)
+// Use the same API base as your Home.js
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const Home = () => {
@@ -37,102 +39,170 @@ const Home = () => {
     setSelectedCategories,
   } = useOutletContext();
 
-  // Metric states
+  // ---------- STATE ----------
   const [totalSales, setTotalSales] = useState(0);
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [avgArticlePrice, setAvgArticlePrice] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
+
   const [mostSoldItems, setMostSoldItems] = useState([]);
   const [mostSoldItemsByPrice, setMostSoldItemsByPrice] = useState([]);
-  // New state for daily sales data (for the chart)
   const [dailySales, setDailySales] = useState([]);
 
-  // Dropdown options for filters
+  // Dropdown options
   const [sellers, setSellers] = useState([]);
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // Metric fetch functions
+  // ---------- FETCH FUNCTIONS ----------
+
+  // 1) Fetch total sales
   const fetchTotalSales = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers.map(s => s.value).join(",")}&sellerCategories=${selectedSellerCategories.map(cat => cat.value).join(",")}&articleNames=${selectedArticleNames.map(a => a.value).join(",")}&categories=${selectedCategories.map(cat => cat.value).join(",")}`
-      );
+      const url = `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}`;
+      const response = await fetch(url);
       const data = await response.json();
-      setTotalSales(data.total_sales);
+      setTotalSales(data.total_sales || 0);
     } catch (error) {
       console.error("Error fetching total sales:", error);
     }
   };
 
+  // 2) Fetch total quantity
   const fetchTotalQuantity = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers.map(s => s.value).join(",")}&sellerCategories=${selectedSellerCategories.map(cat => cat.value).join(",")}&articleNames=${selectedArticleNames.map(a => a.value).join(",")}&categories=${selectedCategories.map(cat => cat.value).join(",")}`
-      );
+      const url = `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}`;
+      const response = await fetch(url);
       const data = await response.json();
-      setTotalQuantity(data.total_quantity);
+      setTotalQuantity(data.total_quantity || 0);
     } catch (error) {
       console.error("Error fetching total quantity:", error);
     }
   };
 
+  // 3) Fetch average article price
   const fetchAvgArticlePrice = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers.map(s => s.value).join(",")}&sellerCategories=${selectedSellerCategories.map(cat => cat.value).join(",")}&articleNames=${selectedArticleNames.map(a => a.value).join(",")}&categories=${selectedCategories.map(cat => cat.value).join(",")}`
-      );
+      const url = `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}`;
+      const response = await fetch(url);
       const data = await response.json();
-      setAvgArticlePrice(data.avg_price);
+      setAvgArticlePrice(data.avg_price || 0);
     } catch (error) {
       console.error("Error fetching average article price:", error);
     }
   };
 
+  // 4) Fetch order count (if your backend has such an endpoint)
+  const fetchOrderCount = async () => {
+    try {
+      const url = `${API_URL}/sales/order-count?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setOrderCount(data.order_count || 0);
+    } catch (error) {
+      console.error("Error fetching order count:", error);
+    }
+  };
+
+  // 5) Fetch most sold items
   const fetchMostSoldItems = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/sales/most-sold-items?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers.map(s => s.value).join(",")}&sellerCategories=${selectedSellerCategories.map(cat => cat.value).join(",")}&articleNames=${selectedArticleNames.map(a => a.value).join(",")}&categories=${selectedCategories.map(cat => cat.value).join(",")}`
-      );
+      const url = `${API_URL}/sales/most-sold-items?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}`;
+      const response = await fetch(url);
       const data = await response.json();
-      setMostSoldItems(data);
+      setMostSoldItems(data || []);
     } catch (error) {
       console.error("Error fetching most sold items:", error);
     }
   };
 
+  // 6) Fetch most sold items by price
   const fetchMostSoldItemsByPrice = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/sales/most-sold-items-by-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers.map(s => s.value).join(",")}&sellerCategories=${selectedSellerCategories.map(cat => cat.value).join(",")}&articleNames=${selectedArticleNames.map(a => a.value).join(",")}&categories=${selectedCategories.map(cat => cat.value).join(",")}`
-      );
+      const url = `${API_URL}/sales/most-sold-items-by-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}`;
+      const response = await fetch(url);
       const data = await response.json();
-      setMostSoldItemsByPrice(data);
+      setMostSoldItemsByPrice(data || []);
     } catch (error) {
       console.error("Error fetching most sold items by price:", error);
     }
   };
 
-  // New fetch function for Daily Sales data (for the chart)
+  // 7) Fetch daily sales (for the chart)
   const fetchDailySales = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers.map(s => s.value).join(",")}&sellerCategories=${selectedSellerCategories.map(cat => cat.value).join(",")}&articleNames=${selectedArticleNames.map(a => a.value).join(",")}&categories=${selectedCategories.map(cat => cat.value).join(",")}`
-      );
+      const url = `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}`;
+      const response = await fetch(url);
       const data = await response.json();
-      setDailySales(data);
+      setDailySales(data || []);
     } catch (error) {
       console.error("Error fetching daily sales:", error);
     }
   };
 
-  // Dropdown fetch functions
+  // ---------- DROPDOWN FETCHES ----------
   const fetchSellers = async () => {
     try {
       const response = await fetch(`${API_URL}/sales/sellers`);
       const data = await response.json();
-      setSellers(data.map(s => ({ value: s, label: s })));
+      setSellers(data.map((s) => ({ value: s, label: s })));
     } catch (error) {
       console.error("Error fetching sellers:", error);
     }
@@ -142,13 +212,12 @@ const Home = () => {
     try {
       const response = await fetch(`${API_URL}/sales/seller-categories`);
       const data = await response.json();
-      setSellerCategories(data.map(cat => ({ value: cat, label: cat })));
+      setSellerCategories(data.map((cat) => ({ value: cat, label: cat })));
     } catch (error) {
       console.error("Error fetching seller categories:", error);
     }
   };
 
-  // Dynamic fetch for Categories based on filters
   const fetchCategories = async () => {
     try {
       let url = `${API_URL}/sales/categories?`;
@@ -157,19 +226,20 @@ const Home = () => {
         queryParams.push(`startDate=${startDate.toISOString()}`);
         queryParams.push(`endDate=${endDate.toISOString()}`);
       }
-      if (selectedSellers && selectedSellers.length > 0) {
-        queryParams.push(`sellers=${selectedSellers.map(s => s.value).join(",")}`);
+      if (selectedSellers?.length) {
+        queryParams.push(`sellers=${selectedSellers.map((s) => s.value).join(",")}`);
       }
-      if (selectedSellerCategories && selectedSellerCategories.length > 0) {
-        queryParams.push(`sellerCategories=${selectedSellerCategories.map(sc => sc.value).join(",")}`);
+      if (selectedSellerCategories?.length) {
+        queryParams.push(`sellerCategories=${selectedSellerCategories.map((sc) => sc.value).join(",")}`);
       }
-      if (selectedArticleNames && selectedArticleNames.length > 0) {
-        queryParams.push(`articleNames=${selectedArticleNames.map(a => a.value).join(",")}`);
+      if (selectedArticleNames?.length) {
+        queryParams.push(`articleNames=${selectedArticleNames.map((a) => a.value).join(",")}`);
       }
       url += queryParams.join("&");
+
       const response = await fetch(url);
       const data = await response.json();
-      setCategories(data.map(cat => ({ value: cat, label: cat })));
+      setCategories(data.map((cat) => ({ value: cat, label: cat })));
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -179,39 +249,32 @@ const Home = () => {
     try {
       let url = `${API_URL}/sales/article-names?`;
       const queryParams = [];
-      if (selectedCategories && selectedCategories.length > 0) {
-        queryParams.push(`categories=${selectedCategories.map(cat => cat.value).join(",")}`);
+      if (selectedCategories?.length) {
+        queryParams.push(`categories=${selectedCategories.map((cat) => cat.value).join(",")}`);
       }
-      if (selectedSellers && selectedSellers.length > 0) {
-        queryParams.push(`sellers=${selectedSellers.map(s => s.value).join(",")}`);
+      if (selectedSellers?.length) {
+        queryParams.push(`sellers=${selectedSellers.map((s) => s.value).join(",")}`);
       }
-      if (selectedSellerCategories && selectedSellerCategories.length > 0) {
-        queryParams.push(`sellerCategories=${selectedSellerCategories.map(sc => sc.value).join(",")}`);
+      if (selectedSellerCategories?.length) {
+        queryParams.push(`sellerCategories=${selectedSellerCategories.map((sc) => sc.value).join(",")}`);
       }
       if (startDate && endDate) {
         queryParams.push(`startDate=${startDate.toISOString()}`);
         queryParams.push(`endDate=${endDate.toISOString()}`);
       }
       url += queryParams.join("&");
+
       const response = await fetch(url);
       const data = await response.json();
-      setArticleNames(data.map(article => ({ value: article, label: article })));
+      setArticleNames(data.map((article) => ({ value: article, label: article })));
     } catch (error) {
       console.error("Error fetching article names:", error);
     }
   };
 
-  // Re-fetch metrics whenever any filter changes
-  useEffect(() => {
-    fetchTotalSales();
-    fetchTotalQuantity();
-    fetchAvgArticlePrice();
-    fetchMostSoldItems();
-    fetchMostSoldItemsByPrice();
-    fetchDailySales();
-  }, [startDate, endDate, selectedSellers, selectedSellerCategories, selectedArticleNames, selectedCategories]);
+  // ---------- USE EFFECTS ----------
 
-  // Fetch dropdown options on mount
+  // 1) On mount, fetch initial dropdown data
   useEffect(() => {
     fetchSellers();
     fetchSellerCategories();
@@ -219,86 +282,55 @@ const Home = () => {
     fetchArticleNames();
   }, []);
 
-  // Re-fetch Article Names when related filters change
+  // 2) Re-fetch metrics whenever filters change
   useEffect(() => {
-    fetchArticleNames();
-  }, [selectedCategories, selectedSellers, selectedSellerCategories, startDate, endDate]);
+    fetchTotalSales();
+    fetchTotalQuantity();
+    fetchAvgArticlePrice();
+    fetchOrderCount(); // only if you have an endpoint for it
+    fetchMostSoldItems();
+    fetchMostSoldItemsByPrice();
+    fetchDailySales();
+  }, [
+    startDate,
+    endDate,
+    selectedSellers,
+    selectedSellerCategories,
+    selectedArticleNames,
+    selectedCategories,
+  ]);
 
-  // Re-fetch Categories when related filters change
-  useEffect(() => {
-    fetchCategories();
-  }, [selectedSellers, selectedSellerCategories, selectedArticleNames, startDate, endDate]);
-
-  useEffect(() => {
-    if (selectedSellerCategories.length > 0) {
-      fetchArticleNames().then(() => {
-        setSelectedArticleNames(articleNames);
-      });
-    }
-  }, [selectedSellerCategories]);
-
-  // Prepare data for Nivo Line Chart:
-  // Transform dailySales into the format: [{ id, data: [{ x, y }, ...] }]
-  const nivoData = [
-    {
-      id: "Daily Sales",
-      data: dailySales.map(item => ({
-        x: item.date,
-        y: Number(item.total)
-      }))
-    }
-  ];
-
+  // ---------- CHART DATA ----------
   const barData = (dailySales || [])
-    .filter(item => item && item.date && item.total !== undefined)
-    .map(item => ({
+    .filter((item) => item && item.date && item.total !== undefined)
+    .map((item) => ({
       date: item.date,
-      total: Number(item.total)
+      total: Number(item.total),
     }));
 
-  // ...existing chart tooltip code...
+  const averageTotal =
+    barData.reduce((sum, item) => sum + item.total, 0) / (barData.length || 1);
 
-  const CustomTooltip = ({ value, indexValue, average }) => (
-    <div
-      style={{
-        padding: "8px",
-        background: "white",
-        border: "1px solid #ccc",
-      }}
-    >
+  const CustomTooltip = ({ value, indexValue }) => (
+    <Box p="8px" bg="white" border="1px solid #ccc">
       <strong>{indexValue}</strong>
       <br />
-      Total Article Price: <span style={{ fontWeight: "bold", color: "black" }}>{Number(value).toLocaleString()} ALL</span>
-      <br />
-    </div>
+      Total Article Price:{" "}
+      <Box as="span" fontWeight="bold" color="black">
+        {Number(value).toLocaleString()} ALL
+      </Box>
+    </Box>
   );
 
-  const AverageTooltip = ({ average }) => (
-    <div
-      style={{
-        padding: "8px",
-        background: "white",
-        border: "1px solid #ccc",
-      }}
-    >
-      <strong>Average</strong>
-      <br />
-      Average ALL: <span style={{ fontWeight: "bold", color: "black" }}>{Number(average).toLocaleString()} ALL</span>
-    </div>
-  );
-
-  // Calculate the average value of the total field in the barData
-  const averageTotal = barData.reduce((sum, item) => sum + item.total, 0) / barData.length;
-
+  // ---------- RENDER ----------
   return (
-    <div>
-      <h1 style={{ color: "white" }}>Home Page</h1>
-      <Grid templateColumns="repeat(4, 1fr)" gap={6} mb="6">
+    <Box bg="gray.900" minH="100vh" p={4} color="gray.100">
+      <Heading mb={6} textAlign="center">
+        Restaurant Dashboard
+      </Heading>
 
-
-
-
-        {/* Total Sales */} 
+      {/* Top Metrics */}
+      <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={6}>
         <GridItem>
           <Card bg="gray.800">
             <CardBody>
@@ -316,27 +348,17 @@ const Home = () => {
             </CardBody>
           </Card>
         </GridItem>
- 
-
-
-        {/* Total Quantity */}
-
         <GridItem>
           <Card bg="gray.800">
             <CardBody>
               <Stat>
                 <StatLabel>Total Quantity</StatLabel>
-                <StatNumber>
-                  {parseFloat(totalQuantity).toFixed(0)}
-                </StatNumber>
+                <StatNumber>{parseFloat(totalQuantity).toFixed(0)}</StatNumber>
                 <StatHelpText>Based on selected filters</StatHelpText>
               </Stat>
             </CardBody>
           </Card>
         </GridItem>
-
-
-        {/* Average Article Price */}
         <GridItem>
           <Card bg="gray.800">
             <CardBody>
@@ -356,9 +378,6 @@ const Home = () => {
             </CardBody>
           </Card>
         </GridItem>
-
-
-        {/* Order Count */}
         <GridItem>
           <Card bg="gray.800">
             <CardBody>
@@ -372,227 +391,171 @@ const Home = () => {
         </GridItem>
       </Grid>
 
-      {/* Filter Row */}
-      <Grid gap={6} mb="6" templateColumns={{ base: "repeat(1,1fr)", lg: "repeat(5,1fr)" }}>
-        {/* Date Range Filter */}
-        <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white">Date Range</StatLabel>
-                <Box>
-                  <StatLabel color="white">Start Date</StatLabel>
-                  <Box zIndex="1000">
-                    <DatePicker selected={startDate} onChange={setStartDate} portalId="root-portal" />
-                  </Box>
-                </Box>
-                <Box mt={4}>
-                  <StatLabel color="white">End Date</StatLabel>
-                  <Box zIndex="1000">
-                    <DatePicker selected={endDate} onChange={setEndDate} portalId="root-portal" />
-                  </Box>
-                </Box>
-              
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-        {/* Seller Filter */}
-        <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white">Seller</StatLabel>
-                <Select
-                  isMulti
-                  options={sellers}
-                  onChange={setSelectedSellers}
-                  placeholder="Select sellers"
-                  menuPortalTarget={document.body}
-                  styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                  value={selectedSellers}
-                />
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-        {/* Seller Category Filter */}
-        <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white">Seller Category</StatLabel>
-                <Select
-                  isMulti
-                  options={sellerCategories}
-                  onChange={setSelectedSellerCategories}
-                  placeholder="Select seller categories"
-                  menuPortalTarget={document.body}
-                  styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                  value={selectedSellerCategories}
-                />
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-        {/* Article Name Filter */}
-        <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white">Article Name</StatLabel>
-                <Box height="200px" overflow="auto">
-                  <Select
-                    isMulti
-                    options={articleNames}
-                    onChange={setSelectedArticleNames}
-                    placeholder="Select article names"
-                    menuPortalTarget={document.body}
-                    styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                    value={selectedArticleNames}
-                  />
-                </Box>
-                <Button mt={2} colorScheme="teal" size="sm" onClick={() => setSelectedArticleNames(articleNames)}>
-                  Select All
-                </Button>
-                <Button mt={2} ml={2} colorScheme="red" size="sm" onClick={() => setSelectedArticleNames([])}>
-                  Deselect All
-                </Button>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-        {/* Category Filter */}
-        <GridItem>
-          <Card overflow="hidden" variant="outline" bg="blackAlpha.900">
-            <CardBody>
-              <Stat>
-                <StatLabel color="white">Category</StatLabel>
-                <Select
-                  isMulti
-                  options={categories}
-                  onChange={setSelectedCategories}
-                  placeholder="Select categories"
-                  menuPortalTarget={document.body}
-                  styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                  value={selectedCategories}
-                />
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </Grid>
+      {/* Filter Section */}
+      <Card bg="gray.800" mb={6}>
+        <CardBody>
+          <Heading size="md" mb={4}>
+            Filters
+          </Heading>
+          <Flex wrap="wrap" gap={4}>
+            {/* Date Range */}
+            <Box>
+              <Box mb={2}>Start Date</Box>
+              <DatePicker
+                selected={startDate}
+                onChange={setStartDate}
+                portalId="root-portal"
+              />
+            </Box>
+            <Box>
+              <Box mb={2}>End Date</Box>
+              <DatePicker
+                selected={endDate}
+                onChange={setEndDate}
+                portalId="root-portal"
+              />
+            </Box>
+            {/* Seller */}
+            <Box minW="200px">
+              <Box mb={2}>Seller</Box>
+              <Select
+                isMulti
+                options={sellers}
+                onChange={setSelectedSellers}
+                placeholder="Select sellers"
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                value={selectedSellers}
+              />
+            </Box>
+            {/* Seller Category */}
+            <Box minW="200px">
+              <Box mb={2}>Seller Category</Box>
+              <Select
+                isMulti
+                options={sellerCategories}
+                onChange={setSelectedSellerCategories}
+                placeholder="Select categories"
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                value={selectedSellerCategories}
+              />
+            </Box>
+            {/* Article Name */}
+            <Box minW="200px">
+              <Box mb={2}>Article Name</Box>
+              <Select
+                isMulti
+                options={articleNames}
+                onChange={setSelectedArticleNames}
+                placeholder="Select articles"
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                value={selectedArticleNames}
+              />
+            </Box>
+            {/* Category */}
+            <Box minW="200px">
+              <Box mb={2}>Category</Box>
+              <Select
+                isMulti
+                options={categories}
+                onChange={setSelectedCategories}
+                placeholder="Select categories"
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                value={selectedCategories}
+              />
+            </Box>
+            {/* Fetch Button */}
+            <Box alignSelf="flex-end">
+              <Button
+                colorScheme="teal"
+                onClick={() => {
+                  // Force re-fetch if user wants to manually click
+                  fetchTotalSales();
+                  fetchTotalQuantity();
+                  fetchAvgArticlePrice();
+                  fetchOrderCount();
+                  fetchMostSoldItems();
+                  fetchMostSoldItemsByPrice();
+                  fetchDailySales();
+                }}
+              >
+                Fetch Data
+              </Button>
+            </Box>
+          </Flex>
+        </CardBody>
+      </Card>
 
-      <div style={{ height: 400, marginTop: "2rem" }}>
-        <h3 style={{ color: "white", textAlign: "center" }}>Daily Sales</h3>
-        <ResponsiveBar
-          data={barData}
-          keys={["total"]}
-          indexBy="date"
-          margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
-          padding={0.3}
-          valueScale={{ type: "linear" }}
-          indexScale={{ type: "band", round: true }}
-          colors={() => "#00008B"}
-          borderColor={{ theme: 'background' }}
-          tooltip={({ value, indexValue }) => <CustomTooltip value={value} indexValue={indexValue} average={averageTotal} />}
-          axisTop={null}
-          axisRight={null}
-          axisBottom={{
-            tickSize: 5,
-            tickPadding: 5,
-            tickRotation: 0,
-            legend: "",
-            legendOffset: 32,
-            legendPosition: "middle",
-          }}
-          axisLeft={{
-            tickSize: 5,
-            tickPadding: 5,
-            tickRotation: 0,
-            legend: "  ",
-            legendOffset: -40,
-            legendPosition: "middle",
-          }}
-          labelSkipWidth={12}
-          labelSkipHeight={12}
-          labelTextColor="white"
-          theme={{
-            axis: {
-              ticks: {
-                text: {
-                  fontSize: 12,
-                  fontWeight: "bold",
-                  fill: "#000000",
-                  fontFamily: "Arial, sans-serif",
+      {/* Chart Section */}
+      <Box bg="gray.800" p={4} borderRadius="md" mb={6}>
+        <Heading size="md" mb={4}>
+          Daily Sales
+        </Heading>
+        <Box height="400px">
+          <ResponsiveBar
+            data={barData}
+            keys={["total"]}
+            indexBy="date"
+            margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
+            padding={0.3}
+            valueScale={{ type: "linear" }}
+            indexScale={{ type: "band", round: true }}
+            colors={() => "#008080"}
+            borderColor={{ theme: "background" }}
+            tooltip={({ value, indexValue }) => (
+              <CustomTooltip value={value} indexValue={indexValue} />
+            )}
+            axisTop={null}
+            axisRight={null}
+            axisBottom={{
+              tickSize: 5,
+              tickPadding: 5,
+              tickRotation: 0,
+              legend: "",
+              legendOffset: 32,
+              legendPosition: "middle",
+            }}
+            axisLeft={{
+              tickSize: 5,
+              tickPadding: 5,
+              tickRotation: 0,
+              legend: "",
+              legendOffset: -40,
+              legendPosition: "middle",
+            }}
+            labelSkipWidth={12}
+            labelSkipHeight={12}
+            labelTextColor="white"
+            theme={{
+              axis: {
+                ticks: {
+                  text: {
+                    fontSize: 12,
+                    fontWeight: "bold",
+                    fill: "#ffffff",
+                  },
                 },
               },
-              legend: {
-                text: {
-                  fontSize: 14,
-                  fontWeight: "bold",
-                  fill: "#000000",
-                  fontFamily: "Arial, sans-serif",
-                },
+            }}
+            markers={[
+              {
+                axis: "y",
+                value: averageTotal,
+                lineStyle: { stroke: "#b0413e", strokeWidth: 2 },
+                legend: "Average",
+                legendOrientation: "vertical",
+                legendPosition: "right",
               },
-            },
-          }}
-          markers={[
-            {
-              axis: 'y',
-              value: averageTotal,
-              lineStyle: { stroke: '#b0413e', strokeWidth: 2 },
-              legend: 'Average',
-              legendOrientation: 'vertical',
-              legendPosition: 'right',
-            },
-          ]}
-          layers={[
-            'grid',
-            'axes',
-            'bars',
-            'markers',
-            'legends',
-            ({ bars, xScale, yScale }) => (
-              <g>
-                {bars.map(bar => (
-                  <rect
-                    key={bar.key}
-                    x={bar.x}
-                    y={yScale(averageTotal)}
-                    width={bar.width}
-                    height={2}
-                    fill="transparent"
-                    onMouseEnter={(event) => {
-                      const tooltip = document.createElement('div');
-                      tooltip.innerHTML = `<div style="padding: 8px; background: white; border: 1px solid #ccc;">
-                        <strong>Average</strong><br />
-                        Average Value: <span style="font-weight: bold; color: black;">${Number(averageTotal).toLocaleString()} ALL</span>
-                      </div>`;
-                      tooltip.style.position = 'absolute';
-                      tooltip.style.pointerEvents = 'none';
-                      tooltip.style.top = `${event.clientY}px`;
-                      tooltip.style.left = `${event.clientX}px`;
-                      tooltip.id = 'average-tooltip';
-                      document.body.appendChild(tooltip);
-                    }}
-                    onMouseLeave={() => {
-                      const tooltip = document.getElementById('average-tooltip');
-                      if (tooltip) {
-                        document.body.removeChild(tooltip);
-                      }
-                    }}
-                  />
-                ))}
-              </g>
-            ),
-          ]}
-        />
-      </div>
+            ]}
+          />
+        </Box>
+      </Box>
 
-      {/* Most Sold Items Sections */}
-      <Grid gap={6} mb="6" templateColumns={{ base: "repeat(1,1fr)", lg: "repeat(2,1fr)" }}>
-        <GridItem>
+      {/* Most Sold Items */}
+      <Grid gap={6} templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}>
         <Card bg="gray.800">
           <CardBody>
             <Heading size="md" mb={4}>
@@ -607,8 +570,6 @@ const Home = () => {
             </Stack>
           </CardBody>
         </Card>
-        </GridItem>
-        <GridItem>
         <Card bg="gray.800">
           <CardBody>
             <Heading size="md" mb={4}>
@@ -626,9 +587,8 @@ const Home = () => {
             </Stack>
           </CardBody>
         </Card>
-        </GridItem>
       </Grid>
-    </div>
+    </Box>
   );
 };
 
