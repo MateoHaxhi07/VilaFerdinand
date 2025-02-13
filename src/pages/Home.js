@@ -648,41 +648,7 @@ const Home = () => {
         </Box>
       </Box>
 
-      {/* Pie Chart Section */}
-      <Box height="300px" mb={6}>
-        <ResponsivePie
-          data={pieData}
-          margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
-          innerRadius={0.4}
-          padAngle={0.7}
-          cornerRadius={3}
-          colors={{ scheme: "set3" }}
-          borderWidth={1}
-          borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
-          radialLabelsSkipAngle={10}
-          radialLabelsTextColor="#ffffff"
-          radialLabelsLinkColor="#ffffff"
-          sliceLabelsSkipAngle={10}
-          sliceLabelsTextColor="#000000"
-          legends={[
-            {
-              anchor: "bottom",
-              direction: "row",
-              justify: false,
-              translateX: 0,
-              translateY: 56,
-              itemsSpacing: 4,
-              itemWidth: 100,
-              itemHeight: 18,
-              itemTextColor: "#ffffff",
-              itemDirection: "left-to-right",
-              itemOpacity: 1,
-              symbolSize: 18,
-              symbolShape: "circle",
-            },
-          ]}
-        />
-      </Box>
+      
 
       {/* Most Sold Items */}
       <Grid gap={6} templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}>
@@ -744,11 +710,70 @@ const Home = () => {
                   )}
                 </Stack>
               </Box>
+
+
+              <Box height="300px" mb={6}>
+  <ResponsivePie
+    data={pieData}
+    margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+    innerRadius={0.4}
+    padAngle={0.7}
+    cornerRadius={3}
+    colors={{ scheme: "set3" }}
+    borderWidth={1}
+    borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
+    radialLabelsSkipAngle={10}
+    radialLabelsTextColor="#ffffff"
+    radialLabelsLinkColor="#ffffff"
+    sliceLabelsSkipAngle={10}
+    sliceLabelsTextColor="#000000"
+    tooltip={({ datum }) => (
+      <Box p="8px" bg="white" border="1px solid #ccc">
+        <strong style={{ color: "black", fontWeight: "bold" }}>{datum.id}</strong>
+        <br />
+        <Box as="span" fontWeight="bold" color="black">
+          {datum.value.toLocaleString()} ALL
+        </Box>
+      </Box>
+    )}
+    sliceLabel={(datum) => (
+      <text style={{ fontWeight: "bold", fill: "black" }}>{datum.id}</text>
+    )}
+    legends={[
+      {
+        anchor: "bottom",
+        direction: "row",
+        justify: false,
+        translateX: 0,
+        translateY: 56,
+        itemsSpacing: 4,
+        itemWidth: 100,
+        itemHeight: 18,
+        itemTextColor: "#ffffff",
+        itemDirection: "left-to-right",
+        itemOpacity: 1,
+        symbolSize: 18,
+        symbolShape: "circle",
+      },
+    ]}
+  />
+</Box>
             </Grid>
           </CardBody>
         </Card>
       </Grid>
     </Box>
+
+
+
+
+
+
+
+
+
+
+
   );
 };
 
