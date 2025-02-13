@@ -13,6 +13,7 @@ import {
   StatNumber,
   StatHelpText,
   Stack,
+  Select as ChakraSelect,
   Flex,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
@@ -637,7 +638,7 @@ const Home = () => {
         </Box>
       </Box>
 
-      {/* Table Section */}
+      {/* Table Sectiondd */}
       <Box p={{ base: 2, md: 5 }}>
         <Heading as="h1" size={{ base: "lg", md: "xl" }} mb={{ base: 4, md: 5 }}>
           Most Sold Items by Total Article Price
@@ -655,7 +656,7 @@ const Home = () => {
               <Table variant="striped" colorScheme="teal">
                 <Thead>
                   <Tr>
-                    <Th fontSize={{ base: "sm", md: "md" }}>Rank</Th>
+                    <Th fontSize={{ base: "sm", md: "md" }}>Ranking</Th>
                     <Th fontSize={{ base: "sm", md: "md" }}>Article Name</Th>
                     <Th fontSize={{ base: "sm", md: "md" }}>Total Quantity Sold</Th>
                     <Th fontSize={{ base: "sm", md: "md" }}>Total Article Price (ALL)</Th>
