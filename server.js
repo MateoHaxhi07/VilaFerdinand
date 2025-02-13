@@ -43,16 +43,8 @@ app.get("/sales/all-data", async (req, res) => {
     const categoryArray = categories ? categories.split(",") : [];
 
     let query = `
-      SELECT 
-        "Order_ID",
-        "Seller", 
-        "Article_Name", 
-        "Category", 
-        "Quantity"::numeric, 
-        "Article_Price"::numeric,
-        "Total_Article_Price"::numeric, 
-        "Datetime", 
-        "Seller Category"
+      SELECT "Order_ID","Seller", "Article_Name", "Category", "Quantity"::numeric, "Article_Price"::numeric,
+             "Total_Article_Price"::numeric, "Datetime", "Seller Category"
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
@@ -80,7 +72,6 @@ app.get("/sales/all-data", async (req, res) => {
     }
     query += ` ORDER BY "Datetime" DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
-    paramIndex += 2;
 
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -203,30 +194,25 @@ app.get("/sales/article-names", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Endpoint for most sold items by quantity
 app.get("/sales/most-sold-items", async (req, res) => {
   try {
-    const { startDate, endDate, sellers, sellerCategories, articleNames, categories, page = 1, limit = 10 } = req.query;
-
+    const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
-
-    const offset = (page - 1) * limit;
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
     const categoryArray = categories ? categories.split(",") : [];
-
     let query = `
       SELECT "Article_Name", SUM("Quantity") AS total_quantity
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-
     const params = [startDate, endDate];
     let paramIndex = 3;
-
-    // Apply optional filters
     if (sellerArray.length) {
       query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
       params.push(sellerArray);
@@ -247,22 +233,64 @@ app.get("/sales/most-sold-items", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
-
-    // Add GROUP BY and ORDER BY correctly
     query += `
       GROUP BY "Article_Name"
       ORDER BY total_quantity DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
+      LIMIT 10;
     `;
-
-    // Add pagination parameters
-    params.push(parseInt(limit, 10), parseInt(offset, 10));
-
-    // Execute the query
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
-    console.error("Database query failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint for most sold items by price
+app.get("/sales/most-sold-items-by-price", async (req, res) => {
+  try {
+    const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Please provide startDate and endDate" });
+    }
+    const sellerArray = sellers ? sellers.split(",") : [];
+    const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
+    const articleNameArray = articleNames ? articleNames.split(",") : [];
+    const categoryArray = categories ? categories.split(",") : [];
+    let query = `
+      SELECT "Article_Name", SUM("Total_Article_Price") AS total_price
+      FROM "sales"
+      WHERE "Datetime" BETWEEN $1 AND $2
+    `;
+    const params = [startDate, endDate];
+    let paramIndex = 3;
+    if (sellerArray.length) {
+      query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
+      params.push(sellerArray);
+      paramIndex++;
+    }
+    if (sellerCategoryArray.length) {
+      query += ` AND "Seller Category" = ANY($${paramIndex}::text[])`;
+      params.push(sellerCategoryArray);
+      paramIndex++;
+    }
+    if (articleNameArray.length) {
+      query += ` AND "Article_Name" = ANY($${paramIndex}::text[])`;
+      params.push(articleNameArray);
+      paramIndex++;
+    }
+    if (categoryArray.length) {
+      query += ` AND "Category" = ANY($${paramIndex}::text[])`;
+      params.push(categoryArray);
+      paramIndex++;
+    }
+    query += `
+      GROUP BY "Article_Name"
+      ORDER BY total_price DESC
+      LIMIT 10;
+    `;
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -307,6 +335,28 @@ app.get("/sales/total-sales", async (req, res) => {
     }
     const result = await pool.query(query, params);
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/sales/sales-by-seller-category", async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Please provide startDate and endDate" });
+    }
+
+    const query = `
+      SELECT "Seller Category", SUM("Total_Article_Price") AS total_sales
+      FROM "sales"
+      WHERE "Datetime" BETWEEN $1 AND $2
+      GROUP BY "Seller Category"
+      ORDER BY total_sales DESC;
+    `;
+
+    const result = await pool.query(query, [startDate, endDate]);
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

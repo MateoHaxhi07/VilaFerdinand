@@ -12,7 +12,6 @@ import {
   StatLabel,
   StatNumber,
   StatHelpText,
-  Button,
   Stack,
   Flex,
 } from "@chakra-ui/react";
@@ -20,8 +19,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { ResponsiveBar } from "@nivo/bar";
-
-
+import { ResponsivePie } from "@nivo/pie";
 
 // Use the same API base as your Home.js
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -47,55 +45,56 @@ const Home = () => {
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [avgArticlePrice, setAvgArticlePrice] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
-
   const [mostSoldItems, setMostSoldItems] = useState([]);
   const [mostSoldItemsByPrice, setMostSoldItemsByPrice] = useState([]);
   const [dailySales, setDailySales] = useState([]);
+  const [pieData, setPieData] = useState([]);
 
+  // ---------- CUSTOM SELECT STYLES ----------
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
-      backgroundColor: '#2D3748',
-      borderColor: state.isFocused ? '#63B3ED' : '#4A5568',
-      color: '#fff',
-      fontWeight: 'bold',
-      minHeight: '40px',
+      backgroundColor: "#2D3748",
+      borderColor: state.isFocused ? "#63B3ED" : "#4A5568",
+      color: "#fff",
+      fontWeight: "bold",
+      minHeight: "40px",
     }),
     menu: (base) => ({
       ...base,
-      backgroundColor: '#2D3748',
+      backgroundColor: "#2D3748",
     }),
     option: (base, state) => ({
       ...base,
-      backgroundColor: state.isFocused ? '#4A5568' : '#2D3748',
-      color: '#fff',
-      fontWeight: 'bold',
+      backgroundColor: state.isFocused ? "#4A5568" : "#2D3748",
+      color: "#fff",
+      fontWeight: "bold",
     }),
     singleValue: (base) => ({
       ...base,
-      color: '#fff',
-      fontWeight: 'bold',
+      color: "#fff",
+      fontWeight: "bold",
     }),
     multiValue: (base) => ({
       ...base,
-      backgroundColor: '#4A5568',
+      backgroundColor: "#4A5568",
     }),
     multiValueLabel: (base) => ({
       ...base,
-      color: '#fff',
-      fontWeight: 'bold',
+      color: "#fff",
+      fontWeight: "bold",
     }),
     placeholder: (base) => ({
       ...base,
-      color: '#A0AEC0',
-      fontWeight: 'bold',
+      color: "#A0AEC0",
+      fontWeight: "bold",
     }),
   };
 
-  // Dropdown options
+  // Dropdown options state
   const [sellers, setSellers] = useState([]);
-  const [sellerCategories, setSellerCategories] = useState([]);
-  const [articleNames, setArticleNames] = useState([]);
+  const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
+  const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [categories, setCategories] = useState([]);
 
   // ---------- FETCH FUNCTIONS ----------
@@ -104,13 +103,13 @@ const Home = () => {
   const fetchTotalSales = async () => {
     try {
       const url = `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
-        .map(s => s.value)
+        .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
+        .map((a) => a.value)
         .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -124,13 +123,13 @@ const Home = () => {
   const fetchTotalQuantity = async () => {
     try {
       const url = `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
-        .map(s => s.value)
+        .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
+        .map((a) => a.value)
         .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -144,13 +143,13 @@ const Home = () => {
   const fetchAvgArticlePrice = async () => {
     try {
       const url = `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
-        .map(s => s.value)
+        .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
+        .map((a) => a.value)
         .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -160,17 +159,17 @@ const Home = () => {
     }
   };
 
-  // 4) Fetch order count (if your backend has such an endpoint)
+  // 4) Fetch order count
   const fetchOrderCount = async () => {
     try {
       const url = `${API_URL}/sales/order-count?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
-        .map(s => s.value)
+        .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
+        .map((a) => a.value)
         .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -184,13 +183,13 @@ const Home = () => {
   const fetchMostSoldItems = async () => {
     try {
       const url = `${API_URL}/sales/most-sold-items?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
-        .map(s => s.value)
+        .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
+        .map((a) => a.value)
         .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -204,13 +203,13 @@ const Home = () => {
   const fetchMostSoldItemsByPrice = async () => {
     try {
       const url = `${API_URL}/sales/most-sold-items-by-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
-        .map(s => s.value)
+        .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
+        .map((a) => a.value)
         .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -224,13 +223,13 @@ const Home = () => {
   const fetchDailySales = async () => {
     try {
       const url = `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
-        .map(s => s.value)
+        .map((s) => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
+        .map((a) => a.value)
         .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
+        .map((cat) => cat.value)
         .join(",")}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -251,11 +250,11 @@ const Home = () => {
     }
   };
 
-  const fetchSellerCategories = async () => {
+  const fetchSellerCategoriesOptions = async () => {
     try {
       const response = await fetch(`${API_URL}/sales/seller-categories`);
       const data = await response.json();
-      setSellerCategories(data.map((cat) => ({ value: cat, label: cat })));
+      setSellerCategoriesOptions(data.map((cat) => ({ value: cat, label: cat })));
     } catch (error) {
       console.error("Error fetching seller categories:", error);
     }
@@ -279,7 +278,6 @@ const Home = () => {
         queryParams.push(`articleNames=${selectedArticleNames.map((a) => a.value).join(",")}`);
       }
       url += queryParams.join("&");
-
       const response = await fetch(url);
       const data = await response.json();
       setCategories(data.map((cat) => ({ value: cat, label: cat })));
@@ -288,7 +286,7 @@ const Home = () => {
     }
   };
 
-  const fetchArticleNames = async () => {
+  const fetchArticleNamesOptions = async () => {
     try {
       let url = `${API_URL}/sales/article-names?`;
       const queryParams = [];
@@ -306,27 +304,64 @@ const Home = () => {
         queryParams.push(`endDate=${endDate.toISOString()}`);
       }
       url += queryParams.join("&");
-
       const response = await fetch(url);
       const data = await response.json();
-      setArticleNames(data.map((article) => ({ value: article, label: article })));
+      setArticleNamesOptions(data.map((article) => ({ value: article, label: article })));
     } catch (error) {
       console.error("Error fetching article names:", error);
     }
   };
 
   // ---------- USE EFFECTS ----------
-
-  // 1) On mount, fetch initial dropdown data
+  // On mount, fetch initial dropdown data
   useEffect(() => {
     fetchSellers();
-    fetchSellerCategories();
+    fetchSellerCategoriesOptions();
     fetchCategories();
-    fetchArticleNames();
+    fetchArticleNamesOptions();
   }, []);
 
+  // Re-fetch metrics whenever filters change
   useEffect(() => {
-    const style = document.createElement('style');
+    fetchTotalSales();
+    fetchTotalQuantity();
+    fetchAvgArticlePrice();
+    fetchOrderCount();
+    fetchMostSoldItems();
+    fetchMostSoldItemsByPrice();
+    fetchDailySales();
+  }, [
+    startDate,
+    endDate,
+    selectedSellers,
+    selectedSellerCategories,
+    selectedArticleNames,
+    selectedCategories,
+  ]);
+
+  // Fetch pie chart data for seller category sales
+  useEffect(() => {
+    const fetchSalesBySellerCategory = async () => {
+      try {
+        const url = `${API_URL}/sales/sales-by-seller-category?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const formattedData = data.map((item) => ({
+          id: item["Seller Category"] || "Unknown",
+          label: item["Seller Category"] || "Unknown",
+          value: parseFloat(item.total_sales),
+        }));
+        setPieData(formattedData);
+      } catch (error) {
+        console.error("Error fetching sales by seller category:", error);
+      }
+    };
+    fetchSalesBySellerCategory();
+  }, [startDate, endDate]);
+
+  // Inject custom styles for DatePicker with cleanup
+  useEffect(() => {
+    const style = document.createElement("style");
     style.innerHTML = `
       .react-datepicker__input-container input {
         background-color: #2D3748 !important;
@@ -347,26 +382,10 @@ const Home = () => {
       }
     `;
     document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
-
-
-  // 2) Re-fetch metrics whenever filters change
-  useEffect(() => {
-    fetchTotalSales();
-    fetchTotalQuantity();
-    fetchAvgArticlePrice();
-    fetchOrderCount(); // only if you have an endpoint for it
-    fetchMostSoldItems();
-    fetchMostSoldItemsByPrice();
-    fetchDailySales();
-  }, [
-    startDate,
-    endDate,
-    selectedSellers,
-    selectedSellerCategories,
-    selectedArticleNames,
-    selectedCategories,
-  ]);
 
   // ---------- CHART DATA ----------
   const barData = (dailySales || [])
@@ -396,7 +415,7 @@ const Home = () => {
       <Heading mb={6} textAlign="center" fontWeight="bold">
         Restaurant Dashboard
       </Heading>
-  
+
       {/* Top Metrics */}
       <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={6}>
         <GridItem>
@@ -468,7 +487,7 @@ const Home = () => {
           </Card>
         </GridItem>
       </Grid>
-  
+
       {/* Filter Section */}
       <Card bg="gray.800" mb={6}>
         <CardBody>
@@ -478,29 +497,28 @@ const Home = () => {
           <Flex wrap="wrap" gap={4}>
             {/* Date Range */}
             <Box>
-    <Box mb={2} color="white" fontWeight="bold">
-      Start Date
-    </Box>
-    <DatePicker
-      selected={startDate}
-      onChange={setStartDate}
-      portalId="root-portal"
-      className="dark-datepicker"
-    />
-  </Box>
-  
-  <Box>
-    <Box mb={2} color="white" fontWeight="bold">
-      End Date
-    </Box>
-    <DatePicker
-      selected={endDate}
-      onChange={setEndDate}
-      portalId="root-portal"
-      className="dark-datepicker"
-    />
-  </Box>
-  
+              <Box mb={2} color="white" fontWeight="bold">
+                Start Date
+              </Box>
+              <DatePicker
+                selected={startDate}
+                onChange={setStartDate}
+                portalId="root-portal"
+                className="dark-datepicker"
+              />
+            </Box>
+            <Box>
+              <Box mb={2} color="white" fontWeight="bold">
+                End Date
+              </Box>
+              <DatePicker
+                selected={endDate}
+                onChange={setEndDate}
+                portalId="root-portal"
+                className="dark-datepicker"
+              />
+            </Box>
+
             {/* Seller */}
             <Box minW="200px">
               <Box mb={2} color="white" fontWeight="bold">
@@ -523,7 +541,7 @@ const Home = () => {
               </Box>
               <Select
                 isMulti
-                options={sellerCategories}
+                options={sellerCategoriesOptions}
                 onChange={setSelectedSellerCategories}
                 placeholder="Select categories"
                 menuPortalTarget={document.body}
@@ -538,7 +556,7 @@ const Home = () => {
               </Box>
               <Select
                 isMulti
-                options={articleNames}
+                options={articleNamesOptions}
                 onChange={setSelectedArticleNames}
                 placeholder="Select articles"
                 menuPortalTarget={document.body}
@@ -564,7 +582,7 @@ const Home = () => {
           </Flex>
         </CardBody>
       </Card>
-  
+
       {/* Chart Section */}
       <Box bg="gray.900" p={4} borderRadius="md" mb={6}>
         <Heading size="md" mb={4} color="white" fontWeight="bold">
@@ -629,58 +647,109 @@ const Home = () => {
           />
         </Box>
       </Box>
-  
+
+      {/* Pie Chart Section */}
+      <Box height="300px" mb={6}>
+        <ResponsivePie
+          data={pieData}
+          margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+          innerRadius={0.4}
+          padAngle={0.7}
+          cornerRadius={3}
+          colors={{ scheme: "set3" }}
+          borderWidth={1}
+          borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
+          radialLabelsSkipAngle={10}
+          radialLabelsTextColor="#ffffff"
+          radialLabelsLinkColor="#ffffff"
+          sliceLabelsSkipAngle={10}
+          sliceLabelsTextColor="#000000"
+          legends={[
+            {
+              anchor: "bottom",
+              direction: "row",
+              justify: false,
+              translateX: 0,
+              translateY: 56,
+              itemsSpacing: 4,
+              itemWidth: 100,
+              itemHeight: 18,
+              itemTextColor: "#ffffff",
+              itemDirection: "left-to-right",
+              itemOpacity: 1,
+              symbolSize: 18,
+              symbolShape: "circle",
+            },
+          ]}
+        />
+      </Box>
+
       {/* Most Sold Items */}
       <Grid gap={6} templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}>
-        {/* Combined Most Sold Items Card */}
-  <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
-    <CardBody>
-      <Heading size="md" mb={4} color="white" fontWeight="bold" textAlign="center">
-        Most Sold Items
-      </Heading>
-  
-      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
-        {/* Left Column: Most Sold Items by Quantity */}
-        <Box>
-    <Heading size="sm" mb={3} color="white" textAlign="center" borderBottom="2px solid white" pb={2}>
-      By Quantity
-    </Heading>
-    <Stack spacing={2}>
-      {mostSoldItems.length > 0 ? (
-        mostSoldItems.map((item, index) => (
-          <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
-            {index + 1}. {item.Article_Name}: {Math.floor(item.total_quantity).toLocaleString()} 
-          </Box>
-        ))
-      ) : (
-        <Box color="gray.300" textAlign="center">No data available</Box>
-      )}
-    </Stack>
-  </Box>
-  
-        {/* Right Column: Most Sold Items by Price */}
-        <Box>
-          <Heading size="sm" mb={3} color="white" textAlign="center" borderBottom="2px solid white" pb={2}>
-            By Total Sales
-          </Heading>
-          <Stack spacing={2}>
-            {mostSoldItemsByPrice.length > 0 ? (
-              mostSoldItemsByPrice.map((item, index) => (
-                <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
-                  {index + 1}. {item.Article_Name}: {Number(item.total_price).toLocaleString()} ALL
-                </Box>
-              ))
-            ) : (
-              <Box color="gray.300" textAlign="center">No data available</Box>
-            )}
-          </Stack>
-        </Box>
-      </Grid>
-    </CardBody>
-  </Card>
+        <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
+          <CardBody>
+            <Heading size="md" mb={4} color="white" fontWeight="bold" textAlign="center">
+              Most Sold Items
+            </Heading>
+            <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
+              {/* By Quantity */}
+              <Box>
+                <Heading
+                  size="sm"
+                  mb={3}
+                  color="white"
+                  textAlign="center"
+                  borderBottom="2px solid white"
+                  pb={2}
+                >
+                  By Quantity
+                </Heading>
+                <Stack spacing={2}>
+                  {mostSoldItems.length > 0 ? (
+                    mostSoldItems.map((item, index) => (
+                      <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
+                        {index + 1}. {item.Article_Name}: {Math.floor(item.total_quantity).toLocaleString()}
+                      </Box>
+                    ))
+                  ) : (
+                    <Box color="gray.300" textAlign="center">
+                      No data available
+                    </Box>
+                  )}
+                </Stack>
+              </Box>
+              {/* By Total Sales */}
+              <Box>
+                <Heading
+                  size="sm"
+                  mb={3}
+                  color="white"
+                  textAlign="center"
+                  borderBottom="2px solid white"
+                  pb={2}
+                >
+                  By Total Sales
+                </Heading>
+                <Stack spacing={2}>
+                  {mostSoldItemsByPrice.length > 0 ? (
+                    mostSoldItemsByPrice.map((item, index) => (
+                      <Box key={index} color="white" fontWeight="bold" bg="gray.800" p={2} borderRadius="md">
+                        {index + 1}. {item.Article_Name}: {Number(item.total_price).toLocaleString()} ALL
+                      </Box>
+                    ))
+                  ) : (
+                    <Box color="gray.300" textAlign="center">
+                      No data available
+                    </Box>
+                  )}
+                </Stack>
+              </Box>
+            </Grid>
+          </CardBody>
+        </Card>
       </Grid>
     </Box>
   );
-  };
-  
-  export default Home;
+};
+
+export default Home;
