@@ -256,7 +256,9 @@ app.get("/sales/most-sold-items-by-price", async (req, res) => {
     const articleNameArray = articleNames ? articleNames.split(",") : [];
     const categoryArray = categories ? categories.split(",") : [];
     let query = `
-      SELECT "Article_Name", SUM("Total_Article_Price") AS total_price
+      SELECT "Article_Name", 
+             SUM("Total_Article_Price") AS total_price,
+             SUM("Quantity") AS total_quantity
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
@@ -284,8 +286,7 @@ app.get("/sales/most-sold-items-by-price", async (req, res) => {
     }
     query += `
       GROUP BY "Article_Name"
-      ORDER BY total_price DESC
-      LIMIT 10;
+      ORDER BY total_price DESC;
     `;
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -511,6 +512,54 @@ app.get("/sales/daily-sales", async (req, res) => {
 
 
 
+// Endpoint for unique Order_ID count (order count)
+app.get("/sales/order-count", async (req, res) => {
+  try {
+    const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Please provide startDate and endDate" });
+    }
+
+    const sellerArray = sellers ? sellers.split(",") : [];
+    const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
+    const articleNameArray = articleNames ? articleNames.split(",") : [];
+    const categoryArray = categories ? categories.split(",") : [];
+
+    let query = `
+      SELECT COUNT(DISTINCT "Order_ID") AS order_count
+      FROM "sales"
+      WHERE "Datetime" BETWEEN $1 AND $2
+    `;
+    const params = [startDate, endDate];
+    let paramIndex = 3;
+
+    if (sellerArray.length) {
+      query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
+      params.push(sellerArray);
+      paramIndex++;
+    }
+    if (sellerCategoryArray.length) {
+      query += ` AND "Seller Category" = ANY($${paramIndex}::text[])`;
+      params.push(sellerCategoryArray);
+      paramIndex++;
+    }
+    if (articleNameArray.length) {
+      query += ` AND "Article_Name" = ANY($${paramIndex}::text[])`;
+      params.push(articleNameArray);
+      paramIndex++;
+    }
+    if (categoryArray.length) {
+      query += ` AND "Category" = ANY($${paramIndex}::text[])`;
+      params.push(categoryArray);
+      paramIndex++;
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 app.get('/', (req, res) => {
