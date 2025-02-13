@@ -10,6 +10,7 @@
     "@emotion/styled": "11.10.5",
     "@nivo/bar": "^0.88.0",
     "@nivo/line": "^0.88.0",
+    "@nivo/pie": "^0.88.0",
     "build": "^0.1.4",
     "concurrently": "^9.1.2",
     "cors": "^2.8.5",
