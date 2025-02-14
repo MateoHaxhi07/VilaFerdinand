@@ -1,0 +1,65 @@
+.custom-datepicker {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    background-color: #f9f9f9;
+    color: #333;
+    font-weight: bolder;
+  }
+  .custom-input {
+    font-size: 30px;
+    font-weight: bold;
+  }
+  .table-header {
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #61ca6b86;
+  }
+  
+  .table-row {
+    background-color: #fff;
+  }
+  .table-column {
+    padding: 20px;
+    font-size: 38px;
+    font-weight: bold;
+  }
+  .table-row:nth-of-type(odd) {
+    background-color: #f9f9f9;
+  }
+  
+  .table-container {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+  
+  .card-container {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+  }
+  
+  .card-header {
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ccc;
+  }
+
+  
+  .card-body {
+    padding: 16px;
+  }
+
+  button:hover {
+    transform: scale(1.05);
+    transition: all 0.3s ease;
+  }
+
+  .table-cell {
+    padding: 8px;
+    font-size: 18px;    
+    font-weight: bold   ;
+  }

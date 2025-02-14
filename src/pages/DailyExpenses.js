@@ -14,11 +14,17 @@ import {
   TableContainer,
   useToast,
   IconButton,
-  Flex
+  Flex,
+  Card,
+  CardBody,
+  CardHeader,
+  Stack,
+  StackDivider
 } from "@chakra-ui/react";
-import { DeleteIcon, AddIcon } from "@chakra-ui/icons";
+import { DeleteIcon, AddIcon, CalendarIcon,} from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import "./DailyExpenses.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -27,6 +33,9 @@ const SELLERS = ["KRISTI", "VERA", "JONI", "FLORI", "DEA", "ENISA"];
 
 // Maximum number of sets of expense columns we allow
 const MAX_EXPENSE_SETS = 15;
+
+// Define a light green color for rows
+const ROW_COLOR = "#e8f5e9";
 
 export default function ExpensesTableWithView() {
   const toast = useToast();
@@ -299,6 +308,21 @@ export default function ExpensesTableWithView() {
       });
     }
   };
+  const handleClearExpenses = () => {
+    setTableData(
+      SELLERS.map((seller) => ({
+        seller,
+        dailyTotal: "",
+        cashDailyTotal: "",
+        expenses: Array.from({ length: MAX_EXPENSE_SETS }, () => ({
+          expense: "",
+          amount: "",
+          description: "",
+        })),
+      }))
+    );
+    toast({ title: "Cleared", description: "All expense inputs have been cleared", status: "info" });
+  };
 
   // Delete an expense line
   const handleDeleteExpense = async (id) => {
@@ -339,26 +363,27 @@ export default function ExpensesTableWithView() {
         Vila Ferdinand - Expense Management
       </Heading>
 
-      {/* --- Expense Entry Section --- */}
-      <Box mb={6}>
-        <FormLabel>Select Date for Entry:</FormLabel>
+     {/* --- Expense Entry Section --- */}
+     <Box mb={10}>
+     <FormLabel fontWeight="bold" fontSize="2xl"> DATA: </FormLabel>
+     <CalendarIcon ml={1} boxSize={20} />
+
         <DatePicker
           selected={entryDate}
           onChange={setEntryDate}
           dateFormat="dd/MM/yyyy"
+          className="custom-datepicker"
         />
 
         <TableContainer
-          bg="white"
+          className="table-container"
           p={4}
-          borderRadius="md"
-          boxShadow="md"
           mt={4}
           overflowX="auto"
         >
           <Table variant="simple" border="1px solid black">
             <Thead>
-              <Tr>
+              <Tr className="table-header">
                 <Th>Seller</Th>
                 <Th>Daily Total</Th>
                 <Th>Cash Daily Total</Th>
@@ -375,19 +400,21 @@ export default function ExpensesTableWithView() {
 
             <Tbody>
               {tableData.map((row, rowIndex) => (
-                <Tr key={rowIndex}>
+                <Tr key={rowIndex} style={{ backgroundColor: ROW_COLOR }}>
                   <Td>{row.seller}</Td>
                   <Td>
                     <Input
+                      className="custom-input"
                       value={row.dailyTotal}
                       onChange={(e) =>
                         handleInputChange(rowIndex, "dailyTotal", e.target.value)
                       }
-                      placeholder="Enter total"
+                      placeholder="0 "
                     />
                   </Td>
                   <Td>
                     <Input
+                      className="custom-input"
                       value={row.cashDailyTotal}
                       onChange={(e) =>
                         handleInputChange(
@@ -396,7 +423,7 @@ export default function ExpensesTableWithView() {
                           e.target.value
                         )
                       }
-                      placeholder="Enter cash total"
+                      placeholder="0"
                     />
                   </Td>
 
@@ -405,6 +432,7 @@ export default function ExpensesTableWithView() {
                     <React.Fragment key={expenseIndex}>
                       <Td>
                         <Input
+                          className="custom-input"
                           value={row.expenses[expenseIndex].expense}
                           onChange={(e) =>
                             handleExpenseChange(
@@ -414,11 +442,12 @@ export default function ExpensesTableWithView() {
                               e.target.value
                             )
                           }
-                          placeholder={`Expense ${expenseIndex + 1}`}
+                          placeholder={`Blerje ${expenseIndex + 1}`}
                         />
                       </Td>
                       <Td>
                         <Input
+                          className="custom-input"
                           value={row.expenses[expenseIndex].amount}
                           onChange={(e) =>
                             handleExpenseChange(
@@ -428,11 +457,13 @@ export default function ExpensesTableWithView() {
                               e.target.value
                             )
                           }
-                          placeholder={`Amount ${expenseIndex + 1}`}
+                          placeholder={`0`}
                         />
                       </Td>
                       <Td>
                         <Input
+                        className="custom-input"
+                        
                           value={row.expenses[expenseIndex].description}
                           onChange={(e) =>
                             handleExpenseChange(
@@ -442,7 +473,7 @@ export default function ExpensesTableWithView() {
                               e.target.value
                             )
                           }
-                          placeholder={`Description ${expenseIndex + 1}`}
+                          placeholder={`Detaje ${expenseIndex + 1}`}
                         />
                       </Td>
                     </React.Fragment>
@@ -467,81 +498,88 @@ export default function ExpensesTableWithView() {
           <Button colorScheme="blue" onClick={handleSave}>
             Save Expenses
           </Button>
+
+          <Button colorScheme="orange" leftIcon={<RepeatIcon />} onClick={handleClearExpenses}>Clear Expenses</Button>
         </Flex>
       </Box>
 
       {/* --- View / Edit Existing Expenses (grouped by seller) --- */}
-      <Box mt={6}>
-        <FormLabel>Select Date to View Expenses:</FormLabel>
+      <Box mb={10}>
+     <FormLabel fontWeight="bold" fontSize="2xl"> DATA: </FormLabel>
+     <CalendarIcon ml={1} boxSize={20} />
+
         <DatePicker
-          selected={viewDate}
-          onChange={setViewDate}
+          selected={entryDate}
+          onChange={setEntryDate}
           dateFormat="dd/MM/yyyy"
+          className="custom-datepicker"
         />
 
-        <TableContainer bg="white" p={4} borderRadius="md" boxShadow="md" mt={4}>
-          <Table variant="simple" border="1px solid black">
-            <Thead>
-              <Tr>
-                <Th>Seller</Th>
-                <Th>Daily Total</Th>
-                <Th>Cash Daily Total</Th>
-                {/* Dynamically render up to the maximum expense columns we see in the data */}
-                {[...Array(groupedExpenses.maxExpenseColumns)].map((_, i) => (
-                  <React.Fragment key={i}>
-                    <Th>Expense {i + 1}</Th>
-                    <Th>Amount {i + 1}</Th>
-                    <Th>Description {i + 1}</Th>
-                    <Th>Delete {i + 1}</Th>
-                  </React.Fragment>
-                ))}
-              </Tr>
-            </Thead>
-            <Tbody>
-              {groupedExpenses.data.map((group, rowIndex) => (
-                <Tr key={rowIndex}>
-                  <Td>{group.seller}</Td>
-                  <Td>{group.dailyTotal}</Td>
-                  <Td>{group.cashDailyTotal}</Td>
-                  {/*
-                    For each "expense slot" from 0..(maxExpenseColumns-1),
-                    show the data if it exists, or blank if it doesn't.
-                  */}
-                  {[...Array(groupedExpenses.maxExpenseColumns)].map((_, colIndex) => {
-                    const expLine = group.expenses[colIndex];
-                    if (!expLine) {
-                      // No data for this expense index
-                      return (
-                        <React.Fragment key={colIndex}>
-                          <Td></Td>
-                          <Td></Td>
-                          <Td></Td>
-                          <Td></Td>
-                        </React.Fragment>
-                      );
-                    }
+        <Stack spacing={4} mt={4}>
+          {groupedExpenses.data.map((group, rowIndex) => (
+            <Card key={rowIndex} className="card-container">
+              <CardHeader className="card-header">
+                <Heading size="md">{group.seller}</Heading>
+              </CardHeader>
+              <CardBody className="card-body">
+                <TableContainer>
+                  <Table variant="simple">
+                    <Thead>
+                      <Tr className="table-header">
+                        <Th>Daily Total</Th>
+                        <Th>Cash Daily Total</Th>
+                        {[...Array(groupedExpenses.maxExpenseColumns)].map((_, i) => (
+                          <React.Fragment key={i}>
+                            <Th>Expense {i + 1}</Th>
+                            <Th>Amount {i + 1}</Th>
+                            <Th>Description {i + 1}</Th>
+                            <Th>Delete {i + 1}</Th>
+                          </React.Fragment>
+                        ))}
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      <Tr className="table-row" style={{ backgroundColor: ROW_COLOR }}>
+                        <Td>{group.dailyTotal}</Td>
+                        <Td>{group.cashDailyTotal}</Td>
+                        {[...Array(groupedExpenses.maxExpenseColumns)].map((_, colIndex) => {
+                          const expLine = group.expenses[colIndex];
+                          if (!expLine) {
+                            // No data for this expense index
+                            return (
+                              <React.Fragment key={colIndex}>
+                                <Td></Td>
+                                <Td></Td>
+                                <Td></Td>
+                                <Td></Td>
+                              </React.Fragment>
+                            );
+                          }
 
-                    return (
-                      <React.Fragment key={colIndex}>
-                        <Td>{expLine.expense}</Td>
-                        <Td>{expLine.amount}</Td>
-                        <Td>{expLine.description}</Td>
-                        <Td>
-                          <IconButton
-                            aria-label="Delete"
-                            icon={<DeleteIcon />}
-                            colorScheme="red"
-                            onClick={() => handleDeleteExpense(expLine.id)}
-                          />
-                        </Td>
-                      </React.Fragment>
-                    );
-                  })}
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </TableContainer>
+                          return (
+                            <React.Fragment key={colIndex}>
+                              <Td>{expLine.expense}</Td>
+                              <Td>{expLine.amount}</Td>
+                              <Td>{expLine.description}</Td>
+                              <Td>
+                                <IconButton
+                                  aria-label="Delete"
+                                  icon={<DeleteIcon />}
+                                  colorScheme="red"
+                                  onClick={() => handleDeleteExpense(expLine.id)}
+                                />
+                              </Td>
+                            </React.Fragment>
+                          );
+                        })}
+                      </Tr>
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+              </CardBody>
+            </Card>
+          ))}
+        </Stack>
       </Box>
     </Box>
   );
