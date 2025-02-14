@@ -1,29 +1,51 @@
-import time
-import subprocess
+import psycopg2
+import os
+from urllib.parse import urlparse
 
-# Define script paths
-scripts = [
-    "C:\\Users\\mhaxh\\OneDrive\\Desktop\\Restaurant_Dashboard-1.2.0\\PYTHON SCRIPTS DATA\\DATA_SCRAPE.PY",
-    "C:\\Users\\mhaxh\\OneDrive\\Desktop\\Restaurant_Dashboard-1.2.0\\PYTHON SCRIPTS DATA\\IMPORT_PGADMIN.PY",
-    "C:\\Users\\mhaxh\\OneDrive\\Desktop\\Restaurant_Dashboard-1.2.0\\run_backend_server.py"
-]
+def list_all_tables():
+    # Parse database URL
+    DATABASE_URL = "postgresql://restaurant_db_mg7q_user:d9Zslmf92niOQETVqJaTb2n1Rxg0niYg@dpg-cumpfg8gph6c7387r200-a.frankfurt-postgres.render.com/restaurant_db_mg7q"
+    url = urlparse(DATABASE_URL)
+    
+    connection_params = {
+        "host": url.hostname,
+        "database": url.path[1:],
+        "user": url.username,
+        "password": url.password,
+        "port": url.port
+    }
 
-while True:  # Keep running the scripts in a loop
-    print("Starting scripts...")
+    try:
+        # Establish a connection to PostgreSQL
+        conn = psycopg2.connect(**connection_params)
+        cur = conn.cursor()
+        
+        # Query to list all tables in the public schema
+        list_tables_query = """
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public';
+        """
+        cur.execute(list_tables_query)
+        
+        # Fetch all table names
+        tables = cur.fetchall()
+        
+        if tables:
+            print("Tables in restaurant_db_mg7q:")
+            for table in tables:
+                print(table[0])
+        else:
+            print("No tables found in restaurant_db_mg7q.")
+        
+    except Exception as e:
+        print(f"Error retrieving tables: {e}")
+        
+    finally:
+        # Close cursor and connection
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
-    # Run first script
-    subprocess.Popen(["python", scripts[0]])
-    time.sleep(45)  # Pause 45 seconds
-
-    # Run second script
-    subprocess.Popen(["python", scripts[1]])
-    time.sleep(8)  # Pause 8 seconds
-
-    # Run remaining scripts
-    subprocess.Popen(["python", scripts[2]])
-
-
-    print("Scripts completed. Waiting 5 minutes before rerunning...")
-
-    # Wait 5 minutes before rerunning everything
-    time.sleep(5 * 60)
+if __name__ == "__main__":
+    list_all_tables()

@@ -556,21 +556,143 @@ app.get("/sales/order-count", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+/* ===============================
+   NEW DAILY_EXPENSES   ENDPOINTS
+   =============================== */
+
+
+// Create the expenses table for daily expenses
+const createDailyExpensesTable = async () => {
+  const query = `
+    CREATE TABLE IF NOT EXISTS daily_expenses (
+      id SERIAL PRIMARY KEY,
+      date DATE NOT NULL,
+      seller TEXT NOT NULL,
+      daily_total TEXT,
+      cash_daily_total TEXT,
+      expense TEXT,
+      amount TEXT,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+  try {
+    await pool.query(query);
+    console.log("Daily expenses table created successfully.");
+  } catch (error) {
+    console.error("Error creating daily expenses table:", error);
+  }
+};
+
+createDailyExpensesTable();
+
+app.post("/expenses/bulk", async (req, res) => {
+  const { selectedDate, entries } = req.body;
+
+  if (!selectedDate || !entries || !Array.isArray(entries)) {
+    return res.status(400).json({ error: "Invalid request payload" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    for (const entry of entries) {
+      const { seller, dailyTotal, cashDailyTotal, expense, amount, description } = entry;
+
+      await client.query(
+        `INSERT INTO daily_expenses (date, seller, daily_total, cash_daily_total, expense, amount, description, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
+        [selectedDate, seller, dailyTotal, cashDailyTotal, expense, amount, description]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.status(201).json({ message: "Expenses saved successfully" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error inserting expenses:", error);
+    res.status(500).json({ error: "Failed to save expenses" });
+  } finally {
+    client.release();
+  }
+});
+
+  
+app.get("/expenses/bulk", async (req, res) => {
+  const { date } = req.query;
+  if (!date) {
+    return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
+  }
+  try {
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+    const result = await pool.query(
+      "SELECT id, seller, daily_total, cash_daily_total, expense, amount, description, date FROM daily_expenses WHERE date BETWEEN $1 AND $2 ORDER BY date ASC",
+      [startDate.toISOString(), endDate.toISOString()]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching expenses:", err);
+    res.status(500).json({ error: "Failed to fetch expenses" });
+  }
+});
+
+// GET /expenses/:id - Retrieve a single expense by ID  
+app.get("/expenses/bulk/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await pool.query("SELECT * FROM daily_expenses WHERE id = $1", [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error("Error fetching expense:", err);
+      res.status(500).json({ error: "Failed to fetch expense" });
+    }
+  });
+
+
+
+
+
+  // Delete an expense endpoint
+app.delete("/expenses/bulk/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query("DELETE FROM daily_expenses WHERE id = $1 RETURNING *", [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Expense not found" });
+    }
+    res.status(200).json({ message: "Expense deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting expense:", error);
+    res.status(500).json({ error: "Failed to delete expense" });
+  }
+});
+
+
 
 /* ===============================
-   NEW EXPENSES ENDPOINTS
+   NEW INPUT_FORM FOR EXPENSEES ENDPOINTS
    =============================== */
+
+// Create the "expenses" table if it doesn't exist
 
 // Create the "expenses" table if it doesn't exist
 const createExpensesTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS expenses (
-      name TEXT NOT NULL,
-      amount NUMERIC NOT NULL,
-      expense_date TIMESTAMP NOT NULL,
-      description TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  expense_date TIMESTAMP NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
   `;
   try {
     await pool.query(query);
@@ -618,6 +740,18 @@ app.get("/expenses", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch expenses" });
   }
 });
+// In your server.js
+app.delete("/expenses/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM expenses WHERE id = $1", [id]);
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Error deleting expense:", err);
+    res.status(500).json({ error: "Failed to delete expense" });
+  }
+});
+
 
 /* ===============================
    SERVING THE REACT APP
