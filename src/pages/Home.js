@@ -402,7 +402,7 @@ const Home = () => {
   return (
     <Box bg="gray.900" minH="100vh" p={4} color="gray.100">
       <Heading mb={6} textAlign="center" fontWeight="bold">
-        Restaurant Dashboard
+        Dashboard
       </Heading>
 
       {/* Top Metrics */}
