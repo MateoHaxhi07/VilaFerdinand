@@ -21,7 +21,7 @@ import {
   Stack,
   StackDivider
 } from "@chakra-ui/react";
-import { DeleteIcon, AddIcon, CalendarIcon,} from "@chakra-ui/icons";
+import { DeleteIcon, AddIcon, CalendarIcon,RepeatIcon} from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./DailyExpenses.css";
