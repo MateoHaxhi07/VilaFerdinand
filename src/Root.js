@@ -5,7 +5,7 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 // Import your new page component
 import MostSoldItemsByPrice from './pages/MostSoldItemsByPrice';
-import InputForm from './pages/InputForm'; // Import the DailyExpenses component
+// import InputForm from './pages/InputForm'; // Import the DailyExpenses component
 import DailyExpenses from './pages/DailyExpenses'; // Import the DailyExpenses component
 
 const Root = () => (

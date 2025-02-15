@@ -753,6 +753,164 @@ app.delete("/expenses/:id", async (req, res) => {
 });
 
 
+
+
+
+
+
+
+
+
+/****************************************************
+ *   SUPPLIER EXPENSES TABLE (ORDER YOU REQUESTED)
+ ****************************************************/
+// This table has columns in the order you asked for:
+// 1) date
+// 2) supplier
+// 3) total_amount
+// 4) amount_unpaid
+// 5) item_name
+// 6) quantity
+// (Plus an id primary key and created_at)
+const createSupplierExpensesTable = async () => {
+  const query = `
+    CREATE TABLE IF NOT EXISTS supplier_expenses (
+      id SERIAL PRIMARY KEY,
+      date DATE NOT NULL,
+      supplier TEXT NOT NULL,
+      total_amount TEXT,
+      amount_unpaid TEXT,
+      item_name TEXT,
+      quantity TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+  try {
+    await pool.query(query);
+    console.log("supplier_expenses table created successfully.");
+  } catch (error) {
+    console.error("Error creating supplier_expenses table:", error);
+  }
+};
+createSupplierExpensesTable();
+
+/****************************************************
+ *   SUPPLIER EXPENSES ENDPOINTS
+ ****************************************************/
+
+/**
+ * POST /suppliers/bulk
+ * Expects:
+ * {
+ *   "selectedDate": "YYYY-MM-DD",
+ *   "entries": [
+ *     {
+ *       "supplier": "Riza",
+ *       "totalAmount": "20000",
+ *       "amountUnpaid": "5000",
+ *       "itemName": "Flour",
+ *       "itemQuantity": "2"
+ *     },
+ *     ...
+ *   ]
+ * }
+ */
+app.post("/suppliers/bulk", async (req, res) => {
+  const { selectedDate, entries } = req.body;
+  if (!selectedDate || !entries || !Array.isArray(entries)) {
+    return res.status(400).json({ error: "Invalid request payload" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    for (const entry of entries) {
+      const {
+        supplier,
+        totalAmount,
+        amountUnpaid,
+        itemName,
+        itemQuantity,
+      } = entry;
+
+      await client.query(
+        `INSERT INTO supplier_expenses
+         (date, supplier, total_amount, amount_unpaid, item_name, quantity, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+        [
+          selectedDate,
+          supplier,
+          totalAmount,
+          amountUnpaid,
+          itemName,
+          itemQuantity,
+        ]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.status(201).json({ message: "Supplier expenses saved successfully" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error inserting supplier expenses:", error);
+    res.status(500).json({ error: "Failed to save supplier expenses" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * GET /suppliers/bulk?date=YYYY-MM-DD
+ * Retrieves all supplier_expenses rows for the given date
+ */
+app.get("/suppliers/bulk", async (req, res) => {
+  const { date } = req.query;
+  if (!date) {
+    return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
+  }
+  try {
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const result = await pool.query(
+      `SELECT id, supplier, total_amount, amount_unpaid, item_name, quantity, date
+       FROM supplier_expenses
+       WHERE date BETWEEN $1 AND $2
+       ORDER BY date ASC`,
+      [startDate.toISOString(), endDate.toISOString()]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching supplier expenses:", err);
+    res.status(500).json({ error: "Failed to fetch supplier expenses" });
+  }
+});
+
+/**
+ * DELETE /suppliers/bulk/:id
+ * Deletes a single row from supplier_expenses by ID
+ */
+app.delete("/suppliers/bulk/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "DELETE FROM supplier_expenses WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Supplier expense not found" });
+    }
+    res.status(200).json({ message: "Supplier expense deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting supplier expense:", error);
+    res.status(500).json({ error: "Failed to delete supplier expense" });
+  }
+});
+
+
 /* ===============================
    SERVING THE REACT APP
    =============================== */
