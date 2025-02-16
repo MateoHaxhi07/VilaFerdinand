@@ -1,10 +1,8 @@
-// App.js
 import { useState } from 'react';
 import { useBreakpointValue, Box } from '@chakra-ui/react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './components/Sidebar/index.js';
 import Header from './components/Header/index.js';
-import Footer from './components/Footer/index.js';
+// import Footer from './components/Footer/index.js'; // Remove this line
 
 const smVariant = { navigation: 'drawer', navigationButton: true };
 const mdVariant = { navigation: 'sidebar', navigationButton: false };
@@ -26,8 +24,7 @@ export default function App() {
 
   return (
     <>
-      <Sidebar variant={variants.navigation} isOpen={isSidebarOpen} onClose={toggleSidebar} />
-      <Box ml={!variants?.navigationButton && 240}>
+      <Box>
         <Header showSidebarButton={variants?.navigationButton} onShowSidebar={toggleSidebar} />
         <Box p="5">
           {/* Pass the global states via Outlet context */}
@@ -48,7 +45,7 @@ export default function App() {
             }}
           />
         </Box>
-        <Footer />
+        {/* <Footer /> */} {/* Remove or comment out this line */}
       </Box>
     </>
   );

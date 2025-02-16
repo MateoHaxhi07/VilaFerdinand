@@ -9,9 +9,12 @@ import DailyExpenses from './pages/DailyExpenses'; // Import the DailyExpenses c
 import Supplier from './pages/Supplier.js'; // Import the DailyExpenses component
 import ArticleIngredients from './pages/ArticleIngredients.js'; // Import the DailyExpenses component
 import Usage from './pages/Usage.js'; // Import the DailyExpenses component
+import MissingArticles from './pages/MissingArticles.js'; // Import the DailyExpenses component
+
 
 const Root = () => (
   <ChakraProvider>
+
     <Routes>
       <Route path="/" element={<App />}>
         <Route path="home" element={<Home />} />
@@ -22,6 +25,7 @@ const Root = () => (
         <Route path="supplier" element={<Supplier />} /> {/* Add a route for the DailyExpenses component */}
         <Route path="article-ingredients" element={<ArticleIngredients />} /> {/* Add a route for the DailyExpenses component */}
         <Route path="usage" element={<Usage />} /> {/* Add a route for the DailyExpenses component */}
+        <Route path="missing-articles" element={<MissingArticles />} /> {/* Add a route for the DailyExpenses component */}
 
       </Route>
     </Routes>

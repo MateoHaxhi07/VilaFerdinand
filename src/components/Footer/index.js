@@ -39,6 +39,9 @@ const FooterNav = () => {
         <Button as={Link} to="/usage" variant="ghost" color="white"> {/* Add a new button for the DailyExpenses page */}
           Usage
         </Button>
+        <Button as={Link} to="/missing-articles" variant="ghost" color="white"> {/* Add a new button for the DailyExpenses page */}
+          Missing Articles
+        </Button>
       
       
       </HStack>

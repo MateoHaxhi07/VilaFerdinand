@@ -64,8 +64,8 @@ app.get("/sales/all-data", async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
-
-    const adjustedEndDate = endDate;
+    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
+    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -77,7 +77,7 @@ app.get("/sales/all-data", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, adjustedEndDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     if (sellerArray.length) {
       query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
@@ -230,6 +230,9 @@ app.get("/sales/most-sold-items", async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
+
+    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
+    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -239,7 +242,7 @@ app.get("/sales/most-sold-items", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     if (sellerArray.length) {
       query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
@@ -279,6 +282,9 @@ app.get("/sales/most-sold-items-by-price", async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
+
+    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
+    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -290,7 +296,7 @@ app.get("/sales/most-sold-items-by-price", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     if (sellerArray.length) {
       query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
@@ -330,6 +336,10 @@ app.get("/sales/total-sales", async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
+
+    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
+    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -339,7 +349,7 @@ app.get("/sales/total-sales", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     if (sellerArray.length) {
       query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
@@ -398,6 +408,8 @@ app.get("/sales/total-quantity", async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
+    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
+    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -407,7 +419,7 @@ app.get("/sales/total-quantity", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     if (sellerArray.length) {
       query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
@@ -443,6 +455,8 @@ app.get("/sales/avg-article-price", async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
+    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
+    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -452,7 +466,7 @@ app.get("/sales/avg-article-price", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     if (sellerArray.length) {
       query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
@@ -488,6 +502,9 @@ app.get("/sales/daily-sales", async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
+
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -499,7 +516,7 @@ app.get("/sales/daily-sales", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     
     if (sellerArray.length) {
@@ -543,6 +560,9 @@ app.get("/sales/order-count", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
+    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
+    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -553,7 +573,7 @@ app.get("/sales/order-count", async (req, res) => {
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
 
     if (sellerArray.length) {
@@ -942,19 +962,56 @@ app.get("/article-ingredients", async (req, res) => {
 });
 
 
+app.patch("/article-ingredients/:article_name", async (req, res) => {
+  const { article_name } = req.params;
+  const { new_article_name } = req.body;
 
+  if (!new_article_name || new_article_name.trim() === "") {
+    return res.status(400).json({ error: "New article name is required" });
+  }
 
-app.put("/article-ingredients/:articleName", async (req, res) => {
-  const { articleName } = req.params;
-  const {
-    ingredient_name_01, usage_amount_01,
-    ingredient_name_02, usage_amount_02,
-    ingredient_name_03, usage_amount_03,
-    ingredient_name_04, usage_amount_04,
-    ingredient_name_05, usage_amount_05,
-  } = req.body;
-
+  const client = await pool.connect();
   try {
+    await client.query("BEGIN");
+
+    // Update the article name in the database
+    const result = await client.query(
+      `UPDATE article_ingredients
+       SET article_name = $1
+       WHERE article_name = $2;`,
+      [new_article_name.trim(), article_name]
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error("Article not found or name already exists");
+    }
+
+    await client.query("COMMIT");
+    res.status(200).json({ message: "Article name updated successfully" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error updating article name:", error);
+    res.status(500).json({ error: "Failed to update article name" });
+  } finally {
+    client.release();
+  }
+});
+
+app.put("/article-ingredients/:article_name", async (req, res) => {
+  const { article_name } = req.params;
+  const updates = req.body;
+
+  // Convert empty string fields to null
+  Object.keys(updates).forEach(key => {
+    if (updates[key] === "") {
+      updates[key] = null;
+    }
+  });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
     const query = `
       UPDATE article_ingredients
       SET
@@ -968,28 +1025,63 @@ app.put("/article-ingredients/:articleName", async (req, res) => {
         usage_amount_04 = $9,
         ingredient_name_05 = $10,
         usage_amount_05 = $11
-      WHERE article_name = $1
-      RETURNING *;
+      WHERE article_name = $1;
     `;
-    const values = [
-      articleName,
-      ingredient_name_01, usage_amount_01,
-      ingredient_name_02, usage_amount_02,
-      ingredient_name_03, usage_amount_03,
-      ingredient_name_04, usage_amount_04,
-      ingredient_name_05, usage_amount_05
-    ];
 
-    const result = await pool.query(query, values);
+    await client.query(query, [
+      article_name,
+      updates.ingredient_name_01,
+      updates.usage_amount_01,
+      updates.ingredient_name_02,
+      updates.usage_amount_02,
+      updates.ingredient_name_03,
+      updates.usage_amount_03,
+      updates.ingredient_name_04,
+      updates.usage_amount_04,
+      updates.ingredient_name_05,
+      updates.usage_amount_05,
+    ]);
+
+    await client.query("COMMIT");
+    res.status(200).json({ message: "Article updated successfully" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error updating article ingredients:", error);
+    res.status(500).json({ error: "Failed to update article ingredients" });
+  } finally {
+    client.release();
+  }
+});
+
+
+// DELETE /article-ingredients/:article_name - Delete an article by name
+app.delete("/article-ingredients/:article_name", async (req, res) => {
+  const { article_name } = req.params;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `DELETE FROM article_ingredients WHERE article_name = $1;`,
+      [article_name]
+    );
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Article not found" });
     }
-    res.json({ message: "Article updated successfully", row: result.rows[0] });
+
+    await client.query("COMMIT");
+    res.status(200).json({ message: "Article deleted successfully" });
   } catch (error) {
-    console.error("Error updating article ingredients:", error);
-    res.status(500).json({ error: "Failed to update article ingredients" });
+    await client.query("ROLLBACK");
+    console.error("Error deleting article:", error);
+    res.status(500).json({ error: "Failed to delete article" });
+  } finally {
+    client.release();
   }
 });
+
 
 
 
@@ -1082,6 +1174,57 @@ app.get("/report/ingredient-usage", async (req, res) => {
   }
 });
 
+/******************************************************
+ * MISSING ARTICLES PAGE
+ ******************************************************/
+
+
+
+
+
+
+
+// GET /report/missing-articles - Find articles from sales not in article_ingredients
+app.get("/report/missing-articles", async (req, res) => {
+  try {
+    const { startDate, endDate, search } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Please provide startDate and endDate" });
+    }
+
+    let query = `
+      SELECT DISTINCT s."Article_Name" AS article_name
+      FROM sales s
+      LEFT JOIN article_ingredients ai
+      ON s."Article_Name" = ai.article_name
+      WHERE s."Datetime" BETWEEN $1 AND $2
+      AND ai.article_name IS NULL
+    `;
+
+    const params = [startDate, endDate];
+
+    // Optional: Filter by article name (search)
+    if (search) {
+      query += ` AND s."Article_Name" ILIKE $3`;
+      params.push(`%${search}%`);
+    }
+
+    query += ` ORDER BY s."Article_Name";`;
+
+    const result = await pool.query(query, params);
+
+    // Return only article names
+    const missingArticles = result.rows.map(row => ({
+      articleName: row.article_name,
+    }));
+
+    res.json(missingArticles);
+  } catch (err) {
+    console.error("Error generating missing articles report:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 /******************************************************

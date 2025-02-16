@@ -9,8 +9,10 @@ import {
   Td,
   TableContainer,
   Box,
+  Card,
   Heading,
   Button,
+  CardBody,
   Flex,
   Select as ChakraSelect,
   Grid,
@@ -20,7 +22,46 @@ import Select from 'react-select';
 
 // Use environment variable for API URL
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
+// ---------- CUSTOM SELECT STYLES ----------
+const customSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: "#2D3748",
+    borderColor: state.isFocused ? "#63B3ED" : "#4A5568",
+    color: "#fff",
+    fontWeight: "bold",
+    minHeight: "40px",
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: "#2D3748",
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#4A5568" : "#2D3748",
+    color: "#fff",
+    fontWeight: "bold",
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: "#fff",
+    fontWeight: "bold",
+  }),
+  multiValue: (base) => ({
+    ...base,
+    backgroundColor: "#4A5568",
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    color: "#fff",
+    fontWeight: "bold",
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: "#A0AEC0",
+    fontWeight: "bold",
+  }),
+};
 const Dashboard = () => {
   const {
     startDate,
@@ -33,6 +74,7 @@ const Dashboard = () => {
     setSelectedArticleNames,
     selectedCategories,
     setSelectedCategories,
+    customSelectStyles,
   } = useOutletContext();
 
   const [data, setData] = useState([]);
@@ -66,6 +108,8 @@ const Dashboard = () => {
       console.error('Error fetching data:', error);
     }
   };
+
+
 
   // Fetch filter options
   const fetchSellers = async () => {
@@ -138,67 +182,38 @@ const Dashboard = () => {
   };
 
   return (
-    <Box p={5}>
-      <Heading as="h1" size="lg" mb={5}>
-        All Data 
-      </Heading>
-      <Flex justifyContent="space-between" mb={4}>
-        <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
-          <option value={50}>50 rows</option>
-          <option value={200}>200 rows</option>
-          <option value={500}>500 rows</option>
-        </ChakraSelect>
-      </Flex>
-      <Grid gap={4} mb={4} templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(4, 1fr)' }}>
-        <GridItem>
-          <Select
-            isMulti
-            options={sellers}
-            onChange={setSelectedSellers}
-            placeholder="Select sellers"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedSellers}
-          />
-        </GridItem>
-        <GridItem>
-          <Select
-            isMulti
-            options={sellerCategories}
-            onChange={setSelectedSellerCategories}
-            placeholder="Select seller categories"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedSellerCategories}
-          />
-        </GridItem>
-        <GridItem>
-          <Select
-            isMulti
-            options={articleNames}
-            onChange={setSelectedArticleNames}
-            placeholder="Select article names"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedArticleNames}
-          />
-        </GridItem>
-        <GridItem>
-          <Select
-            isMulti
-            options={categories}
-            onChange={setSelectedCategories}
-            placeholder="Select categories"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedCategories}
-          />
-        </GridItem>
-      </Grid>
-      {data.length > 0 ? (
-        <>
+    <Card bg="gray.900" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
+      <CardBody>
+        <Heading size="md" mb={6} color="white" fontWeight="bold" textAlign="center">
+          SHITJET SIPAS ORES
+        </Heading>
+        <Flex wrap="wrap" gap={6} justifyContent="center">
+          {[{ label: 'Sellers', options: sellers, value: selectedSellers, onChange: setSelectedSellers },
+            { label: 'Seller Categories', options: sellerCategories, value: selectedSellerCategories, onChange: setSelectedSellerCategories },
+            { label: 'Article Names', options: articleNames, value: selectedArticleNames, onChange: setSelectedArticleNames },
+            { label: 'Categories', options: categories, value: selectedCategories, onChange: setSelectedCategories }]
+            .map(({ label, options, value, onChange }) => (
+              <Box key={label} minW={{ base: "150px", md: "200px" }}>
+                <Box mb={2} color="white" fontWeight="bold" fontSize="sm">
+                  {label}
+                </Box>
+                <Select
+                  isMulti
+                  options={options}
+                  onChange={onChange}
+                  placeholder={`Select ${label.toLowerCase()}`}
+                  menuPortalTarget={document.body}
+                  styles={customSelectStyles}
+                  value={value}
+                />
+              </Box>
+            ))}
+        </Flex>
+      </CardBody>
+      <Card bg="white.800" borderRadius="lg" boxShadow="lg" mt={6} p={4}>
+        <CardBody>
           <TableContainer>
-            <Table variant="striped" colorScheme="teal">
+            <Table variant="striped" colorScheme="gray">
               <Thead>
                 <Tr>
                   <Th>Seller</Th>
@@ -218,8 +233,8 @@ const Dashboard = () => {
                     <Td>{row.Article_Name}</Td>
                     <Td>{row.Category}</Td>
                     <Td>{row.Quantity}</Td>
-                    <Td>${parseFloat(row.Article_Price).toFixed(2)}</Td>
-                    <Td>${parseFloat(row.Total_Article_Price).toFixed(2)}</Td>
+                    <Td>{parseFloat(row.Article_Price).toFixed(0)} ALL</Td>
+                    <Td>{parseFloat(row.Total_Article_Price).toFixed(0)} ALL</Td>
                     <Td>{new Date(row.Datetime).toLocaleString()}</Td>
                     <Td>{row["Seller Category"]}</Td>
                   </Tr>
@@ -227,24 +242,30 @@ const Dashboard = () => {
               </Tbody>
             </Table>
           </TableContainer>
-          <Flex mt={4} justifyContent="space-between">
+
+
+      <Flex justifyContent="space-between" mb={4}>
+       
+        </Flex>  
+        <Flex mt={4} justifyContent="space-between">
             <Button onClick={handleLoadLess} isDisabled={offset === 0}>
               Previous
             </Button>
+            <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
+          <option value={50}>50 rows</option>
+          <option value={200}>200 rows</option>
+          <option value={500}>500 rows</option>
+        </ChakraSelect>
             <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
               Next
             </Button>
           </Flex>
-        </>
-      ) : (
-        <Box mt={4}>
-          <Heading as="h2" size="md">
-            No data available
-          </Heading>
-        </Box>
-      )}
-    </Box>
+        </CardBody>
+      </Card>
+    </Card>
   );
+
 };
+
 
 export default Dashboard;

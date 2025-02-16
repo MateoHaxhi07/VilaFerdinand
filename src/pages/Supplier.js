@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Heading,
@@ -32,16 +32,22 @@ const ROW_COLOR = "#e8f5e9";
 
 export default function Supplier() {
   const toast = useToast();
+
+  // Date pickers for entry and view
   const [entryDate, setEntryDate] = useState(new Date());
   const [viewDate, setViewDate] = useState(new Date());
+
+  // Number of dynamic item columns (for ingredients, etc.)
   const [itemSetsCount, setItemSetsCount] = useState(1);
 
+  // Supplier rows for manual input
   const [supplierRows, setSupplierRows] = useState([
     {
       supplier: "",
-      transactionType: "purchase",
+      transactionType: "purchase", // "purchase" = Blerje, "service" = Borxh Klienta
       totalAmount: "",
       amountPaid: "",
+      // We'll let the server calculate amount left but here we show a preview
       items: Array.from({ length: MAX_ITEM_SETS }, () => ({
         name: "",
         quantity: "",
@@ -49,11 +55,10 @@ export default function Supplier() {
     },
   ]);
 
+  // Fetched supplier records for viewing
   const [fetchedRows, setFetchedRows] = useState([]);
 
-  /* --------------------------------
-   * 1) ADD / REMOVE ROWS or COLUMNS
-   -------------------------------- */
+  /* ----------------- HANDLERS FOR MANUAL INPUT ----------------- */
   const handleAddSupplierRow = () => {
     setSupplierRows((prev) => [
       ...prev,
@@ -71,17 +76,15 @@ export default function Supplier() {
   };
 
   const handleRemoveSupplierRow = (rowIndex) => {
-    setSupplierRows((prev) => {
-      if (prev.length === 1) {
-        toast({
-          title: "Cannot remove",
-          description: "Must have at least one supplier row",
-          status: "warning",
-        });
-        return prev;
-      }
-      return prev.filter((_, i) => i !== rowIndex);
-    });
+    if (supplierRows.length === 1) {
+      toast({
+        title: "Cannot remove",
+        description: "Must have at least one supplier row",
+        status: "warning",
+      });
+      return;
+    }
+    setSupplierRows((prev) => prev.filter((_, i) => i !== rowIndex));
   };
 
   const handleAddItemSet = () => {
@@ -100,9 +103,6 @@ export default function Supplier() {
     if (itemSetsCount > 1) setItemSetsCount(itemSetsCount - 1);
   };
 
-  /* --------------------------------
-   * 2) HANDLE INPUT CHANGES
-   -------------------------------- */
   const handleRowChange = (rowIndex, field, value) => {
     setSupplierRows((prev) => {
       const updated = [...prev];
@@ -119,31 +119,34 @@ export default function Supplier() {
     });
   };
 
-  /* --------------------------------
-   * 3) SAVE => UPSERT
-   -------------------------------- */
+  /* ----------------- SAVE MANUAL ENTRIES ----------------- */
   const handleSave = async () => {
     const dateStr = entryDate.toISOString().split("T")[0];
     const finalEntries = [];
-
     supplierRows.forEach((row) => {
+      // Only process if at least one field has data
       const rowHasData =
         row.supplier.trim() ||
         row.totalAmount.trim() ||
         row.amountPaid.trim() ||
-        row.items.some((it) => it.name.trim() || it.quantity.trim());
+        row.items.some(
+          (it) => it.name.trim() || it.quantity.trim()
+        );
       if (!rowHasData) return;
 
+      // Main entry with total and paid amounts
       const mainEntry = {
         supplier: row.supplier.trim(),
         transactionType: row.transactionType,
         totalAmount: row.totalAmount.trim(),
         amountPaid: row.amountPaid.trim(),
+        // These fields are for ingredients; leave blank in main entry
         itemName: "",
         itemQuantity: "",
       };
       finalEntries.push(mainEntry);
 
+      // Additional entries for each item column (if filled)
       for (let i = 0; i < itemSetsCount; i++) {
         const { name, quantity } = row.items[i];
         if (name.trim() || quantity.trim()) {
@@ -162,7 +165,7 @@ export default function Supplier() {
     if (finalEntries.length === 0) {
       toast({
         title: "No Data",
-        description: "No valid supplier rows to save",
+        description: "No valid entries to save",
         status: "warning",
       });
       return;
@@ -175,14 +178,13 @@ export default function Supplier() {
         body: JSON.stringify({ selectedDate: dateStr, entries: finalEntries }),
       });
       if (!resp.ok) {
-        throw new Error("Failed to upsert supplier expenses");
+        throw new Error("Failed to save supplier expenses");
       }
       toast({
         title: "Success",
-        description: "Supplier expenses upserted",
+        description: "Supplier expenses upserted successfully",
         status: "success",
       });
-
       setSupplierRows([
         {
           supplier: "",
@@ -195,10 +197,7 @@ export default function Supplier() {
           })),
         },
       ]);
-
-      if (dateStr === viewDate.toISOString().split("T")[0]) {
-        fetchExisting(viewDate);
-      }
+      fetchExisting(viewDate);
     } catch (error) {
       toast({
         title: "Error",
@@ -208,9 +207,7 @@ export default function Supplier() {
     }
   };
 
-  /* --------------------------------
-   * 4) FETCH & DELETE
-   -------------------------------- */
+  /* ----------------- FETCH & DELETE ----------------- */
   const fetchExisting = async (date) => {
     const dateStr = date.toISOString().split("T")[0];
     try {
@@ -256,26 +253,23 @@ export default function Supplier() {
     }
   };
 
-  // Helper to convert transaction_type
+  // Helper: translate transaction type to display names
   const translateTransactionType = (type) => {
     return type === "purchase" ? "Blerje" : "Borxh Klienta";
   };
 
-  /* --------------------------------
-   * VIEW TABLE DISPLAY
-   -------------------------------- */
+  /* ----------------- VIEW TABLE DISPLAY ----------------- */
   return (
     <Box p={4} bg="gray.50" minH="100vh">
       <Heading textAlign="center" mb={6}>
-        Supplier Expenses (Updated View Table)
+        Supplier Expenses (Table-Based)
       </Heading>
 
       {/* ---- Input Table for Adding Rows ---- */}
-      <Box mb={10} p={4} bg="white" borderRadius="md" boxShadow="md">
+      <Box mb={10} p={4} bg="white" borderRadius="md" boxShadow="md" overflowX="auto">
         <Heading size="md" mb={4}>
           Add Supplier Expenses
         </Heading>
-
         <FormLabel fontWeight="bold">Date (Entry)</FormLabel>
         <CalendarIcon boxSize={5} mr={2} />
         <DatePicker
@@ -291,7 +285,7 @@ export default function Supplier() {
           <Button onClick={handleRemoveItemSet} disabled={itemSetsCount <= 1}>
             Remove Item Columns
           </Button>
-          <Button colorScheme="green" onClick={handleAddSupplierRow}>
+          <Button onClick={handleAddSupplierRow} colorScheme="green">
             Add Supplier Row
           </Button>
         </Flex>
@@ -304,15 +298,13 @@ export default function Supplier() {
                 <Th>Lloji Borxhit</Th>
                 <Th>Totali Fatures</Th>
                 <Th>Paguar nga Fatura</Th>
-                {[...Array(itemSetsCount)].map((_, i) => {
-                  const colNum = String(i + 1).padStart(2, "0");
-                  return (
-                    <React.Fragment key={i}>
-                      <Th>{`Item ${colNum}`}</Th>
-                      <Th>{`Qty ${colNum}`}</Th>
-                    </React.Fragment>
-                  );
-                })}
+                <Th>Amount Left</Th>
+                {[...Array(itemSetsCount)].map((_, i) => (
+                  <React.Fragment key={i}>
+                    <Th>{`Item ${String(i + 1).padStart(2, "0")}`}</Th>
+                    <Th>{`Qty ${String(i + 1).padStart(2, "0")}`}</Th>
+                  </React.Fragment>
+                ))}
                 <Th>Remove Row</Th>
               </Tr>
             </Thead>
@@ -323,21 +315,13 @@ export default function Supplier() {
                     <Input
                       placeholder="Supplier"
                       value={row.supplier}
-                      onChange={(e) =>
-                        handleRowChange(rowIndex, "supplier", e.target.value)
-                      }
+                      onChange={(e) => handleRowChange(rowIndex, "supplier", e.target.value)}
                     />
                   </Td>
                   <Td>
                     <Select
                       value={row.transactionType}
-                      onChange={(e) =>
-                        handleRowChange(
-                          rowIndex,
-                          "transactionType",
-                          e.target.value
-                        )
-                      }
+                      onChange={(e) => handleRowChange(rowIndex, "transactionType", e.target.value)}
                     >
                       <option value="purchase">
                         Blerje (Me borxh ose pa borxh)
@@ -351,55 +335,44 @@ export default function Supplier() {
                     <Input
                       placeholder="Total Amount"
                       value={row.totalAmount}
-                      onChange={(e) =>
-                        handleRowChange(rowIndex, "totalAmount", e.target.value)
-                      }
+                      onChange={(e) => handleRowChange(rowIndex, "totalAmount", e.target.value)}
                     />
                   </Td>
                   <Td>
                     <Input
                       placeholder="Amount Paid"
                       value={row.amountPaid}
-                      onChange={(e) =>
-                        handleRowChange(rowIndex, "amountPaid", e.target.value)
-                      }
+                      onChange={(e) => handleRowChange(rowIndex, "amountPaid", e.target.value)}
                     />
                   </Td>
-                  {[...Array(itemSetsCount)].map((_, itemIndex) => {
-                    const colNum = String(itemIndex + 1).padStart(2, "0");
-                    return (
-                      <React.Fragment key={itemIndex}>
-                        <Td>
-                          <Input
-                            placeholder={`Item ${colNum}`}
-                            value={row.items[itemIndex].name}
-                            onChange={(e) =>
-                              handleItemChange(
-                                rowIndex,
-                                itemIndex,
-                                "name",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </Td>
-                        <Td>
-                          <Input
-                            placeholder={`Qty ${colNum}`}
-                            value={row.items[itemIndex].quantity}
-                            onChange={(e) =>
-                              handleItemChange(
-                                rowIndex,
-                                itemIndex,
-                                "quantity",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </Td>
-                      </React.Fragment>
-                    );
-                  })}
+                  <Td>
+                    <Input
+                      value={
+                        isNaN(parseFloat(row.totalAmount)) || isNaN(parseFloat(row.amountPaid))
+                          ? ""
+                          : (parseFloat(row.totalAmount) - parseFloat(row.amountPaid)).toFixed(2)
+                      }
+                      isReadOnly
+                    />
+                  </Td>
+                  {[...Array(itemSetsCount)].map((_, itemIndex) => (
+                    <React.Fragment key={itemIndex}>
+                      <Td>
+                        <Input
+                          placeholder={`Item ${String(itemIndex + 1).padStart(2, "0")}`}
+                          value={row.items[itemIndex].name}
+                          onChange={(e) => handleItemChange(rowIndex, itemIndex, "name", e.target.value)}
+                        />
+                      </Td>
+                      <Td>
+                        <Input
+                          placeholder={`Qty ${String(itemIndex + 1).padStart(2, "0")}`}
+                          value={row.items[itemIndex].quantity}
+                          onChange={(e) => handleItemChange(rowIndex, itemIndex, "quantity", e.target.value)}
+                        />
+                      </Td>
+                    </React.Fragment>
+                  ))}
                   <Td>
                     <IconButton
                       aria-label="Remove row"
@@ -416,12 +389,12 @@ export default function Supplier() {
 
         <Flex mt={4} justify="center" gap={4}>
           <Button colorScheme="blue" onClick={handleSave}>
-            Save Supplier Expenses
+            Save Expenses
           </Button>
         </Flex>
       </Box>
 
-      {/* ---- VIEW TABLE (With Translations) ---- */}
+      {/* ---- VIEW TABLE (With Translations and Date) ---- */}
       <Heading size="md" mb={4}>
         View Existing Supplier Records
       </Heading>
@@ -445,7 +418,7 @@ export default function Supplier() {
                   <Th isNumeric>Total Amount</Th>
                   <Th isNumeric>Amount Paid</Th>
                   <Th isNumeric>Amount Unpaid</Th>
-                  <Th>Items</Th>
+                  <Th>Items (JSON)</Th>
                   <Th>Action</Th>
                 </Tr>
               </Thead>
@@ -482,4 +455,9 @@ export default function Supplier() {
       </Box>
     </Box>
   );
+}
+
+// Helper to translate transaction type
+function translateTransactionType(type) {
+  return type === "purchase" ? "Blerje" : "Borxh Klienta";
 }

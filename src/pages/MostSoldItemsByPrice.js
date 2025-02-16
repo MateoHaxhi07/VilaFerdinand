@@ -10,6 +10,8 @@ import {
   TableContainer,
   Box,
   Heading,
+  Card,
+  CardBody,
   Button,
   Flex,
   Select as ChakraSelect,
@@ -20,6 +22,47 @@ import Select from 'react-select';
 
 // Use environment variable for API URL
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const customSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: "#2D3748",
+    borderColor: state.isFocused ? "#63B3ED" : "#4A5568",
+    color: "#fff",
+    fontWeight: "bold",
+    minHeight: "40px",
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: "#2D3748",
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#4A5568" : "#2D3748",
+    color: "#fff",
+    fontWeight: "bold",
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: "#fff",
+    fontWeight: "bold",
+  }),
+  multiValue: (base) => ({
+    ...base,
+    backgroundColor: "#4A5568",
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    color: "#fff",
+    fontWeight: "bold",
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: "#A0AEC0",
+    fontWeight: "bold",
+  }),
+};
+
+
 
 const MostSoldItemsByPrice = () => {
   const {
@@ -33,6 +76,7 @@ const MostSoldItemsByPrice = () => {
     setSelectedArticleNames,
     selectedCategories,
     setSelectedCategories,
+    customSelectStyles,
   } = useOutletContext();
 
   // Data & Pagination state
@@ -148,125 +192,95 @@ const MostSoldItemsByPrice = () => {
   };
 
   return (
-    <Box p={{ base: 2, md: 5 }}>
-      <Heading as="h1" size={{ base: "lg", md: "xl" }} mb={{ base: 4, md: 5 }}>
-        Most Sold Items by Total Article Price
-      </Heading>
-      <Flex justifyContent="space-between" mb={{ base: 3, md: 4 }}>
-        <ChakraSelect width={{ base: "150px", md: "200px" }} value={limit} onChange={handleLimitChange}>
+    <Card bg="gray.900" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
+      <CardBody>
+        <Heading size="md" mb={6} color="white" fontWeight="bold" textAlign="center">
+          SHITJET SIPAS RENDITJES SASISE / CMIMIT 
+        </Heading>
+        <Flex wrap="wrap" gap={6} justifyContent="center">
+          {[{ label: 'Sellers', options: sellers, value: selectedSellers, onChange: setSelectedSellers },
+            { label: 'Seller Categories', options: sellerCategories, value: selectedSellerCategories, onChange: setSelectedSellerCategories },
+            { label: 'Article Names', options: articleNames, value: selectedArticleNames, onChange: setSelectedArticleNames },
+            { label: 'Categories', options: categories, value: selectedCategories, onChange: setSelectedCategories }]
+            .map(({ label, options, value, onChange }) => (
+              <Box key={label} minW={{ base: "150px", md: "200px" }}>
+                <Box mb={2} color="white" fontWeight="bold" fontSize="sm">
+                  {label}
+                </Box>
+                <Select
+                  isMulti
+                  options={options}
+                  onChange={onChange}
+                  placeholder={`Select ${label.toLowerCase()}`}
+                  menuPortalTarget={document.body}
+                  styles={customSelectStyles}
+                  value={value}
+                />
+              </Box>
+            ))}
+        </Flex>
+      </CardBody>
+      
+      <Card bg="white.800" borderRadius="lg" boxShadow="lg" mt={6} p={4}>
+      <CardBody>
+      <TableContainer mt={6} borderRadius="lg" boxShadow="md" bg=".700" p={4}>
+        <Table variant="striped" colorScheme="gray">
+          <Thead>
+            <Tr>
+            <Th fontSize={{ base: "sm", md: "md" }}>Rank</Th>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Article Name</Th>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Total Quantity Sold</Th>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Total Article Price (ALL)</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {data.length > 0 ? (
+              data.map((item, idx) => (
+                <Tr key={idx}>
+                  <Td>{idx + 1}</Td>
+                  <Td>{item.Article_Name}</Td>
+                  <Td>{item.total_quantity?.toLocaleString() || '-'}</Td>
+                  <Td fontSize={{ base: "xs", md: "sm" }}>
+                        {item.total_price ? Number(item.total_price).toLocaleString() : '-'} ALL
+                      </Td>
+                </Tr>
+              ))
+            ) : (
+              <Tr>
+                <Td colSpan={4} textAlign="center" color="white">
+                  No Data Available
+                </Td>
+              </Tr>
+            )}
+          </Tbody>
+        </Table>
+      </TableContainer>
+
+      <Flex justifyContent="space-between" mb={4}>
+       
+        </Flex>  
+        <Flex mt={4} justifyContent="space-between">
+            <Button onClick={handleLoadLess} isDisabled={offset === 0}>
+              Previous
+            </Button>
+            <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
           <option value={50}>50 rows</option>
           <option value={200}>200 rows</option>
           <option value={500}>500 rows</option>
         </ChakraSelect>
-      </Flex>
-      <Grid gap={{ base: 2, md: 4 }} mb={{ base: 3, md: 4 }} templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(4, 1fr)' }}>
-        <GridItem>
-          <Select
-            isMulti
-            options={sellers}
-            onChange={setSelectedSellers}
-            placeholder="Select sellers"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedSellers}
-          />
-        </GridItem>
-        <GridItem>
-          <Select
-            isMulti
-            options={sellerCategories}
-            onChange={setSelectedSellerCategories}
-            placeholder="Select seller categories"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedSellerCategories}
-          />
-        </GridItem>
-        <GridItem>
-          <Select
-            isMulti
-            options={articleNames}
-            onChange={setSelectedArticleNames}
-            placeholder="Select article names"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedArticleNames}
-          />
-        </GridItem>
-        <GridItem>
-          <Select
-            isMulti
-            options={categories}
-            onChange={setSelectedCategories}
-            placeholder="Select categories"
-            menuPortalTarget={document.body}
-            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-            value={selectedCategories}
-          />
-        </GridItem>
-      </Grid>
-      {data.length > 0 ? (
-        <>
-          <TableContainer>
-            <Table variant="striped" colorScheme="teal">
-              <Thead>
-                <Tr>
-                  <Th fontSize={{ base: "sm", md: "md" }}>Rank</Th>
-                  <Th fontSize={{ base: "sm", md: "md" }}>Article Name</Th>
-                  <Th fontSize={{ base: "sm", md: "md" }}>Total Quantity Sold</Th>
-                  <Th fontSize={{ base: "sm", md: "md" }}>Total Article Price (ALL)</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {data.map((row, index) => {
-                  // Calculate normalized ranking (best rank gets value 1, worst gets 0)
-                  const rank = index + 1;
-                  const normalized = data.length > 1 ? (data.length - rank) / (data.length - 1) : 1;
-                  const bucket = Math.min(Math.floor(normalized * 5), 4);
-                  const heatmapColor = heatmapColors[bucket];
-                  return (
-                    <Tr key={index}>
-                      <Td fontSize={{ base: "xs", md: "sm" }}>
-                        <Box
-                          width="20px"
-                          height="20px"
-                          bg={heatmapColor}
-                          borderRadius="full"
-                          display="inline-block"
-                          mr={2}
-                        />
-                        {rank}
-                      </Td>
-                      <Td fontSize={{ base: "xs", md: "sm" }}>{row.Article_Name}</Td>
-                      <Td fontSize={{ base: "xs", md: "sm" }}>
-                        {row.total_quantity ? Number(row.total_quantity).toLocaleString() : '-'}
-                      </Td>
-                      <Td fontSize={{ base: "xs", md: "sm" }}>
-                        {row.total_price ? Number(row.total_price).toLocaleString() : '-'} ALL
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </Tbody>
-            </Table>
-          </TableContainer>
-          <Flex mt={{ base: 3, md: 4 }} justifyContent="space-between">
-            <Button onClick={handleLoadLess} isDisabled={offset === 0} size={{ base: "sm", md: "md" }}>
-              Previous
-            </Button>
-            <Button onClick={handleLoadMore} isDisabled={data.length < limit} size={{ base: "sm", md: "md" }}>
+            <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
               Next
             </Button>
           </Flex>
-        </>
-      ) : (
-        <Box mt={{ base: 3, md: 4 }}>
-          <Heading as="h2" size={{ base: "md", md: "lg" }}>
-            No data available
-          </Heading>
-        </Box>
-      )}
-    </Box>
+
+
+
+
+
+
+      </CardBody>
+      </Card>
+    </Card>
   );
 };
 

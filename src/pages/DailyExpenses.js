@@ -251,7 +251,7 @@ export default function DailyExpenses() {
   return (
     <Box p={4} bg="gray.50" minH="100vh">
       <Heading textAlign="center" mb={6}>
-        Daily Expenses
+        XHIRO DITORE
       </Heading>
 
       {/* Entry Table */}
@@ -271,8 +271,8 @@ export default function DailyExpenses() {
           <Thead>
             <Tr bg="gray.200">
               <Th>Seller</Th>
-              <Th>Daily Total</Th>
-              <Th>Cash Daily Total</Th>
+              <Th> TOTAL</Th>
+              <Th>Cash  Total</Th>
               {[...Array(expenseSetsCount)].map((_, i) => (
                 <React.Fragment key={i}>
                   <Th>Expense {i + 1}</Th>

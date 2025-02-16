@@ -387,103 +387,31 @@ const Home = () => {
   const averageTotal =
     barData.reduce((sum, item) => sum + item.total, 0) / (barData.length || 1);
 
-  const CustomTooltip = ({ value, indexValue }) => (
-    <Box p="8px" bg="white" border="1px solid #ccc">
-      <strong>{indexValue}</strong>
-      <br />
-      Total Article Price:{" "}
-      <Box as="span" fontWeight="bold" color="black">
-        {Number(value).toLocaleString()} ALL
+    const CustomTooltip = ({ value, indexValue }) => (
+      <Box p="8px" bg="black" border="1px solid #ccc" borderRadius="md">
+        <strong style={{ color: "white", fontWeight: "bold" }}>{indexValue}</strong>
+        <br />
+        <Box as="span" color="white">Total Article Price:</Box>{" "}
+        <Box as="span" fontWeight="bold" color="white">
+          {Number(value).toLocaleString()} ALL
+        </Box>
       </Box>
-    </Box>
-  );
-
+    );
+    
   // ---------- RENDER ----------
   return (
-    <Box bg="gray.900" minH="100vh" p={4} color="gray.100">
+    <Box minH="100vh" p={4} color="gray.100">
       <Heading mb={6} textAlign="center" fontWeight="bold">
-        Dashboard
+      
       </Heading>
 
-      {/* Top Metrics */}
-      <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={4} mb={6}>
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-                  Total Sales
-                </StatLabel>
-                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-                  {parseFloat(totalSales).toLocaleString()} ALL
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-                  Based on selected filters
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
+      {/* Merged Card for Top Metrics and Daily Sales */}
 
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-                  Total Quantity
-                </StatLabel>
-                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-                  {parseFloat(totalQuantity).toFixed(0)}
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-                  Based on selected filters
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
 
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-                  Avg. Article Price
-                </StatLabel>
-                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-                  {parseFloat(avgArticlePrice).toLocaleString()} ALL
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-                  Calculated from total sales/quantity
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-
-        <GridItem>
-          <Card bg="gray.800">
-            <CardBody>
-              <Stat>
-                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="white" fontWeight="bold">
-                  Transactions
-                </StatLabel>
-                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="white" fontWeight="bold">
-                  {orderCount}
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="white" fontWeight="bold">
-                  Unique orders by datetime
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </Grid>
-
-      {/* Filter Section */}
+      <Card bg="white.100" mb={6}>
       <Card bg="gray.800" mb={6}>
         <CardBody>
-          <Heading size="md" mb={4} color="orange" fontWeight="bold">
+          <Heading size="md" mb={4} color="white" fontWeight="bold">
             Filters
           </Heading>
           <Flex wrap="wrap" gap={4}>
@@ -541,168 +469,183 @@ const Home = () => {
                 value={selectedSellerCategories}
               />
             </Box>
-            {/* Article Name */}
-            <Box minW="200px">
-              <Box mb={2} color="white" fontWeight="bold">
-                Article Name
-              </Box>
-              <Select
-                isMulti
-                options={articleNamesOptions}
-                onChange={setSelectedArticleNames}
-                placeholder="Select articles"
-                menuPortalTarget={document.body}
-                styles={customSelectStyles}
-                value={selectedArticleNames}
-              />
-            </Box>
-            {/* Category */}
-            <Box minW="200px">
-              <Box mb={2} color="white" fontWeight="bold">
-                Category
-              </Box>
-              <Select
-                isMulti
-                options={categories}
-                onChange={setSelectedCategories}
-                placeholder="Select categories"
-                menuPortalTarget={document.body}
-                styles={customSelectStyles}
-                value={selectedCategories}
-              />
-            </Box>
+            
           </Flex>
         </CardBody>
       </Card>
 
-      {/* Chart Section */}
-      <Box bg="gray.900" p={4} borderRadius="md" mb={6}>
-        <Heading size="md" mb={4} color="white" fontWeight="bold">
-          Daily Sales
-        </Heading>
-        <Box height="400px">
-          <ResponsiveBar
-            data={barData}
-            keys={["total"]}
-            indexBy="date"
-            margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
-            padding={0.3}
-            valueScale={{ type: "linear" }}
-            indexScale={{ type: "band", round: true }}
-            colors={() => "#008080"}
-            borderColor={{ theme: "background" }}
-            tooltip={({ value, indexValue }) => (
-              <CustomTooltip value={value} indexValue={indexValue} />
-            )}
-            axisTop={null}
-            axisRight={null}
-            axisBottom={{
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              legend: "",
-              legendOffset: 32,
-              legendPosition: "middle",
-            }}
-            axisLeft={{
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              legend: "",
-              legendOffset: -40,
-              legendPosition: "middle",
-            }}
-            labelSkipWidth={12}
-            labelSkipHeight={12}
-            labelTextColor="white"
-            theme={{
-              axis: {
-                ticks: {
-                  text: {
-                    fontSize: 12,
-                    fontWeight: "bold",
-                    fill: "#ffffff",
+    <Heading mb={6} textAlign="center" fontWeight="bold" color="black">
+      Performance
+      </Heading>
+        <CardBody>
+          <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={4} mb={6}>
+            <GridItem>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
+                  Total Sales
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="black" fontWeight="bold">
+                  {parseFloat(totalSales).toLocaleString()} ALL
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
+                  Based on selected filters
+                </StatHelpText>
+              </Stat>
+            </GridItem>
+
+            <GridItem>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
+                  Total Quantity
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="black" fontWeight="bold">
+                  {parseFloat(totalQuantity).toFixed(0)}
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
+                  Based on selected filters
+                </StatHelpText>
+              </Stat>
+            </GridItem>
+
+            <GridItem>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
+                  Avg. Article Price
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="black" fontWeight="bold">
+                  {parseFloat(avgArticlePrice).toLocaleString()} ALL
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
+                  Calculated from total sales/quantity
+                </StatHelpText>
+              </Stat>
+            </GridItem>
+
+            <GridItem>
+              <Stat>
+                <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
+                  Orders
+                </StatLabel>
+                <StatNumber fontSize={{ base: 'md', md: 'xl' }} color="black" fontWeight="bold">
+                  {orderCount}
+                </StatNumber>
+                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
+                  Unique orders by datetime
+                </StatHelpText>
+              </Stat>
+            </GridItem>
+          </Grid>
+
+          {/* Daily Sales Chart */}
+          <Heading size="md" mb={4} color="black" fontWeight="bold">
+            Daily Sales
+          </Heading>
+          <Box height="400px">
+            <ResponsiveBar
+              data={barData}
+              keys={["total"]}
+              indexBy="date"
+              margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
+              padding={0.3}
+              valueScale={{ type: "linear" }}
+              indexScale={{ type: "band", round: true }}
+              colors={() => "#009de0"}
+              borderColor={{ theme: "background" }}
+              tooltip={({ value, indexValue }) => (
+                <CustomTooltip value={value} indexValue={indexValue} />
+              )}
+              axisTop={null}
+              axisRight={null}
+              axisBottom={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: "",
+                legendOffset: 32,
+                legendPosition: "middle",
+              }}
+              axisLeft={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: "",
+                legendOffset: -40,
+                legendPosition: "middle",
+              }}
+              label={(d) => `${d.value.toLocaleString()} ALL`} // Show value on top of each bar
+              labelSkipWidth={12}
+              labelSkipHeight={12}
+              labelTextColor="white"fontWeight="bold" 
+              
+              theme={{
+                background: "#ffffff", // Set the background color to white
+                axis: {
+                  domain: {
+                    line: {
+                      stroke: "#000000", // Change the color of the axis line to black
+                    },
+                  },
+                  ticks: {
+                    line: {
+                      stroke: "#000000", // Change the color of the axis ticks to black
+                      strokeWidth: 1,
+                    },
+                    text: {
+                      fontSize: 12,
+                      fontWeight: "bold",
+                      fill: "#000000", // Change the color of the axis tick text to black
+                    },
+                  },
+                  legend: {
+                    text: {
+                      fill: "#000000", // Change the color of the axis legend text to black
+                    },
                   },
                 },
-              },
-            }}
-            markers={[
-              {
-                axis: "y",
-                value: averageTotal,
-                lineStyle: { stroke: "#b0413e", strokeWidth: 2 },
-                legend: "Average",
-                legendOrientation: "vertical",
-                legendPosition: "right",
-              },
-            ]}
-          />
-        </Box>
-      </Box>
+              }}
+            />
+          </Box>
+        </CardBody>
+      </Card>
 
+      
       {/* Pie Chart Section */}
+
       <Grid gap={6} templateColumns="1fr">
-        <Card bg="gray.700" p={4} borderRadius="lg" mb={6}>
+        <Card bg="white.800" p={4} borderRadius="lg" mb={6}>
+        <Heading mb={6} textAlign="center" fontWeight="bold" color="black">
+      Category Sales
+      </Heading>
           <CardBody>
-            <Heading
-              size="md"
-              mb={4}
-              color="white"
-              fontWeight="bold"
-              textAlign="center"
-            >
-              Sales by Seller Category
-            </Heading>
+            
             <Box height="300px" mb={6}>
-              <ResponsivePie
-                data={pieData}
-                margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
-                innerRadius={0}  
-                padAngle={0.7}
-                cornerRadius={3}
-                colors={{ scheme: "set3" }}
-                borderWidth={1}
-                borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
-                radialLabelsSkipAngle={10}
-                radialLabelsTextColor="#ffffff"
-                radialLabelsLinkColor="#ffffff"
-                sliceLabelsSkipAngle={10}
-                sliceLabelsTextColor="#000000"
-                tooltip={({ datum }) => (
-                  <Box p="8px" bg="white" border="1px solid #ccc">
-                    <strong style={{ color: "black", fontWeight: "bold" }}>
-                      {datum.id}
-                    </strong>
-                    <br />
-                    <Box as="span" fontWeight="bold" color="black">
-                      {datum.value.toLocaleString()} ALL
-                    </Box>
-                  </Box>
-                )}
-                sliceLabel={(datum) => (
-                  <text style={{ fontWeight: "bold", fill: "black" }}>
-                    {datum.id}
-                  </text>
-                )}
-                legends={[
-                  {
-                    anchor: "bottom",
-                    direction: "row",
-                    justify: false,
-                    translateX: 0,
-                    translateY: 56,
-                    itemsSpacing: 4,
-                    itemWidth: 100,
-                    itemHeight: 18,
-                    itemTextColor: "#ffffff",
-                    itemDirection: "left-to-right",
-                    itemOpacity: 1,
-                    symbolSize: 18,
-                    symbolShape: "circle",
-                  },
-                ]}
-              />
+            <ResponsivePie
+          data={pieData}
+          margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+          innerRadius={0}
+          padAngle={0.7}
+          cornerRadius={3}
+          colors={{ scheme: "set3" }}
+          borderWidth={1}
+          borderColor={{ from: "color", modifiers: [["darker", 0.6]] }}
+          sliceLabelsSkipAngle={10}
+          sliceLabelsTextColor="#000000"
+          tooltip={({ datum }) => (
+            <Box p="8px" bg="black" border="1px solid #ccc" borderRadius="lg">
+              <strong style={{ color: "white", fontWeight: "bold" }}>{datum.id}</strong>
+              <br />
+              <Box as="span" fontWeight="bold" color="white">
+                {datum.value.toLocaleString()} ALL
+              </Box>
             </Box>
+          )}
+          sliceLabel={(datum) => `${datum.id}`}
+          radialLabelsSkipAngle={10}
+          radialLabelsTextColor="#ffffff"
+          radialLabelsLinkColor="#ffffff"
+          legends={[]}
+        />
+      </Box>
           </CardBody>
         </Card>
       </Grid>
