@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Heading,
@@ -12,33 +12,34 @@ import {
   Th,
   Td,
   TableContainer,
-  useToast,
+  Flex,
   IconButton,
-  Flex
+  useToast,
 } from "@chakra-ui/react";
-import { DeleteIcon, AddIcon } from "@chakra-ui/icons";
+import { DeleteIcon, AddIcon, CalendarIcon, RepeatIcon } from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+// Adjust if you have a .env
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// Predefined sellers
+// We can define some sellers for daily usage
 const SELLERS = ["KRISTI", "VERA", "JONI", "FLORI", "DEA", "ENISA"];
-
-// Maximum number of sets of expense columns we allow
 const MAX_EXPENSE_SETS = 15;
+const ROW_COLOR = "#e8f5e9";
 
-export default function ExpensesTableWithView() {
+export default function DailyExpenses() {
   const toast = useToast();
-  
+
+  // Entry date for new daily expenses
   const [entryDate, setEntryDate] = useState(new Date());
+  // View date for existing daily expenses
   const [viewDate, setViewDate] = useState(new Date());
 
-  // How many expense columns are currently displayed (initially 1)?
+  // how many dynamic expense columns we show
   const [expenseSetsCount, setExpenseSetsCount] = useState(1);
 
-  // We'll store table data as an array of objects (one per seller).
-  // Each object has dailyTotal, cashDailyTotal, and an array of up to 15 possible expense sets.
+  // table data for input: one row per SELLER
   const [tableData, setTableData] = useState(
     SELLERS.map((seller) => ({
       seller,
@@ -52,39 +53,24 @@ export default function ExpensesTableWithView() {
     }))
   );
 
-  // Raw expenses from the server. We’ll transform them for display in the dynamic table.
+  // fetched data from the server for the selected "view date"
   const [rawExpenses, setRawExpenses] = useState([]);
 
-  // --- Helper: Group rawExpenses by seller so we can show multiple columns in a single row ---
-  // This transforms the array of rows (one row per expense line) into
-  // an array of "grouped" objects, each with:
-  //  {
-  //    seller: string,
-  //    dailyTotal: string,
-  //    cashDailyTotal: string,
-  //    date: string,
-  //    expenses: [
-  //      { id, expense, amount, description },  // 1st line
-  //      { id, expense, amount, description },  // 2nd line
-  //      ...
-  //    ]
-  //  }
-  // We'll also find the maximum number of expense sets among all sellers to know how many columns to display.
-  const groupedExpenses = React.useMemo(() => {
-    const bySeller = {};
+  // group them by (seller, date)
+  const groupedExpenses = useMemo(() => {
+    const byKey = {};
     rawExpenses.forEach((row) => {
-      const key = `${row.seller}||${row.date}`; // group by (seller, date)
-      if (!bySeller[key]) {
-        bySeller[key] = {
+      const key = `${row.seller}||${row.date}`;
+      if (!byKey[key]) {
+        byKey[key] = {
           seller: row.seller,
           date: row.date,
-          // We'll just take the daily/cash totals from the first row we see for that seller
           dailyTotal: row.daily_total || "",
           cashDailyTotal: row.cash_daily_total || "",
-          expenses: [],
+          items: [],
         };
       }
-      bySeller[key].expenses.push({
+      byKey[key].items.push({
         id: row.id,
         expense: row.expense,
         amount: row.amount,
@@ -92,43 +78,31 @@ export default function ExpensesTableWithView() {
       });
     });
 
-    // Convert the object into an array
-    const groupedArray = Object.values(bySeller);
-
-    // Calculate how many expense sets the "View" table needs to show
-    let max = 0;
-    groupedArray.forEach((group) => {
-      if (group.expenses.length > max) {
-        max = group.expenses.length;
-      }
+    const groupedArr = Object.values(byKey);
+    let maxCols = 0;
+    groupedArr.forEach((g) => {
+      if (g.items.length > maxCols) maxCols = g.items.length;
     });
-
-    return { data: groupedArray, maxExpenseColumns: max };
+    return { data: groupedArr, maxCols };
   }, [rawExpenses]);
 
-  // --- Add or remove columns for the "Entry" table ---
+  // Add or remove expense columns
   const handleAddExpenseSet = () => {
     if (expenseSetsCount < MAX_EXPENSE_SETS) {
       setExpenseSetsCount(expenseSetsCount + 1);
     } else {
       toast({
         title: "Limit Reached",
-        description: `You can only add up to ${MAX_EXPENSE_SETS} expenses.`,
+        description: `Max columns = ${MAX_EXPENSE_SETS}`,
         status: "warning",
-        duration: 3000,
-        isClosable: true,
       });
     }
   };
-
   const handleRemoveExpenseSet = () => {
-    // Only allow removing if we have more than 1
-    if (expenseSetsCount > 1) {
-      setExpenseSetsCount(expenseSetsCount - 1);
-    }
+    if (expenseSetsCount > 1) setExpenseSetsCount(expenseSetsCount - 1);
   };
 
-  // Handle input change for dailyTotal / cashDailyTotal
+  // handle changes in dailyTotal, cashDailyTotal
   const handleInputChange = (rowIndex, field, value) => {
     setTableData((prev) => {
       const updated = [...prev];
@@ -137,7 +111,7 @@ export default function ExpensesTableWithView() {
     });
   };
 
-  // Handle input change for the dynamic expense fields
+  // handle changes in dynamic expense sets
   const handleExpenseChange = (rowIndex, expenseIndex, field, value) => {
     setTableData((prev) => {
       const updated = [...prev];
@@ -146,56 +120,44 @@ export default function ExpensesTableWithView() {
     });
   };
 
-  // Fetch expenses for a given date
+  // fetch existing daily expenses for a date
   const fetchExpenses = async (date) => {
     const dateStr = date.toISOString().split("T")[0];
     try {
-      const response = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch expenses");
+      const resp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
+      if (!resp.ok) {
+        throw new Error("Failed to fetch daily expenses");
       }
-      const data = await response.json();
+      const data = await resp.json();
       setRawExpenses(data);
     } catch (error) {
       toast({
-        title: "Error fetching expenses",
+        title: "Error fetching",
         description: error.message,
         status: "error",
-        duration: 5000,
-        isClosable: true,
       });
     }
   };
 
-  // Save new expenses
-  const handleSave = async () => {
-    // Flatten the data: for each row (seller), we have up to expenseSetsCount expense lines.
-    const entriesToSave = [];
+  useEffect(() => {
+    fetchExpenses(viewDate);
+  }, [viewDate]);
 
+  // save new daily expenses
+  const handleSave = async () => {
+    const entriesToSave = [];
     tableData.forEach((row) => {
-      // Check if this row has any data at all
       const rowHasData =
         row.dailyTotal.trim() ||
         row.cashDailyTotal.trim() ||
         row.expenses.some(
-          (exp) =>
-            exp.expense.trim() ||
-            exp.amount.trim() ||
-            exp.description.trim()
+          (exp) => exp.expense.trim() || exp.amount.trim() || exp.description.trim()
         );
+      if (!rowHasData) return;
 
-      if (!rowHasData) {
-        // skip entirely if no data
-        return;
-      }
-
-      // For each expense set up to expenseSetsCount, if user typed something, add it
       for (let i = 0; i < expenseSetsCount; i++) {
         const { expense, amount, description } = row.expenses[i];
-        const hasExpenseData =
-          expense.trim() || amount.trim() || description.trim();
-
-        if (hasExpenseData) {
+        if (expense.trim() || amount.trim() || description.trim()) {
           entriesToSave.push({
             seller: row.seller,
             dailyTotal: row.dailyTotal,
@@ -210,338 +172,271 @@ export default function ExpensesTableWithView() {
 
     if (entriesToSave.length === 0) {
       toast({
-        title: "Error",
+        title: "No Data",
         description: "No valid entries to save",
         status: "error",
-        duration: 5000,
-        isClosable: true,
       });
       return;
     }
-
     const dateStr = entryDate.toISOString().split("T")[0];
 
-    // (Optional) Skip duplicates if the seller already exists for this date:
-    let existingExpensesForDate = [];
     try {
-      const response = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch existing expenses");
+      const resp = await fetch(`${API_URL}/expenses/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedDate: dateStr, entries: entriesToSave }),
+      });
+      if (!resp.ok) {
+        throw new Error("Failed to save daily expenses");
       }
-      existingExpensesForDate = await response.json();
+      toast({
+        title: "Success",
+        description: "Daily expenses saved",
+        status: "success",
+      });
+      // Refresh if the same date
+      if (dateStr === viewDate.toISOString().split("T")[0]) {
+        fetchExpenses(viewDate);
+      }
     } catch (error) {
-      console.error("Error fetching existing expenses:", error);
       toast({
         title: "Error",
         description: error.message,
         status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    // Build a set of existing sellers
-    const existingSellers = new Set(
-      existingExpensesForDate.map((ex) => ex.seller.toUpperCase())
-    );
-
-    // Filter out any entries whose seller is already in the set
-    const uniqueEntries = entriesToSave.filter(
-      (entry) => !existingSellers.has(entry.seller.toUpperCase())
-    );
-
-    if (uniqueEntries.length === 0) {
-      toast({
-        title: "Info",
-        description:
-          "No new entries to add (all duplicates for these sellers on this date).",
-        status: "info",
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    // Finally, POST those entries
-    try {
-      const response = await fetch(`${API_URL}/expenses/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          selectedDate: dateStr,
-          entries: uniqueEntries,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save expenses");
-      }
-
-      toast({
-        title: "Success",
-        description: "Expenses saved successfully!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-
-      // Refresh the expense list
-      fetchExpenses(viewDate);
-    } catch (error) {
-      console.error("Error saving expenses:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save expenses",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
       });
     }
   };
 
-  // Delete an expense line
+  // Clear the daily input table
+  const handleClearExpenses = () => {
+    setTableData(
+      SELLERS.map((seller) => ({
+        seller,
+        dailyTotal: "",
+        cashDailyTotal: "",
+        expenses: Array.from({ length: MAX_EXPENSE_SETS }, () => ({
+          expense: "",
+          amount: "",
+          description: "",
+        })),
+      }))
+    );
+    toast({ title: "Cleared", description: "All daily expenses cleared", status: "info" });
+  };
+
+  // Delete a single daily expense
   const handleDeleteExpense = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/expenses/bulk/${id}`, {
+      const resp = await fetch(`${API_URL}/expenses/bulk/${id}`, {
         method: "DELETE",
       });
-      if (!response.ok) {
+      if (!resp.ok) {
         throw new Error("Failed to delete expense");
       }
       toast({
-        title: "Success",
+        title: "Deleted",
         description: "Expense deleted successfully",
         status: "success",
-        duration: 3000,
-        isClosable: true,
       });
       fetchExpenses(viewDate);
     } catch (error) {
       toast({
-        title: "Error deleting expense",
+        title: "Error",
         description: error.message,
         status: "error",
-        duration: 5000,
-        isClosable: true,
       });
     }
   };
 
-  // Fetch expenses whenever the viewDate changes
-  useEffect(() => {
-    fetchExpenses(viewDate);
-  }, [viewDate]);
-
   return (
     <Box p={4} bg="gray.50" minH="100vh">
-      <Heading mb={6} textAlign="center">
-        Vila Ferdinand - Expense Management
+      <Heading textAlign="center" mb={6}>
+        Daily Expenses
       </Heading>
 
-      {/* --- Expense Entry Section --- */}
-      <Box mb={6}>
-        <FormLabel>Select Date for Entry:</FormLabel>
-        <DatePicker
-          selected={entryDate}
-          onChange={setEntryDate}
-          dateFormat="dd/MM/yyyy"
-        />
+      {/* Entry Table */}
+      <FormLabel fontWeight="bold" fontSize="md">
+        Entry Date:
+      </FormLabel>
+      <CalendarIcon boxSize={5} mr={2} />
+      <DatePicker
+        selected={entryDate}
+        onChange={setEntryDate}
+        dateFormat="dd/MM/yyyy"
+        className="custom-datepicker"
+      />
 
-        <TableContainer
-          bg="white"
-          p={4}
-          borderRadius="md"
-          boxShadow="md"
-          mt={4}
-          overflowX="auto"
-        >
-          <Table variant="simple" border="1px solid black">
-            <Thead>
-              <Tr>
-                <Th>Seller</Th>
-                <Th>Daily Total</Th>
-                <Th>Cash Daily Total</Th>
-                {/* Render the dynamic sets of columns */}
-                {[...Array(expenseSetsCount)].map((_, i) => (
-                  <React.Fragment key={i}>
-                    <Th>Expense {i + 1}</Th>
-                    <Th>Amount {i + 1}</Th>
-                    <Th>Description {i + 1}</Th>
+      <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
+        <Table variant="simple">
+          <Thead>
+            <Tr bg="gray.200">
+              <Th>Seller</Th>
+              <Th>Daily Total</Th>
+              <Th>Cash Daily Total</Th>
+              {[...Array(expenseSetsCount)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <Th>Expense {i + 1}</Th>
+                  <Th>Amount {i + 1}</Th>
+                  <Th>Description {i + 1}</Th>
+                </React.Fragment>
+              ))}
+            </Tr>
+          </Thead>
+          <Tbody>
+            {tableData.map((row, rowIndex) => (
+              <Tr key={rowIndex} bg={ROW_COLOR}>
+                <Td>{row.seller}</Td>
+                <Td>
+                  <Input
+                    value={row.dailyTotal}
+                    onChange={(e) =>
+                      handleInputChange(rowIndex, "dailyTotal", e.target.value)
+                    }
+                    placeholder="0"
+                  />
+                </Td>
+                <Td>
+                  <Input
+                    value={row.cashDailyTotal}
+                    onChange={(e) =>
+                      handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
+                    }
+                    placeholder="0"
+                  />
+                </Td>
+                {[...Array(expenseSetsCount)].map((_, expIndex) => (
+                  <React.Fragment key={expIndex}>
+                    <Td>
+                      <Input
+                        value={row.expenses[expIndex].expense}
+                        onChange={(e) =>
+                          handleExpenseChange(rowIndex, expIndex, "expense", e.target.value)
+                        }
+                        placeholder={`Expense ${expIndex + 1}`}
+                      />
+                    </Td>
+                    <Td>
+                      <Input
+                        value={row.expenses[expIndex].amount}
+                        onChange={(e) =>
+                          handleExpenseChange(rowIndex, expIndex, "amount", e.target.value)
+                        }
+                        placeholder="0"
+                      />
+                    </Td>
+                    <Td>
+                      <Input
+                        value={row.expenses[expIndex].description}
+                        onChange={(e) =>
+                          handleExpenseChange(
+                            rowIndex,
+                            expIndex,
+                            "description",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Description"
+                      />
+                    </Td>
                   </React.Fragment>
                 ))}
               </Tr>
-            </Thead>
+            ))}
+          </Tbody>
+        </Table>
+      </TableContainer>
 
-            <Tbody>
-              {tableData.map((row, rowIndex) => (
-                <Tr key={rowIndex}>
-                  <Td>{row.seller}</Td>
-                  <Td>
-                    <Input
-                      value={row.dailyTotal}
-                      onChange={(e) =>
-                        handleInputChange(rowIndex, "dailyTotal", e.target.value)
-                      }
-                      placeholder="Enter total"
-                    />
-                  </Td>
-                  <Td>
-                    <Input
-                      value={row.cashDailyTotal}
-                      onChange={(e) =>
-                        handleInputChange(
-                          rowIndex,
-                          "cashDailyTotal",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Enter cash total"
-                    />
-                  </Td>
+      <Flex mt={4} gap={3} justify="center">
+        <Button leftIcon={<AddIcon />} onClick={handleAddExpenseSet}>
+          Add Columns
+        </Button>
+        <Button onClick={handleRemoveExpenseSet} isDisabled={expenseSetsCount <= 1}>
+          Remove Columns
+        </Button>
+        <Button colorScheme="blue" onClick={handleSave}>
+          Save Expenses
+        </Button>
+        <Button colorScheme="orange" leftIcon={<RepeatIcon />} onClick={handleClearExpenses}>
+          Clear
+        </Button>
+      </Flex>
 
-                  {/* Render each of the expense sets that are currently visible */}
-                  {[...Array(expenseSetsCount)].map((_, expenseIndex) => (
-                    <React.Fragment key={expenseIndex}>
-                      <Td>
-                        <Input
-                          value={row.expenses[expenseIndex].expense}
-                          onChange={(e) =>
-                            handleExpenseChange(
-                              rowIndex,
-                              expenseIndex,
-                              "expense",
-                              e.target.value
-                            )
-                          }
-                          placeholder={`Expense ${expenseIndex + 1}`}
-                        />
-                      </Td>
-                      <Td>
-                        <Input
-                          value={row.expenses[expenseIndex].amount}
-                          onChange={(e) =>
-                            handleExpenseChange(
-                              rowIndex,
-                              expenseIndex,
-                              "amount",
-                              e.target.value
-                            )
-                          }
-                          placeholder={`Amount ${expenseIndex + 1}`}
-                        />
-                      </Td>
-                      <Td>
-                        <Input
-                          value={row.expenses[expenseIndex].description}
-                          onChange={(e) =>
-                            handleExpenseChange(
-                              rowIndex,
-                              expenseIndex,
-                              "description",
-                              e.target.value
-                            )
-                          }
-                          placeholder={`Description ${expenseIndex + 1}`}
-                        />
-                      </Td>
-                    </React.Fragment>
-                  ))}
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </TableContainer>
-
-        {/* Buttons for adding/removing expense columns or saving */}
-        <Flex mt={4} gap={4} justify="center">
-          <Button leftIcon={<AddIcon />} onClick={handleAddExpenseSet}>
-            Add Expense Columns
-          </Button>
-          <Button
-            onClick={handleRemoveExpenseSet}
-            isDisabled={expenseSetsCount <= 1}
-          >
-            Remove Expense Columns
-          </Button>
-          <Button colorScheme="blue" onClick={handleSave}>
-            Save Expenses
-          </Button>
-        </Flex>
-      </Box>
-
-      {/* --- View / Edit Existing Expenses (grouped by seller) --- */}
-      <Box mt={6}>
-        <FormLabel>Select Date to View Expenses:</FormLabel>
+      {/* View Existing */}
+      <Box mt={8}>
+        <Heading size="md" mb={4}>
+          View Daily Expenses
+        </Heading>
+        <FormLabel fontWeight="bold">View Date:</FormLabel>
+        <CalendarIcon boxSize={5} mr={2} />
         <DatePicker
           selected={viewDate}
           onChange={setViewDate}
           dateFormat="dd/MM/yyyy"
+          className="custom-datepicker"
         />
 
-        <TableContainer bg="white" p={4} borderRadius="md" boxShadow="md" mt={4}>
-          <Table variant="simple" border="1px solid black">
-            <Thead>
-              <Tr>
-                <Th>Seller</Th>
-                <Th>Daily Total</Th>
-                <Th>Cash Daily Total</Th>
-                {/* Dynamically render up to the maximum expense columns we see in the data */}
-                {[...Array(groupedExpenses.maxExpenseColumns)].map((_, i) => (
-                  <React.Fragment key={i}>
-                    <Th>Expense {i + 1}</Th>
-                    <Th>Amount {i + 1}</Th>
-                    <Th>Description {i + 1}</Th>
-                    <Th>Delete {i + 1}</Th>
-                  </React.Fragment>
-                ))}
-              </Tr>
-            </Thead>
-            <Tbody>
-              {groupedExpenses.data.map((group, rowIndex) => (
-                <Tr key={rowIndex}>
-                  <Td>{group.seller}</Td>
-                  <Td>{group.dailyTotal}</Td>
-                  <Td>{group.cashDailyTotal}</Td>
-                  {/*
-                    For each "expense slot" from 0..(maxExpenseColumns-1),
-                    show the data if it exists, or blank if it doesn't.
-                  */}
-                  {[...Array(groupedExpenses.maxExpenseColumns)].map((_, colIndex) => {
-                    const expLine = group.expenses[colIndex];
-                    if (!expLine) {
-                      // No data for this expense index
-                      return (
+        {groupedExpenses.data.length > 0 ? (
+          groupedExpenses.data.map((group, idx) => (
+            <Box key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
+              <Heading size="sm" mb={2}>
+                {group.seller} - {group.date}
+              </Heading>
+              <TableContainer>
+                <Table variant="simple">
+                  <Thead>
+                    <Tr bg="gray.200">
+                      <Th>Daily Total</Th>
+                      <Th>Cash Daily Total</Th>
+                      {[...Array(groupedExpenses.maxCols)].map((_, colIndex) => (
                         <React.Fragment key={colIndex}>
-                          <Td></Td>
-                          <Td></Td>
-                          <Td></Td>
-                          <Td></Td>
+                          <Th>Expense {colIndex + 1}</Th>
+                          <Th>Amount {colIndex + 1}</Th>
+                          <Th>Description {colIndex + 1}</Th>
+                          <Th>Action</Th>
                         </React.Fragment>
-                      );
-                    }
-
-                    return (
-                      <React.Fragment key={colIndex}>
-                        <Td>{expLine.expense}</Td>
-                        <Td>{expLine.amount}</Td>
-                        <Td>{expLine.description}</Td>
-                        <Td>
-                          <IconButton
-                            aria-label="Delete"
-                            icon={<DeleteIcon />}
-                            colorScheme="red"
-                            onClick={() => handleDeleteExpense(expLine.id)}
-                          />
-                        </Td>
-                      </React.Fragment>
-                    );
-                  })}
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </TableContainer>
+                      ))}
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    <Tr bg={ROW_COLOR}>
+                      <Td>{group.dailyTotal}</Td>
+                      <Td>{group.cashDailyTotal}</Td>
+                      {[...Array(groupedExpenses.maxCols)].map((_, ci) => {
+                        const item = group.items[ci];
+                        if (!item)
+                          return (
+                            <React.Fragment key={ci}>
+                              <Td />
+                              <Td />
+                              <Td />
+                              <Td />
+                            </React.Fragment>
+                          );
+                        return (
+                          <React.Fragment key={ci}>
+                            <Td>{item.expense}</Td>
+                            <Td>{item.amount}</Td>
+                            <Td>{item.description}</Td>
+                            <Td>
+                              <IconButton
+                                aria-label="Delete"
+                                colorScheme="red"
+                                icon={<DeleteIcon />}
+                                onClick={() => handleDeleteExpense(item.id)}
+                              />
+                            </Td>
+                          </React.Fragment>
+                        );
+                      })}
+                    </Tr>
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </Box>
+          ))
+        ) : (
+          <Box mt={4}>No daily expenses for this date.</Box>
+        )}
       </Box>
     </Box>
   );

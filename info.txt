@@ -74,7 +74,7 @@ git push origin main
 Fourth  we need to creates a tag with a release version of all the files with changes and a message
 
 
-git tag -a v1.0.11 -m "Added Test Folder and new changes"
+git tag -a v2.0.0 -m "Added Test Folder and new changes"
 
 
 
