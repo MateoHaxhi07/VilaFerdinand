@@ -556,12 +556,9 @@ app.get("/sales/order-count", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-/* ===============================
-   NEW DAILY_EXPENSES   ENDPOINTS
-   =============================== */
-
-
-// Create the expenses table for daily expenses
+/******************************************************
+ * DAILY_EXPENSES TABLE & ENDPOINTS
+ ******************************************************/
 const createDailyExpensesTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS daily_expenses (
@@ -578,47 +575,41 @@ const createDailyExpensesTable = async () => {
   `;
   try {
     await pool.query(query);
-    console.log("Daily expenses table created successfully.");
+    console.log("daily_expenses table created or exists.");
   } catch (error) {
-    console.error("Error creating daily expenses table:", error);
+    console.error("Error creating daily_expenses table:", error);
   }
 };
-
 createDailyExpensesTable();
 
 app.post("/expenses/bulk", async (req, res) => {
   const { selectedDate, entries } = req.body;
-
   if (!selectedDate || !entries || !Array.isArray(entries)) {
     return res.status(400).json({ error: "Invalid request payload" });
   }
-
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
     for (const entry of entries) {
       const { seller, dailyTotal, cashDailyTotal, expense, amount, description } = entry;
-
       await client.query(
-        `INSERT INTO daily_expenses (date, seller, daily_total, cash_daily_total, expense, amount, description, created_at)
+        `INSERT INTO daily_expenses
+         (date, seller, daily_total, cash_daily_total, expense, amount, description, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
         [selectedDate, seller, dailyTotal, cashDailyTotal, expense, amount, description]
       );
     }
-
     await client.query("COMMIT");
-    res.status(201).json({ message: "Expenses saved successfully" });
+    res.status(201).json({ message: "Daily expenses saved successfully" });
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Error inserting expenses:", error);
-    res.status(500).json({ error: "Failed to save expenses" });
+    console.error("Error inserting daily expenses:", error);
+    res.status(500).json({ error: "Failed to save daily expenses" });
   } finally {
     client.release();
   }
 });
 
-  
 app.get("/expenses/bulk", async (req, res) => {
   const { date } = req.query;
   if (!date) {
@@ -630,50 +621,35 @@ app.get("/expenses/bulk", async (req, res) => {
     const endDate = new Date(date);
     endDate.setHours(23, 59, 59, 999);
     const result = await pool.query(
-      "SELECT id, seller, daily_total, cash_daily_total, expense, amount, description, date FROM daily_expenses WHERE date BETWEEN $1 AND $2 ORDER BY date ASC",
+      `SELECT id, seller, daily_total, cash_daily_total, expense, amount, description, date
+       FROM daily_expenses
+       WHERE date BETWEEN $1 AND $2
+       ORDER BY date ASC`,
       [startDate.toISOString(), endDate.toISOString()]
     );
     res.json(result.rows);
   } catch (err) {
-    console.error("Error fetching expenses:", err);
-    res.status(500).json({ error: "Failed to fetch expenses" });
+    console.error("Error fetching daily expenses:", err);
+    res.status(500).json({ error: "Failed to fetch daily expenses" });
   }
 });
 
-// GET /expenses/:id - Retrieve a single expense by ID  
-app.get("/expenses/bulk/:id", async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await pool.query("SELECT * FROM daily_expenses WHERE id = $1", [id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Expense not found" });
-      }
-      res.json(result.rows[0]);
-    } catch (err) {
-      console.error("Error fetching expense:", err);
-      res.status(500).json({ error: "Failed to fetch expense" });
-    }
-  });
-
-
-
-
-
-  // Delete an expense endpoint
 app.delete("/expenses/bulk/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("DELETE FROM daily_expenses WHERE id = $1 RETURNING *", [id]);
+    const result = await pool.query(
+      "DELETE FROM daily_expenses WHERE id = $1 RETURNING *",
+      [id]
+    );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Expense not found" });
     }
-    res.status(200).json({ message: "Expense deleted successfully" });
+    res.json({ message: "Daily expense deleted successfully" });
   } catch (error) {
-    console.error("Error deleting expense:", error);
-    res.status(500).json({ error: "Failed to delete expense" });
+    console.error("Error deleting daily expense:", error);
+    res.status(500).json({ error: "Failed to delete daily expense" });
   }
 });
-
 
 
 /* ===============================
@@ -909,6 +885,260 @@ app.delete("/suppliers/bulk/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete supplier expense" });
   }
 });
+
+/******************************************************
+ * ARTICLE_INGREDIENTS TABLE & ENDPOINTS (Manual Entry)
+ ******************************************************/
+
+app.post("/article-ingredients/bulk", async (req, res) => {
+  const { entries } = req.body;
+  if (!entries || !Array.isArray(entries)) {
+    return res.status(400).json({ error: "Invalid request payload" });
+  }
+  
+  // Group the entries by article name
+  const grouped = {};
+  entries.forEach(entry => {
+    const { articleName, ingredientName, ingredientUsage } = entry;
+    const art = articleName.trim();
+    if (!art) return;
+    if (!grouped[art]) {
+      grouped[art] = [];
+    }
+    if (ingredientName.trim() || ingredientUsage.trim()) {
+      grouped[art].push({
+        ingredientName: ingredientName.trim(),
+        ingredientUsage: ingredientUsage.trim()
+      });
+    }
+  });
+  
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const maxIngredients = 5;
+    for (const article in grouped) {
+      const ingredients = grouped[article];
+      // Create arrays for ingredient names and usage values, filling missing slots with null.
+      const ingColumns = [];
+      const usageColumns = [];
+      for (let i = 0; i < maxIngredients; i++) {
+        if (i < ingredients.length) {
+          ingColumns.push(ingredients[i].ingredientName);
+          // Convert usage to a numeric value; if conversion fails or is empty, set to null.
+          const usage = ingredients[i].ingredientUsage;
+          usageColumns.push(usage !== "" ? parseFloat(usage) : null);
+        } else {
+          ingColumns.push(null);
+          usageColumns.push(null);
+        }
+      }
+      const query = `
+        INSERT INTO article_ingredients (
+          article_name,
+          ingredient_name_01, usage_amount_01,
+          ingredient_name_02, usage_amount_02,
+          ingredient_name_03, usage_amount_03,
+          ingredient_name_04, usage_amount_04,
+          ingredient_name_05, usage_amount_05
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (article_name)
+        DO UPDATE SET
+          ingredient_name_01 = EXCLUDED.ingredient_name_01,
+          usage_amount_01 = EXCLUDED.usage_amount_01,
+          ingredient_name_02 = EXCLUDED.ingredient_name_02,
+          usage_amount_02 = EXCLUDED.usage_amount_02,
+          ingredient_name_03 = EXCLUDED.ingredient_name_03,
+          usage_amount_03 = EXCLUDED.usage_amount_03,
+          ingredient_name_04 = EXCLUDED.ingredient_name_04,
+          usage_amount_04 = EXCLUDED.usage_amount_04,
+          ingredient_name_05 = EXCLUDED.ingredient_name_05,
+          usage_amount_05 = EXCLUDED.usage_amount_05;
+      `;
+      await client.query(query, [
+        article,
+        ingColumns[0], usageColumns[0],
+        ingColumns[1], usageColumns[1],
+        ingColumns[2], usageColumns[2],
+        ingColumns[3], usageColumns[3],
+        ingColumns[4], usageColumns[4]
+      ]);
+    }
+    await client.query("COMMIT");
+    res.status(201).json({ message: "Article → Ingredients saved successfully" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error saving article ingredients:", error);
+    res.status(500).json({ error: "Failed to save article ingredients" });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /article-ingredients - Fetch all article-ingredient mappings
+app.get("/article-ingredients", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+         article_name, 
+         ingredient_name_01, usage_amount_01,
+         ingredient_name_02, usage_amount_02,
+         ingredient_name_03, usage_amount_03,
+         ingredient_name_04, usage_amount_04,
+         ingredient_name_05, usage_amount_05,
+         created_at
+       FROM article_ingredients
+       ORDER BY article_name`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching article ingredients:", error);
+    res.status(500).json({ error: "Failed to fetch article ingredients" });
+  }
+});
+
+
+
+
+app.put("/article-ingredients/:articleName", async (req, res) => {
+  const { articleName } = req.params;
+  const {
+    ingredient_name_01, usage_amount_01,
+    ingredient_name_02, usage_amount_02,
+    ingredient_name_03, usage_amount_03,
+    ingredient_name_04, usage_amount_04,
+    ingredient_name_05, usage_amount_05,
+  } = req.body;
+
+  try {
+    const query = `
+      UPDATE article_ingredients
+      SET
+        ingredient_name_01 = $2,
+        usage_amount_01 = $3,
+        ingredient_name_02 = $4,
+        usage_amount_02 = $5,
+        ingredient_name_03 = $6,
+        usage_amount_03 = $7,
+        ingredient_name_04 = $8,
+        usage_amount_04 = $9,
+        ingredient_name_05 = $10,
+        usage_amount_05 = $11
+      WHERE article_name = $1
+      RETURNING *;
+    `;
+    const values = [
+      articleName,
+      ingredient_name_01, usage_amount_01,
+      ingredient_name_02, usage_amount_02,
+      ingredient_name_03, usage_amount_03,
+      ingredient_name_04, usage_amount_04,
+      ingredient_name_05, usage_amount_05
+    ];
+
+    const result = await pool.query(query, values);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Article not found" });
+    }
+    res.json({ message: "Article updated successfully", row: result.rows[0] });
+  } catch (error) {
+    console.error("Error updating article ingredients:", error);
+    res.status(500).json({ error: "Failed to update article ingredients" });
+  }
+});
+
+
+
+/******************************************************
+ * report endpoint total ingredient usage for article names
+ ******************************************************/
+
+
+
+// GET /report/ingredient-usage - Report total ingredient usage based on sales
+app.get("/report/ingredient-usage", async (req, res) => {
+  try {
+    const { startDate, endDate, articleNames } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Please provide startDate and endDate" });
+    }
+    
+    // Base query: aggregate total quantity sold per article within the date range,
+    // and join with article_ingredients table to get per-article ingredient mapping.
+    let query = `
+      SELECT 
+        s."Article_Name" AS article_name,
+        SUM(s."Quantity"::numeric) AS total_sold,
+        ai.ingredient_name_01,
+        ai.usage_amount_01,
+        ai.ingredient_name_02,
+        ai.usage_amount_02,
+        ai.ingredient_name_03,
+        ai.usage_amount_03,
+        ai.ingredient_name_04,
+        ai.usage_amount_04,
+        ai.ingredient_name_05,
+        ai.usage_amount_05
+      FROM "sales" s
+      JOIN article_ingredients ai ON s."Article_Name" = ai.article_name
+      WHERE s."Datetime" BETWEEN $1 AND $2
+    `;
+    
+    const params = [startDate, endDate];
+    
+    // Optionally filter by a list of article names if provided.
+    if (articleNames) {
+      const articleArray = articleNames.split(",").map(a => a.trim());
+      query += ` AND s."Article_Name" = ANY($3::text[]) `;
+      params.push(articleArray);
+    }
+    
+    query += `
+      GROUP BY s."Article_Name", 
+               ai.ingredient_name_01, ai.usage_amount_01,
+               ai.ingredient_name_02, ai.usage_amount_02,
+               ai.ingredient_name_03, ai.usage_amount_03,
+               ai.ingredient_name_04, ai.usage_amount_04,
+               ai.ingredient_name_05, ai.usage_amount_05
+      ORDER BY s."Article_Name"
+    `;
+    
+    const result = await pool.query(query, params);
+    
+    // For each article row, calculate total ingredient usage.
+    // (e.g., if each unit of article "X" uses 0.05 of ingredient1 and 100 units were sold, then total usage = 5)
+    const report = result.rows.map(row => {
+      // Create an object for ingredient usage calculations.
+      const ingredientUsage = {};
+      
+      // Loop over the 5 possible ingredient columns.
+      for (let i = 1; i <= 5; i++) {
+        const ingKey = `ingredient_name_0${i}`;
+        const usageKey = `usage_amount_0${i}`;
+        const ingredient = row[ingKey];
+        const usagePerUnit = row[usageKey];
+        
+        // Only include this ingredient if there is a name and a valid usage value.
+        if (ingredient && usagePerUnit != null) {
+          ingredientUsage[ingredient] = parseFloat(usagePerUnit) * parseFloat(row.total_sold);
+        }
+      }
+      
+      return {
+        articleName: row.article_name,
+        totalSold: parseFloat(row.total_sold),
+        ingredientUsage,
+      };
+    });
+    
+    res.json(report);
+  } catch (err) {
+    console.error("Error generating ingredient usage report:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 /* ===============================
