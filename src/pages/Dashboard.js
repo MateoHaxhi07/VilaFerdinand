@@ -6,6 +6,7 @@ import {
   Tbody,
   Tr,
   Th,
+  Tfoot,
   Td,
   TableContainer,
   Box,
@@ -86,6 +87,10 @@ const Dashboard = () => {
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
+
+  const totalQuantity = data.reduce((sum, item) => sum + Number(item.Quantity ?? 0), 0);
+  const totalSales = data.reduce((sum, item) => sum + Number(item.Total_Article_Price ?? 0), 0);
+
 
   // Build URL dynamically with filters
   const fetchData = async (limit, offset) => {
@@ -182,19 +187,19 @@ const Dashboard = () => {
   };
 
   return (
-    <Card bg="gray.900" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
-      <CardBody>
-        <Heading size="md" mb={6} color="white" fontWeight="bold" textAlign="center">
-          SHITJET SIPAS ORES
+    <Card bg="white.100" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
+      <CardBody >
+        <Heading size="md" mb={6} color="BLACK" fontWeight="bold" textAlign="center">
+          SHITJET ANALITIKE
         </Heading>
-        <Flex wrap="wrap" gap={6} justifyContent="center">
+        <Flex wrap="wrap" gap={6} justifyContent="center" >
           {[{ label: 'Sellers', options: sellers, value: selectedSellers, onChange: setSelectedSellers },
             { label: 'Seller Categories', options: sellerCategories, value: selectedSellerCategories, onChange: setSelectedSellerCategories },
             { label: 'Article Names', options: articleNames, value: selectedArticleNames, onChange: setSelectedArticleNames },
             { label: 'Categories', options: categories, value: selectedCategories, onChange: setSelectedCategories }]
             .map(({ label, options, value, onChange }) => (
-              <Box key={label} minW={{ base: "150px", md: "200px" }}>
-                <Box mb={2} color="white" fontWeight="bold" fontSize="sm">
+              <Box key={label}  bgGradient="linear(to-r, green.600, teal.400)" minW={{ base: "150px", md: "200px" }}>
+                <Box mb={2} color="white" fontWeight="bold"bgGradient="linear(to-r, green.600, teal.400)" fontSize="sm">
                   {label}
                 </Box>
                 <Select
@@ -210,9 +215,9 @@ const Dashboard = () => {
             ))}
         </Flex>
       </CardBody>
-      <Card bg="white.800" borderRadius="lg" boxShadow="lg" mt={6} p={4}>
+      <Card bg="white.800" borderRadius="lg" boxShadow="lg"bgGradient="linear(to-r, gray.200, gray.300)" mt={6} p={4}>
         <CardBody>
-          <TableContainer>
+          <TableContainer overflowY="auto" maxH="60vh" overflowX="auto" >
             <Table variant="striped" colorScheme="gray">
               <Thead>
                 <Tr>
@@ -240,6 +245,16 @@ const Dashboard = () => {
                   </Tr>
                 ))}
               </Tbody>
+
+              <Tfoot>
+          <Tr bg="gray.100" fontWeight="bold">
+            <Td colSpan={3} textAlign="center">TOTAL</Td>
+            <Td>{totalQuantity.toLocaleString()} Units</Td>
+            <Td colSpan={1} textAlign="center"></Td>
+            <Td>{totalSales.toLocaleString()} ALL</Td>
+          </Tr>
+        </Tfoot>
+
             </Table>
           </TableContainer>
 

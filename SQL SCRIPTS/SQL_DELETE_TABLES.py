@@ -37,5 +37,5 @@ def drop_all_tables(table_names):
             conn.close()
 
 if __name__ == "__main__":
-    tables_to_drop = ['daily_expenses', 'expenses', 'sales', 'supplier_expenses',"article_ingredients"]
+    tables_to_drop = ['daily_expenses', 'expenses',  'supplier_expenses',]
     drop_all_tables(tables_to_drop)

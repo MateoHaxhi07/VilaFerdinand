@@ -6,6 +6,7 @@ import {
   Tbody,
   Tr,
   Th,
+  Tfoot,
   Td,
   TableContainer,
   Box,
@@ -89,6 +90,9 @@ const MostSoldItemsByPrice = () => {
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
+
+  const totalQuantity = data.reduce((sum, item) => sum + Number(item.total_quantity ?? 0), 0);
+  const totalSales = data.reduce((sum, item) => sum + Number(item.total_price ?? 0), 0);
 
   // Heatmap colors from worst (red) to best (green)
   const heatmapColors = ["#FF0000", "#FF7F00", "#FFFF00", "#7FFF00", "#00FF00"];
@@ -192,9 +196,9 @@ const MostSoldItemsByPrice = () => {
   };
 
   return (
-    <Card bg="gray.900" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
+    <Card bg="white.900" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
       <CardBody>
-        <Heading size="md" mb={6} color="white" fontWeight="bold" textAlign="center">
+        <Heading size="md" mb={6} color="black" fontWeight="bold" textAlign="center">
           SHITJET SIPAS RENDITJES SASISE / CMIMIT 
         </Heading>
         <Flex wrap="wrap" gap={6} justifyContent="center">
@@ -203,8 +207,8 @@ const MostSoldItemsByPrice = () => {
             { label: 'Article Names', options: articleNames, value: selectedArticleNames, onChange: setSelectedArticleNames },
             { label: 'Categories', options: categories, value: selectedCategories, onChange: setSelectedCategories }]
             .map(({ label, options, value, onChange }) => (
-              <Box key={label} minW={{ base: "150px", md: "200px" }}>
-                <Box mb={2} color="white" fontWeight="bold" fontSize="sm">
+              <Box bgGradient="linear(to-r, green.600, teal.400)"  key={label} minW={{ base: "150px", md: "200px" }}>
+                <Box bgGradient="linear(to-r, green.600, teal.400)" mb={2} color="white" fontWeight="bold" fontSize="sm">
                   {label}
                 </Box>
                 <Select
@@ -221,9 +225,9 @@ const MostSoldItemsByPrice = () => {
         </Flex>
       </CardBody>
       
-      <Card bg="white.800" borderRadius="lg" boxShadow="lg" mt={6} p={4}>
+      <Card bgGradient="linear(to-r, gray.200, gray.300)" borderRadius="lg" boxShadow="lg" mt={6} p={4}>
       <CardBody>
-      <TableContainer mt={6} borderRadius="lg" boxShadow="md" bg=".700" p={4}>
+      <TableContainer overflowY="auto" maxH="60vh" overflowX="auto"  mt={6} borderRadius="lg" boxShadow="md" bg=".700" p={4}>
         <Table variant="striped" colorScheme="gray">
           <Thead>
             <Tr>
@@ -253,6 +257,20 @@ const MostSoldItemsByPrice = () => {
               </Tr>
             )}
           </Tbody>
+          <Tfoot>
+          <Tr bg="gray.100" fontWeight="bold">
+            <Td colSpan={2} textAlign="center">TOTAL</Td>
+            <Td>{totalQuantity.toLocaleString()} Units</Td>
+            <Td>{totalSales.toLocaleString()} ALL</Td>
+
+          </Tr>
+        </Tfoot>
+
+
+
+
+
+
         </Table>
       </TableContainer>
 

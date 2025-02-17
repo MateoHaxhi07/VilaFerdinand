@@ -15,6 +15,8 @@ import {
   Flex,
   IconButton,
   useToast,
+  Divider,
+  Text
 } from "@chakra-ui/react";
 import { DeleteIcon, AddIcon, CalendarIcon, RepeatIcon } from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
@@ -249,16 +251,16 @@ export default function DailyExpenses() {
   };
 
   return (
-    <Box p={4} bg="gray.50" minH="100vh">
+    <Box p={4} bg="white.200" minH="100vh">
       <Heading textAlign="center" mb={6}>
         XHIRO DITORE
       </Heading>
 
       {/* Entry Table */}
-      <FormLabel fontWeight="bold" fontSize="md">
-        Entry Date:
+      <FormLabel fontWeight="bold" fontSize="md" >
+         ZGJIDH DATEN:
       </FormLabel>
-      <CalendarIcon boxSize={5} mr={2} />
+      <CalendarIcon boxSize={10} mr={2} />
       <DatePicker
         selected={entryDate}
         onChange={setEntryDate}
@@ -266,7 +268,7 @@ export default function DailyExpenses() {
         className="custom-datepicker"
       />
 
-      <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
+      <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md" >
         <Table variant="simple">
           <Thead>
             <Tr bg="gray.200">
@@ -364,9 +366,9 @@ export default function DailyExpenses() {
       {/* View Existing */}
       <Box mt={8}>
         <Heading size="md" mb={4}>
-          View Daily Expenses
+           HISTORIKU XHIROVE
         </Heading>
-        <FormLabel fontWeight="bold">View Date:</FormLabel>
+        <FormLabel fontWeight="bold">ZGJIDH DATEN:</FormLabel>
         <CalendarIcon boxSize={5} mr={2} />
         <DatePicker
           selected={viewDate}
@@ -374,7 +376,6 @@ export default function DailyExpenses() {
           dateFormat="dd/MM/yyyy"
           className="custom-datepicker"
         />
-
         {groupedExpenses.data.length > 0 ? (
           groupedExpenses.data.map((group, idx) => (
             <Box key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">

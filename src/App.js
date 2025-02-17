@@ -26,7 +26,7 @@ export default function App() {
     <>
       <Box>
         <Header showSidebarButton={variants?.navigationButton} onShowSidebar={toggleSidebar} />
-        <Box p="5">
+        <Box p="5" overflowY="auto" height="100vh" >
           {/* Pass the global states via Outlet context */}
           <Outlet
             context={{

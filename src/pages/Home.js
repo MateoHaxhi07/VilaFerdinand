@@ -409,7 +409,7 @@ const Home = () => {
 
 
       <Card bg="white.100" mb={6}>
-      <Card bg="gray.800" mb={6}>
+      <Card bg="gray.800" bgGradient="linear(to-r, green.600, teal.400)" mb={6}>
         <CardBody>
           <Heading size="md" mb={4} color="white" fontWeight="bold">
             Filters
@@ -417,7 +417,7 @@ const Home = () => {
           <Flex wrap="wrap" gap={4}>
             {/* Date Range */}
             <Box>
-              <Box mb={2} color="white" fontWeight="bold">
+              <Box mb={2} color="white" bgGradient="linear(to-r, green.600, teal.400)" fontWeight="bold">
                 Start Date
               </Box>
               <DatePicker
@@ -428,7 +428,7 @@ const Home = () => {
               />
             </Box>
             <Box>
-              <Box mb={2} color="white" fontWeight="bold">
+              <Box mb={2} color="white" bgGradient="linear(to-r, green.600, teal.400)" fontWeight="bold">
                 End Date
               </Box>
               <DatePicker
@@ -441,7 +441,7 @@ const Home = () => {
 
             {/* Seller */}
             <Box minW="200px">
-              <Box mb={2} color="white" fontWeight="bold">
+              <Box mb={2} color="white" bgGradient="linear(to-r, green.600, teal.400)" fontWeight="bold">
                 Seller
               </Box>
               <Select
@@ -456,7 +456,7 @@ const Home = () => {
             </Box>
             {/* Seller Category */}
             <Box minW="200px">
-              <Box mb={2} color="white" fontWeight="bold">
+              <Box mb={2} color="white"  bgGradient="linear(to-r, green.600, teal.400)"fontWeight="bold">
                 Seller Category
               </Box>
               <Select
@@ -474,12 +474,9 @@ const Home = () => {
         </CardBody>
       </Card>
 
-    <Heading mb={6} textAlign="center" fontWeight="bold" color="black">
-      Performance
-      </Heading>
-        <CardBody>
-          <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={4} mb={6}>
-            <GridItem>
+        <CardBody  overflowY="auto" maxH="60vh" overflowX="auto" bgGradient="linear(to-r, white.100, gray.100)" boxShadow="lg "border="20px" borderColor="black.200" p={4}>
+          <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={4} mb={6} >
+            <GridItem bgGradient="linear(to-r, green.300, teal.300)" border={1} borderRadius="md" borderColor={"blackAlpha.100"} p={4}>
               <Stat>
                 <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
                   Total Sales
@@ -493,7 +490,7 @@ const Home = () => {
               </Stat>
             </GridItem>
 
-            <GridItem>
+            <GridItem bgGradient="linear(to-r, green.300, teal.300)" border={1} borderRadius="md" borderColor={"blackAlpha.100"} p={4}>
               <Stat>
                 <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
                   Total Quantity
@@ -507,7 +504,7 @@ const Home = () => {
               </Stat>
             </GridItem>
 
-            <GridItem>
+            <GridItem bgGradient="linear(to-r, green.300, teal.300)" border={1} borderRadius="md" borderColor={"blackAlpha.100"} p={4}>
               <Stat>
                 <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
                   Avg. Article Price
@@ -521,7 +518,7 @@ const Home = () => {
               </Stat>
             </GridItem>
 
-            <GridItem>
+            <GridItem bgGradient="linear(to-r, green.300, teal.300)" border={1} borderRadius="md" borderColor={"blackAlpha.100"} p={4}>
               <Stat>
                 <StatLabel fontSize={{ base: 'sm', md: 'lg' }} color="black" fontWeight="bold">
                   Orders
@@ -538,7 +535,7 @@ const Home = () => {
 
           {/* Daily Sales Chart */}
           <Heading size="md" mb={4} color="black" fontWeight="bold">
-            Daily Sales
+
           </Heading>
           <Box height="400px">
             <ResponsiveBar
