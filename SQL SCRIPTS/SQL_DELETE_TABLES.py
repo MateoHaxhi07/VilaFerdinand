@@ -1,17 +1,21 @@
 import psycopg2
+from urllib.parse import urlparse
+
+DATABASE_URL = "postgresql://restaurant_db_mg7q_user:d9Zslmf92niOQETVqJaTb2n1Rxg0niYg@dpg-cumpfg8gph6c7387r200-a.frankfurt-postgres.render.com/restaurant_db_mg7q"
 
 def drop_all_tables(table_names):
-    # Update with your PostgreSQL connection details
-    connection_params = {
-        "host": "localhost",
-        "database": "restaurant_db",
-        "user": "postgres",
-        "password": "Mateo13141*",
-        "port": 5432
-    }
-
     try:
-        # Connect to the PostgreSQL database
+        # Parse the database URL
+        result = urlparse(DATABASE_URL)
+        connection_params = {
+            "dbname": result.path[1:],  # Remove leading '/'
+            "user": result.username,
+            "password": result.password,
+            "host": result.hostname,
+            "port": result.port
+        }
+
+        # Connect to PostgreSQL
         conn = psycopg2.connect(**connection_params)
         cur = conn.cursor()
 
@@ -23,19 +27,19 @@ def drop_all_tables(table_names):
             except Exception as e:
                 print(f"Error dropping table '{table_name}': {e}")
 
-        # Commit the transaction
+        # Commit changes
         conn.commit()
         print("All specified tables dropped successfully.")
-        
+
     except Exception as e:
         print(f"Error connecting to database: {e}")
-        
+
     finally:
-        if cur:
+        if 'cur' in locals() and cur:
             cur.close()
-        if conn:
+        if 'conn' in locals() and conn:
             conn.close()
 
 if __name__ == "__main__":
-    tables_to_drop = ['daily_expenses', 'expenses',  'supplier_expenses',]
+    tables_to_drop = ['supplier_expenses']
     drop_all_tables(tables_to_drop)

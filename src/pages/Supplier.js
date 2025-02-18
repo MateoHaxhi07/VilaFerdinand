@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Heading,
@@ -33,11 +33,12 @@ const ROW_COLOR = "#e8f5e9";
 export default function Supplier() {
   const toast = useToast();
 
-  // Date pickers for entry and view
+  // Use local dates for both entry and view (formatted as YYYY-MM-DD via en-CA)
   const [entryDate, setEntryDate] = useState(new Date());
+  // View date for existing daily expenses
   const [viewDate, setViewDate] = useState(new Date());
 
-  // Number of dynamic item columns (for ingredients, etc.)
+  // Number of dynamic item columns
   const [itemSetsCount, setItemSetsCount] = useState(1);
 
   // Supplier rows for manual input
@@ -47,7 +48,7 @@ export default function Supplier() {
       transactionType: "purchase", // "purchase" = Blerje, "service" = Borxh Klienta
       totalAmount: "",
       amountPaid: "",
-      // We'll let the server calculate amount left but here we show a preview
+      // Extra items (if any)
       items: Array.from({ length: MAX_ITEM_SETS }, () => ({
         name: "",
         quantity: "",
@@ -121,32 +122,36 @@ export default function Supplier() {
 
   /* ----------------- SAVE MANUAL ENTRIES ----------------- */
   const handleSave = async () => {
-    const dateStr = entryDate.toISOString().split("T")[0];
+    // Format the date as YYYY-MM-DD (local)
+    const dateStr = entryDate.toLocaleDateString("en-CA");
     const finalEntries = [];
+
     supplierRows.forEach((row) => {
-      // Only process if at least one field has data
+      // Process row only if at least one field has data
       const rowHasData =
         row.supplier.trim() ||
         row.totalAmount.trim() ||
         row.amountPaid.trim() ||
-        row.items.some(
-          (it) => it.name.trim() || it.quantity.trim()
-        );
+        row.items.some((it) => it.name.trim() || it.quantity.trim());
       if (!rowHasData) return;
 
-      // Main entry with total and paid amounts
+      // Compute the unpaid amount
+      const total = parseFloat(row.totalAmount) || 0;
+      const paid = parseFloat(row.amountPaid) || 0;
+      const unpaid = (total - paid).toFixed(2);
+
+      // Main entry – include transaction type here
       const mainEntry = {
         supplier: row.supplier.trim(),
-        transactionType: row.transactionType,
+        transactionType: row.transactionType, // sent to backend as transaction_type
         totalAmount: row.totalAmount.trim(),
-        amountPaid: row.amountPaid.trim(),
-        // These fields are for ingredients; leave blank in main entry
+        amountUnpaid: unpaid,
         itemName: "",
         itemQuantity: "",
       };
       finalEntries.push(mainEntry);
 
-      // Additional entries for each item column (if filled)
+      // Additional entries for extra items (if any)
       for (let i = 0; i < itemSetsCount; i++) {
         const { name, quantity } = row.items[i];
         if (name.trim() || quantity.trim()) {
@@ -154,7 +159,7 @@ export default function Supplier() {
             supplier: row.supplier.trim(),
             transactionType: row.transactionType,
             totalAmount: "0",
-            amountPaid: "0",
+            amountUnpaid: "0",
             itemName: name.trim(),
             itemQuantity: quantity.trim(),
           });
@@ -185,6 +190,7 @@ export default function Supplier() {
         description: "Supplier expenses upserted successfully",
         status: "success",
       });
+      // Reset to one empty supplier row
       setSupplierRows([
         {
           supplier: "",
@@ -197,6 +203,7 @@ export default function Supplier() {
           })),
         },
       ]);
+      // Refresh the view table for the current view date
       fetchExisting(viewDate);
     } catch (error) {
       toast({
@@ -208,8 +215,9 @@ export default function Supplier() {
   };
 
   /* ----------------- FETCH & DELETE ----------------- */
+  // When fetching, we use the viewDate converted to YYYY-MM-DD.
   const fetchExisting = async (date) => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = date.toLocaleDateString("en-CA");
     try {
       const resp = await fetch(`${API_URL}/suppliers/bulk?date=${dateStr}`);
       if (!resp.ok) {
@@ -226,6 +234,7 @@ export default function Supplier() {
     }
   };
 
+  // Trigger fetching whenever the view date changes
   useEffect(() => {
     fetchExisting(viewDate);
   }, [viewDate]);
@@ -253,20 +262,78 @@ export default function Supplier() {
     }
   };
 
-  // Helper: translate transaction type to display names
-  const translateTransactionType = (type) => {
+  // Helper to translate transaction type for display
+  function translateTransactionType(type) {
     return type === "purchase" ? "Blerje" : "Borxh Klienta";
-  };
+  }
 
+
+
+
+
+  const groupedData = useMemo(() => {
+    // Group by supplier and transaction type so that multiple entries for the same supplier on one day are aggregated.
+    const groups = {};
+    fetchedRows.forEach((row) => {
+      // Use transaction_type if provided; otherwise, fall back to transactionType.
+      const type = row.transaction_type || row.transactionType;
+      const key = `${row.supplier.trim()}_${type}`;
+      if (!groups[key]) {
+        groups[key] = {
+          supplier: row.supplier,
+          transaction_type: type,
+          date: row.date,
+          total_amount: 0,
+          amount_unpaid: 0,
+          line_items: [],
+          mainEntryId: null, // store the id of the main entry
+        };
+      }
+      // If this is a main entry (with no extra item details), add to totals.
+      if (!row.item_name || row.item_name.trim() === "") {
+        groups[key].total_amount += parseFloat(row.total_amount) || 0;
+        groups[key].amount_unpaid += parseFloat(row.amount_unpaid) || 0;
+        if (!groups[key].mainEntryId) {
+          groups[key].mainEntryId = row.id; // store the first main entry id
+        }
+      } else {
+        groups[key].line_items.push({
+          item_name: row.item_name,
+          quantity: row.quantity,
+        });
+      }
+    });
+    // Calculate amount paid for each group
+    Object.values(groups).forEach((group) => {
+      group.amount_paid = (group.total_amount - group.amount_unpaid).toFixed(2);
+    });
+    return Object.values(groups);
+  }, [fetchedRows]);
+
+
+
+
+
+
+
+
+  
   /* ----------------- VIEW TABLE DISPLAY ----------------- */
   return (
-    <Box p={4} bg="gray.50" minH="100vh">
+    <Box p={4} bg="white.200" minH="100vh">
       <Heading textAlign="center" mb={6}>
-        Supplier Expenses (Table-Based)
+        Furnitor & Borxhe
       </Heading>
 
       {/* ---- Input Table for Adding Rows ---- */}
-      <Box mb={10} p={4} bg="white" borderRadius="md" boxShadow="md" overflowX="auto">
+      <Box
+        mb={10}
+        p={4}
+        bg="white"
+        borderRadius="md"
+        boxShadow="md"
+        overflowX="auto"
+      >
         <Heading size="md" mb={4}>
           Add Supplier Expenses
         </Heading>
@@ -275,7 +342,8 @@ export default function Supplier() {
         <DatePicker
           selected={entryDate}
           onChange={setEntryDate}
-          dateFormat="yyyy-MM-dd"
+          dateFormat="dd/MM/yyyy"
+          className="custom-datepicker"
         />
 
         <Flex mt={4} gap={4}>
@@ -305,7 +373,7 @@ export default function Supplier() {
                     <Th>{`Qty ${String(i + 1).padStart(2, "0")}`}</Th>
                   </React.Fragment>
                 ))}
-                <Th>Remove Row</Th>
+
               </Tr>
             </Thead>
             <Tbody>
@@ -315,13 +383,17 @@ export default function Supplier() {
                     <Input
                       placeholder="Supplier"
                       value={row.supplier}
-                      onChange={(e) => handleRowChange(rowIndex, "supplier", e.target.value)}
+                      onChange={(e) =>
+                        handleRowChange(rowIndex, "supplier", e.target.value)
+                      }
                     />
                   </Td>
                   <Td>
                     <Select
                       value={row.transactionType}
-                      onChange={(e) => handleRowChange(rowIndex, "transactionType", e.target.value)}
+                      onChange={(e) =>
+                        handleRowChange(rowIndex, "transactionType", e.target.value)
+                      }
                     >
                       <option value="purchase">
                         Blerje (Me borxh ose pa borxh)
@@ -335,22 +407,30 @@ export default function Supplier() {
                     <Input
                       placeholder="Total Amount"
                       value={row.totalAmount}
-                      onChange={(e) => handleRowChange(rowIndex, "totalAmount", e.target.value)}
+                      onChange={(e) =>
+                        handleRowChange(rowIndex, "totalAmount", e.target.value)
+                      }
                     />
                   </Td>
                   <Td>
                     <Input
                       placeholder="Amount Paid"
                       value={row.amountPaid}
-                      onChange={(e) => handleRowChange(rowIndex, "amountPaid", e.target.value)}
+                      onChange={(e) =>
+                        handleRowChange(rowIndex, "amountPaid", e.target.value)
+                      }
                     />
                   </Td>
                   <Td>
                     <Input
                       value={
-                        isNaN(parseFloat(row.totalAmount)) || isNaN(parseFloat(row.amountPaid))
+                        isNaN(parseFloat(row.totalAmount)) ||
+                        isNaN(parseFloat(row.amountPaid))
                           ? ""
-                          : (parseFloat(row.totalAmount) - parseFloat(row.amountPaid)).toFixed(2)
+                          : (
+                              parseFloat(row.totalAmount) -
+                              parseFloat(row.amountPaid)
+                            ).toFixed(2)
                       }
                       isReadOnly
                     />
@@ -359,28 +439,38 @@ export default function Supplier() {
                     <React.Fragment key={itemIndex}>
                       <Td>
                         <Input
-                          placeholder={`Item ${String(itemIndex + 1).padStart(2, "0")}`}
+                          placeholder={`Item ${String(
+                            itemIndex + 1
+                          ).padStart(2, "0")}`}
                           value={row.items[itemIndex].name}
-                          onChange={(e) => handleItemChange(rowIndex, itemIndex, "name", e.target.value)}
+                          onChange={(e) =>
+                            handleItemChange(
+                              rowIndex,
+                              itemIndex,
+                              "name",
+                              e.target.value
+                            )
+                          }
                         />
                       </Td>
                       <Td>
                         <Input
-                          placeholder={`Qty ${String(itemIndex + 1).padStart(2, "0")}`}
+                          placeholder={`Qty ${String(
+                            itemIndex + 1
+                          ).padStart(2, "0")}`}
                           value={row.items[itemIndex].quantity}
-                          onChange={(e) => handleItemChange(rowIndex, itemIndex, "quantity", e.target.value)}
+                          onChange={(e) =>
+                            handleItemChange(
+                              rowIndex,
+                              itemIndex,
+                              "quantity",
+                              e.target.value
+                            )
+                          }
                         />
                       </Td>
                     </React.Fragment>
                   ))}
-                  <Td>
-                    <IconButton
-                      aria-label="Remove row"
-                      icon={<DeleteIcon />}
-                      colorScheme="red"
-                      onClick={() => handleRemoveSupplierRow(rowIndex)}
-                    />
-                  </Td>
                 </Tr>
               ))}
             </Tbody>
@@ -394,7 +484,7 @@ export default function Supplier() {
         </Flex>
       </Box>
 
-      {/* ---- VIEW TABLE (With Translations and Date) ---- */}
+      {/* ---- VIEW TABLE (Grouped) ---- */}
       <Heading size="md" mb={4}>
         View Existing Supplier Records
       </Heading>
@@ -403,52 +493,59 @@ export default function Supplier() {
       <DatePicker
         selected={viewDate}
         onChange={setViewDate}
-        dateFormat="yyyy-MM-dd"
+        dateFormat="dd/MM/yyyy"
+        className="custom-datepicker"
       />
 
-      <Box mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
-        {fetchedRows.length > 0 ? (
-          <TableContainer>
-            <Table variant="simple">
-              <Thead>
-                <Tr bg="gray.200">
-                  <Th>Date</Th>
-                  <Th>Supplier</Th>
-                  <Th>Type (Lloji Borxhit)</Th>
-                  <Th isNumeric>Total Amount</Th>
-                  <Th isNumeric>Amount Paid</Th>
-                  <Th isNumeric>Amount Unpaid</Th>
-                  <Th>Items (JSON)</Th>
-                  <Th>Action</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {fetchedRows.map((row) => (
-                  <Tr key={row.id} bg={ROW_COLOR}>
-                    <Td>{new Date(row.date).toISOString().split("T")[0]}</Td>
-                    <Td>{row.supplier}</Td>
-                    <Td>{translateTransactionType(row.transaction_type)}</Td>
-                    <Td isNumeric>{row.total_amount}</Td>
-                    <Td isNumeric>{row.amount_paid}</Td>
-                    <Td isNumeric>{row.amount_unpaid}</Td>
-                    <Td>
-                      <Box whiteSpace="pre-wrap" fontSize="xs">
-                        {JSON.stringify(row.line_items, null, 2)}
-                      </Box>
-                    </Td>
-                    <Td>
-                      <IconButton
-                        aria-label="Delete row"
-                        icon={<DeleteIcon />}
-                        colorScheme="red"
-                        onClick={() => handleDeleteRow(row.id)}
-                      />
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
+<Box mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
+  {groupedData.length > 0 ? (
+    <TableContainer>
+      <Table variant="simple">
+        <Thead>
+          <Tr bg="gray.200">
+            <Th>Date</Th>
+            <Th>Supplier</Th>
+            <Th>Type (Lloji Borxhit)</Th>
+            <Th isNumeric>Total Amount</Th>
+            <Th isNumeric>Amount Paid</Th>
+            <Th isNumeric>Amount Unpaid</Th>
+            <Th>Items (JSON)</Th>
+            <Th>Action</Th> {/* New column for delete button */}
+          </Tr>
+        </Thead>
+        <Tbody>
+          {groupedData.map((group, idx) => (
+            <Tr key={idx} bg={ROW_COLOR}>
+              <Td>
+                {new Date(group.date).toLocaleDateString("en-CA")}
+              </Td>
+              <Td>{group.supplier}</Td>
+              <Td>{translateTransactionType(group.transaction_type)}</Td>
+              <Td isNumeric>{group.total_amount.toFixed(2)}</Td>
+              <Td isNumeric>{group.amount_paid}</Td>
+              <Td isNumeric>
+                {parseFloat(group.amount_unpaid).toFixed(2)}
+              </Td>
+              <Td>
+                <Box whiteSpace="pre-wrap" fontSize="xs">
+                  {JSON.stringify(group.line_items, null, 2)}
+                </Box>
+              </Td>
+              <Td>
+                {group.mainEntryId && (
+                  <IconButton
+                    aria-label="Delete"
+                    icon={<DeleteIcon />}
+                    colorScheme="red"
+                    onClick={() => handleDeleteRow(group.mainEntryId)}
+                  />
+                )}
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+    </TableContainer>
         ) : (
           <Box>No supplier expenses found for this date.</Box>
         )}

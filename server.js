@@ -701,9 +701,34 @@ app.get("/sales/order-count", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+
+
+
+
+
+
+
+
 /******************************************************
  * DAILY_EXPENSES TABLE & ENDPOINTS
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
  ******************************************************/
+
+
+
+
+
 const createDailyExpensesTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS daily_expenses (
@@ -761,16 +786,16 @@ app.get("/expenses/bulk", async (req, res) => {
     return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
   }
   try {
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    // Use moment.utc to avoid local timezone shifts
+    const adjustedStartDate = moment.utc(date).startOf('day').toISOString();
+    const adjustedEndDate = moment.utc(date).endOf('day').toISOString();
+
     const result = await pool.query(
       `SELECT id, seller, daily_total, cash_daily_total, expense, amount, description, date
        FROM daily_expenses
        WHERE date BETWEEN $1 AND $2
        ORDER BY date ASC`,
-      [startDate.toISOString(), endDate.toISOString()]
+      [adjustedStartDate, adjustedEndDate]
     );
     res.json(result.rows);
   } catch (err) {
@@ -796,17 +821,22 @@ app.delete("/expenses/bulk/:id", async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 /****************************************************
  *   SUPPLIER EXPENSES TABLE (ORDER YOU REQUESTED)
  ****************************************************/
-// This table has columns in the order you asked for:
-// 1) date
-// 2) supplier
-// 3) total_amount
-// 4) amount_unpaid
-// 5) item_name
-// 6) quantity
-// (Plus an id primary key and created_at)
 
 
 const createSupplierExpensesTable = async () => {
@@ -815,6 +845,7 @@ const createSupplierExpensesTable = async () => {
       id SERIAL PRIMARY KEY,
       date DATE NOT NULL,
       supplier TEXT NOT NULL,
+      transaction_type TEXT NOT NULL, -- New column for transaction type
       total_amount TEXT,
       amount_unpaid TEXT,
       item_name TEXT,
@@ -831,33 +862,13 @@ const createSupplierExpensesTable = async () => {
 };
 createSupplierExpensesTable();
 
-/****************************************************
- *   SUPPLIER EXPENSES ENDPOINTS
- ****************************************************/
-
-/**
- * POST /suppliers/bulk
- * Expects:
- * {
- *   "selectedDate": "YYYY-MM-DD",
- *   "entries": [
- *     {
- *       "supplier": "Riza",
- *       "totalAmount": "20000",
- *       "amountUnpaid": "5000",
- *       "itemName": "Flour",
- *       "itemQuantity": "2"
- *     },
- *     ...
- *   ]
- * }
- */
 app.post("/suppliers/bulk", async (req, res) => {
   const { selectedDate, entries } = req.body;
   if (!selectedDate || !entries || !Array.isArray(entries)) {
     return res.status(400).json({ error: "Invalid request payload" });
   }
 
+  
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -865,6 +876,7 @@ app.post("/suppliers/bulk", async (req, res) => {
     for (const entry of entries) {
       const {
         supplier,
+        transactionType, // new field
         totalAmount,
         amountUnpaid,
         itemName,
@@ -873,11 +885,12 @@ app.post("/suppliers/bulk", async (req, res) => {
 
       await client.query(
         `INSERT INTO supplier_expenses
-         (date, supplier, total_amount, amount_unpaid, item_name, quantity, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+         (date, supplier, transaction_type, total_amount, amount_unpaid, item_name, quantity, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
         [
           selectedDate,
           supplier,
+          transactionType, // insert transactionType here
           totalAmount,
           amountUnpaid,
           itemName,
@@ -907,17 +920,15 @@ app.get("/suppliers/bulk", async (req, res) => {
     return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
   }
   try {
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    const adjustedStartDate = moment.utc(date).startOf('day').toISOString();
+    const adjustedEndDate = moment.utc(date).endOf('day').toISOString();
 
     const result = await pool.query(
-      `SELECT id, supplier, total_amount, amount_unpaid, item_name, quantity, date
+      `SELECT id, supplier, transaction_type, total_amount, amount_unpaid, item_name, quantity, date
        FROM supplier_expenses
        WHERE date BETWEEN $1 AND $2
        ORDER BY date ASC`,
-      [startDate.toISOString(), endDate.toISOString()]
+       [adjustedStartDate, adjustedEndDate]
     );
     res.json(result.rows);
   } catch (err) {
@@ -946,6 +957,13 @@ app.delete("/suppliers/bulk/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete supplier expense" });
   }
 });
+
+
+
+
+
+
+
 
 /******************************************************
  * ARTICLE_INGREDIENTS TABLE & ENDPOINTS (Manual Entry)

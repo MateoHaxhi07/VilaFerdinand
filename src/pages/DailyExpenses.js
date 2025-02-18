@@ -5,10 +5,12 @@ import {
   FormLabel,
   Input,
   Button,
+  Grid,
   Table,
   Thead,
   Tbody,
   Tr,
+  GridItem,
   Th,
   Td,
   TableContainer,
@@ -16,10 +18,16 @@ import {
   IconButton,
   useToast,
   Divider,
-  Text
+  Text,
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter
 } from "@chakra-ui/react";
 import { DeleteIcon, AddIcon, CalendarIcon, RepeatIcon } from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
+import { Center } from "@chakra-ui/react";
+import {motion} from "framer-motion";
 import "react-datepicker/dist/react-datepicker.css";
 
 // Adjust if you have a .env
@@ -87,6 +95,24 @@ export default function DailyExpenses() {
     });
     return { data: groupedArr, maxCols };
   }, [rawExpenses]);
+
+/* Total calculation for daily expenses */
+
+const totals = useMemo(() => {
+  let totalDaily = 0;
+  let totalCashDaily = 0;
+  let totalExpenseCombined = 0;
+
+  tableData.forEach((row) => {
+    totalDaily += parseFloat(row.dailyTotal) || 0;
+    totalCashDaily += parseFloat(row.cashDailyTotal) || 0;
+    for (let i = 0; i < expenseSetsCount; i++) {
+      totalExpenseCombined += parseFloat(row.expenses[i].amount) || 0;
+    }
+  });
+
+  return { totalDaily, totalCashDaily, totalExpenseCombined };
+}, [tableData, expenseSetsCount]);
 
   // Add or remove expense columns
   const handleAddExpenseSet = () => {
@@ -250,17 +276,66 @@ export default function DailyExpenses() {
     }
   };
 
+  // Calculate totals for the view table
+  const viewTotals = useMemo(() => {
+    const totalsBySeller = groupedExpenses.data.map((group) => {
+      let totalExpenseCombined = 0;
+      group.items.forEach((item) => {
+        totalExpenseCombined += parseFloat(item.amount) || 0;
+      });
+      return { seller: group.seller, totalExpenseCombined };
+    });
+
+    return totalsBySeller;
+  }, [groupedExpenses]);
+
   return (
-    <Box p={4} bg="white.200" minH="100vh">
-      <Heading textAlign="center" mb={6}>
-        XHIRO DITORE
-      </Heading>
+    <Box p={1}>
+    {/* Animated Heading */}
+    <Box
+      bgGradient="linear(to-r, green.300, teal.300)"
+      border={5}
+      borderRadius="md"
+      borderColor={"blackAlpha.100"}
+      p={4}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 1,
+          ease: "easeOut",
+          type: "spring",
+          stiffness: 100,
+        }}
+        whileHover={{
+          scale: 1.1,
+          transition: { duration: 0.3 },
+        }}
+      >
+        <Heading
+          textAlign="center"
+          mb={4}
+          padding={10}
+          borderBottom={1}
+          marginBottom={1}
+          color="white"
+          fontSize="4xl"
+        >
+          XHIRO DITORE
+        </Heading>
+      </motion.div>
+    </Box>
+
+
+  
+
 
       {/* Entry Table */}
-      <FormLabel fontWeight="bold" fontSize="md" >
+      <FormLabel fontWeight="bold" fontSize="md"  mb={5}>
          ZGJIDH DATEN:
       </FormLabel>
-      <CalendarIcon boxSize={10} mr={2} />
+      <CalendarIcon boxSize={10} mr={7} />
       <DatePicker
         selected={entryDate}
         onChange={setEntryDate}
@@ -344,7 +419,17 @@ export default function DailyExpenses() {
                 ))}
               </Tr>
             ))}
-          </Tbody>
+
+             {/* Totals Row */}
+  <Tr bg="gray.100" fontWeight="bold" >
+    <Td>TOTALI       {totals.totalDaily}</Td>
+    <Td>TOTALI CASH   {totals.totalCashDaily}</Td>
+    <Td colSpan={3 * expenseSetsCount} textAlign="center">
+    <Td>TOTALI BLERJEVE                                                  {totals.totalExpenseCombined}
+      </Td>
+    </Td>
+  </Tr>
+</Tbody>
         </Table>
       </TableContainer>
 
@@ -365,11 +450,11 @@ export default function DailyExpenses() {
 
       {/* View Existing */}
       <Box mt={8}>
-        <Heading size="md" mb={4}>
-           HISTORIKU XHIROVE
-        </Heading>
-        <FormLabel fontWeight="bold">ZGJIDH DATEN:</FormLabel>
-        <CalendarIcon boxSize={5} mr={2} />
+      
+      <FormLabel fontWeight="bold" fontSize="md"  mb={5}>
+         ZGJIDH DATEN PER TE SHIKUAR HISTORIKUN
+      </FormLabel>
+      <CalendarIcon boxSize={10} mr={7} />
         <DatePicker
           selected={viewDate}
           onChange={setViewDate}
@@ -377,64 +462,77 @@ export default function DailyExpenses() {
           className="custom-datepicker"
         />
         {groupedExpenses.data.length > 0 ? (
-          groupedExpenses.data.map((group, idx) => (
-            <Box key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
-              <Heading size="sm" mb={2}>
-                {group.seller} - {group.date}
-              </Heading>
-              <TableContainer>
-                <Table variant="simple">
-                  <Thead>
-                    <Tr bg="gray.200">
-                      <Th>Daily Total</Th>
-                      <Th>Cash Daily Total</Th>
-                      {[...Array(groupedExpenses.maxCols)].map((_, colIndex) => (
-                        <React.Fragment key={colIndex}>
-                          <Th>Expense {colIndex + 1}</Th>
-                          <Th>Amount {colIndex + 1}</Th>
-                          <Th>Description {colIndex + 1}</Th>
-                          <Th>Action</Th>
-                        </React.Fragment>
-                      ))}
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    <Tr bg={ROW_COLOR}>
-                      <Td>{group.dailyTotal}</Td>
-                      <Td>{group.cashDailyTotal}</Td>
-                      {[...Array(groupedExpenses.maxCols)].map((_, ci) => {
-                        const item = group.items[ci];
-                        if (!item)
-                          return (
-                            <React.Fragment key={ci}>
-                              <Td />
-                              <Td />
-                              <Td />
-                              <Td />
+          groupedExpenses.data.map((group, idx) => {
+            const sellerTotal = viewTotals.find(total => total.seller === group.seller)?.totalExpenseCombined || 0;
+            return (
+              <Card key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
+                <CardHeader>
+                  <Box>
+                    <Heading size="sm" mb={2}>
+                      {group.seller}
+                    </Heading>
+                  </Box>
+                </CardHeader>
+                <CardBody>
+                  <TableContainer>
+                    <Table variant="simple">
+                      <Thead>
+                        <Tr bg="gray.200">
+                          <Th>Daily Total</Th>
+                          <Th>Cash Daily Total</Th>
+                          {[...Array(groupedExpenses.maxCols)].map((_, colIndex) => (
+                            <React.Fragment key={colIndex}>
+                              <Th>Expense {colIndex + 1}</Th>
+                              <Th>Amount {colIndex + 1}</Th>
+                              <Th>Description {colIndex + 1}</Th>
+                              <Th>Action</Th>
                             </React.Fragment>
-                          );
-                        return (
-                          <React.Fragment key={ci}>
-                            <Td>{item.expense}</Td>
-                            <Td>{item.amount}</Td>
-                            <Td>{item.description}</Td>
-                            <Td>
-                              <IconButton
-                                aria-label="Delete"
-                                colorScheme="red"
-                                icon={<DeleteIcon />}
-                                onClick={() => handleDeleteExpense(item.id)}
-                              />
-                            </Td>
-                          </React.Fragment>
-                        );
-                      })}
-                    </Tr>
-                  </Tbody>
-                </Table>
-              </TableContainer>
-            </Box>
-          ))
+                          ))}
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        <Tr bg={ROW_COLOR}>
+                          <Td>{group.dailyTotal}</Td>
+                          <Td>{group.cashDailyTotal}</Td>
+                          {[...Array(groupedExpenses.maxCols)].map((_, ci) => {
+                            const item = group.items[ci];
+                            if (!item)
+                              return (
+                                <React.Fragment key={ci}>
+                                  <Td />
+                                  <Td />
+                                  <Td />
+                                  <Td />
+                                </React.Fragment>
+                              );
+                            return (
+                              <React.Fragment key={ci}>
+                                <Td>{item.expense}</Td>
+                                <Td>{item.amount}</Td>
+                                <Td>{item.description}</Td>
+                                <Td>
+                                  <IconButton
+                                    aria-label="Delete"
+                                    colorScheme="red"
+                                    icon={<DeleteIcon />}
+                                    onClick={() => handleDeleteExpense(item.id)}
+                                  />
+                                </Td>
+                              </React.Fragment>
+                            );
+                          })}
+                        </Tr>
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                </CardBody>
+                <CardFooter>
+                  <Text fontWeight="bold">Total Expense Combined: {sellerTotal}</Text>
+                </CardFooter>
+                <Box mb={4} /> {/* Add margin at the bottom */}
+              </Card>
+            );
+          })
         ) : (
           <Box mt={4}>No daily expenses for this date.</Box>
         )}
