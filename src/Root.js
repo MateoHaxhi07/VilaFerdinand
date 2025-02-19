@@ -20,9 +20,12 @@ const Root = () => {
   return (
     <ChakraProvider>
       <Routes>
+
         {/* Public Route */}
         <Route path="/login" element={<Login />} />
         <Route path="/not-authorized" element={<NotAuthorized />} />
+        <Route path="/" element={<App />}></Route>
+        
 
         {/* Protected Routes nested under App */}
         <Route element={isAuthenticated ? <App /> : <Navigate to="/login" />}>
@@ -98,5 +101,6 @@ const Root = () => {
     </ChakraProvider>
   );
 };
+
 
 export default Root;
