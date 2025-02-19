@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ChakraProvider, Box, Button, Flex, FormControl, FormLabel, Heading, Input, useToast, Text } from '@chakra-ui/react';
+import { ChakraProvider, Box, Button, Flex, FormControl, FormLabel, Heading, Input, useToast } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import anime from 'animejs';
 import axios from 'axios';
-import './Login.css'; // Optional: Your custom CSS styles
-
-
-import ReactDOM from 'react-dom';
-
-
-
+import './Login.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -38,34 +32,42 @@ const Login = () => {
   // 🗝️ Handle Form Submission with Axios
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Login: handleSubmit called with email:', email, 'and password:', password);
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, { email, password });
+      const url = `${process.env.REACT_APP_API_URL}/auth/login`;
+      console.log('Login: Sending POST request to:', url);
+      const response = await axios.post(url, { email, password });
+      console.log('Login: Received response:', response);
       if (response.status === 200) {
         localStorage.setItem('token', response.data.token);
+        console.log('Login: Token stored in localStorage:', response.data.token);
         toast({ title: 'Login Successful', status: 'success', duration: 2000, isClosable: true });
         navigate('/home', { replace: true });
+        console.log('Login: Navigated to /home');
       } else {
+        console.log('Login: Response status not 200:', response.status);
         toast({ title: 'Login Failed', description: 'Invalid credentials.', status: 'error', duration: 2000 });
       }
     } catch (error) {
-      toast({ title: 'An error occurred.', description: error.response?.data?.message || 'Please try again.', status: 'error', duration: 2000 });
+      console.error('Login: Error during login request:', error);
+      toast({
+        title: 'An error occurred.',
+        description: error.response?.data?.error || 'Please try again.',
+        status: 'error',
+        duration: 2000
+      });
     }
   };
 
   // 📝 Handle Redirection to Register
   const handleRegisterRedirect = () => {
+    console.log('Login: Redirecting to register');
     navigate('/register');
   };
 
   return (
     <ChakraProvider>
-      <Flex
-        position="relative"
-        minH="100vh"
-        align="center"
-        justify="center"
-        overflow="hidden"
-      >
+      <Flex position="relative" minH="100vh" align="center" justify="center" overflow="hidden">
         {/* 🎥 YouTube Video Background */}
         <Box
           position="fixed"
@@ -78,25 +80,11 @@ const Login = () => {
           transform="translate(-50%, -50%)"
           zIndex="-2"
         >
-          <video
-  autoPlay
-  loop
-  muted
-  playsInline
-  className="absolute top-0 left-0 w-full h-full object-cover"
->
-  <source src="/videos/Veep_v1.webm" type="video/webm" />
-
-</video>
+          <video autoPlay loop muted playsInline className="absolute top-0 left-0 w-full h-full object-cover">
+            <source src="/videos/Veep_v1.webm" type="video/webm" />
+          </video>
           {/* 🖤 Dark Overlay */}
-          <Box
-            position="absolute"
-            top="0"
-            left="0"
-            w="100%"
-            h="100%"
-            bg="rgba(0, 0, 0, 0.5)"
-          />
+          <Box position="absolute" top="0" left="0" w="100%" h="100%" bg="rgba(0, 0, 0, 0.5)" />
         </Box>
 
         {/* 🌀 Animated Shapes */}
@@ -115,17 +103,16 @@ const Login = () => {
           w="full"
           zIndex="2"
         >
-
-<Heading
-  textAlign="center"
-  mb={10}
-  padding={4}
-  color="white" // Change color to white
-  fontSize="2xl"
-  bgGradient="linear(to-r, green.300, teal.300)"
->
-  Welcome Back
-</Heading>
+          <Heading
+            textAlign="center"
+            mb={10}
+            padding={4}
+            color="white" // Change color to white
+            fontSize="2xl"
+            bgGradient="linear(to-r, green.300, teal.300)"
+          >
+            Welcome Back
+          </Heading>
 
           <form onSubmit={handleSubmit}>
             <FormControl mb={4} isRequired>
@@ -161,7 +148,6 @@ const Login = () => {
               Sign In
             </Button>
           </form>
-
         </Box>
       </Flex>
     </ChakraProvider>
