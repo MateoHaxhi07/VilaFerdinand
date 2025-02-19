@@ -50,9 +50,7 @@ const authenticateAdmin = (req, res, next) => {
 };
 
 
-app.get("/", (req, res) => {
-  res.send("Welcome to the API server");
-});
+
 
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
@@ -1357,6 +1355,6 @@ app.get("/report/missing-articles", async (req, res) => {
     res.sendFile(path.join(__dirname, "build", "index.html"));
   });
 
-  
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
