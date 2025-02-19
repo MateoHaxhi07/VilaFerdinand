@@ -606,7 +606,7 @@ const Home = () => {
       </Card>
 
       
-      {/* Pie Chart Section */}
+      {/* Funnel Chart Section */}
 
       <Grid gap={6} templateColumns="1fr">
         <Card bg="white.800" p={4} borderRadius="lg" mb={6}>

@@ -7,6 +7,8 @@ const cors = require("cors");
 const { Pool } = require("pg");
 const moment = require("moment");
 const bcrypt = require('bcrypt');
+const port = process.env.PORT || 5000;
+
 const jwt = require('jsonwebtoken');
 const app = express();
 const path = require("path");
@@ -1361,5 +1363,7 @@ app.get("/report/missing-articles", async (req, res) => {
   });
 
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+  
