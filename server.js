@@ -9,6 +9,7 @@ const moment = require("moment");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const app = express();
+const path = require("path");
 app.use(cors());
 app.use(express.json());
 
@@ -1346,6 +1347,8 @@ app.get("/report/missing-articles", async (req, res) => {
 /* ===============================
    SERVING THE REACT APP
    =============================== */
+
+   
    app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "build", "index.html"));
   });
