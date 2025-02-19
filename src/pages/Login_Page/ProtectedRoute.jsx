@@ -1,7 +1,7 @@
 // src/components/ProtectedRoute.jsx
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import jwtDecode from 'jwt-decode'; // Corrected import: jwt-decode exports default
+import {jwtDecode} from 'jwt-decode'; // Corrected import: jwt-decode exports default
 
 const ProtectedRoute = ({ allowedRoles, children }) => {
   const token = localStorage.getItem('token');
