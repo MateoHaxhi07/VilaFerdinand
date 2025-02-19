@@ -1,11 +1,4 @@
-paths project: 
 
-cd C:\Users\mhaxh\OneDrive\Desktop\vf_dashboard_2025
-npm start
-
-backend:
-
-cd C:\Users\mhaxh\OneDrive\Desktop\vf_dashboard_2025\restaurant-backend
 
 
 
@@ -14,22 +7,11 @@ psql pass:
 Mateo13141*
 port 5432
 
+to do list
 
-
-First we start the backend server which connects to the PostgreSQL data we input with this cmd command
-
-go to directory of backend server
-
-type: node server.js
-
-
-Then we start the react app by going to the dashboard
-then doing npm start to launch react app which connects with the backend server.js which holds the data
-
-
-
-
-
+table of reviews with rating, date items ordered and comments
+inventory table
+flete hyrje - devpos
 
 
 
@@ -74,7 +56,7 @@ git push origin main
 Fourth  we need to creates a tag with a release version of all the files with changes and a message
 
 
-git tag -a v5.0.3 -m "Local App Updated Online SQL Database"
+git tag -a v5.0.5 -m " App Updated Online SQL Database"
 
 
 

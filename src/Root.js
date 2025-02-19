@@ -1,19 +1,18 @@
-// Root.js
+
 import { ChakraProvider } from '@chakra-ui/react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-
 import App from './App';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import MostSoldItemsByPrice from './pages/MostSoldItemsByPrice';
-import DailyExpenses from './pages/DailyExpenses';
-import Supplier from './pages/Supplier';
-import ArticleIngredients from './pages/ArticleIngredients';
-import Usage from './pages/Usage';
-import MissingArticles from './pages/MissingArticles';
-import Login from './pages/Login';
-import NotAuthorized from './pages/NotAuthorized';
-import ProtectedRoute from './pages/ProtectedRoute.jsx';
+import Home from './pages/Home_Page/Home.js';
+import Dashboard from './pages/Shitjet_Analitike/Dashboard.js';
+import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice.js';
+import DailyExpenses from './pages/Xhiro_Ditore/DailyExpenses.js';
+import Supplier from './pages/Furnitor/Supplier.js';
+import ArticleIngredients from './pages/Receta/ArticleIngredients.js';
+import Usage from './pages/Malli_Shitur/Usage.js';
+import MissingArticles from './pages/Receta_Mungojn/MissingArticles.js';
+import Login from './pages/Login_Page/Login';
+import NotAuthorized from './pages/Login_Page/NotAuthorized';
+import ProtectedRoute from './pages/Login_Page/ProtectedRoute.jsx';
 
 const Root = () => {
   const isAuthenticated = !!localStorage.getItem('token');
