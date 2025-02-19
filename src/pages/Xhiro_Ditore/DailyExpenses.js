@@ -22,18 +22,18 @@ import {
   Card,
   CardHeader,
   CardBody,
-  CardFooter
+  CardFooter,
+  Center,
 } from "@chakra-ui/react";
 import { DeleteIcon, AddIcon, CalendarIcon, RepeatIcon } from "@chakra-ui/icons";
+import { motion } from "framer-motion";
 import DatePicker from "react-datepicker";
-import { Center } from "@chakra-ui/react";
-import {motion} from "framer-motion";
 import "react-datepicker/dist/react-datepicker.css";
 
 // Adjust if you have a .env
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// We can define some sellers for daily usage
+// Define sellers and other constants
 const SELLERS = ["KRISTI", "VERA", "JONI", "FLORI", "DEA", "ENISA"];
 const MAX_EXPENSE_SETS = 15;
 const ROW_COLOR = "#e8f5e9";
@@ -41,15 +41,43 @@ const ROW_COLOR = "#e8f5e9";
 export default function DailyExpenses() {
   const toast = useToast();
 
+  // Inject custom DatePicker styles for dark theme (inside the component)
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+      .react-datepicker__input-container input {
+        background-color: #2D3748 !important;
+        color: #FFF !important;
+        border: 1px solid #4A5568 !important;
+        padding: 8px;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .react-datepicker {
+        background-color: #2D3748 !important;
+        color: #FFF !important;
+      }
+      .react-datepicker__day-name,
+      .react-datepicker__day,
+      .react-datepicker__time-name {
+        color: #FFF !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   // Entry date for new daily expenses
   const [entryDate, setEntryDate] = useState(new Date());
   // View date for existing daily expenses
   const [viewDate, setViewDate] = useState(new Date());
 
-  // how many dynamic expense columns we show
+  // How many dynamic expense columns we show
   const [expenseSetsCount, setExpenseSetsCount] = useState(1);
 
-  // table data for input: one row per SELLER
+  // Table data for input: one row per seller
   const [tableData, setTableData] = useState(
     SELLERS.map((seller) => ({
       seller,
@@ -63,10 +91,10 @@ export default function DailyExpenses() {
     }))
   );
 
-  // fetched data from the server for the selected "view date"
+  // Fetched data from the server for the selected "view date"
   const [rawExpenses, setRawExpenses] = useState([]);
 
-  // group them by (seller, date)
+  // Group raw expenses by seller and date
   const groupedExpenses = useMemo(() => {
     const byKey = {};
     rawExpenses.forEach((row) => {
@@ -96,23 +124,22 @@ export default function DailyExpenses() {
     return { data: groupedArr, maxCols };
   }, [rawExpenses]);
 
-/* Total calculation for daily expenses */
+  /* Total calculation for daily expenses */
+  const totals = useMemo(() => {
+    let totalDaily = 0;
+    let totalCashDaily = 0;
+    let totalExpenseCombined = 0;
 
-const totals = useMemo(() => {
-  let totalDaily = 0;
-  let totalCashDaily = 0;
-  let totalExpenseCombined = 0;
+    tableData.forEach((row) => {
+      totalDaily += parseFloat(row.dailyTotal) || 0;
+      totalCashDaily += parseFloat(row.cashDailyTotal) || 0;
+      for (let i = 0; i < expenseSetsCount; i++) {
+        totalExpenseCombined += parseFloat(row.expenses[i].amount) || 0;
+      }
+    });
 
-  tableData.forEach((row) => {
-    totalDaily += parseFloat(row.dailyTotal) || 0;
-    totalCashDaily += parseFloat(row.cashDailyTotal) || 0;
-    for (let i = 0; i < expenseSetsCount; i++) {
-      totalExpenseCombined += parseFloat(row.expenses[i].amount) || 0;
-    }
-  });
-
-  return { totalDaily, totalCashDaily, totalExpenseCombined };
-}, [tableData, expenseSetsCount]);
+    return { totalDaily, totalCashDaily, totalExpenseCombined };
+  }, [tableData, expenseSetsCount]);
 
   // Add or remove expense columns
   const handleAddExpenseSet = () => {
@@ -130,7 +157,7 @@ const totals = useMemo(() => {
     if (expenseSetsCount > 1) setExpenseSetsCount(expenseSetsCount - 1);
   };
 
-  // handle changes in dailyTotal, cashDailyTotal
+  // Handle changes in dailyTotal, cashDailyTotal
   const handleInputChange = (rowIndex, field, value) => {
     setTableData((prev) => {
       const updated = [...prev];
@@ -139,7 +166,7 @@ const totals = useMemo(() => {
     });
   };
 
-  // handle changes in dynamic expense sets
+  // Handle changes in dynamic expense sets
   const handleExpenseChange = (rowIndex, expenseIndex, field, value) => {
     setTableData((prev) => {
       const updated = [...prev];
@@ -148,7 +175,7 @@ const totals = useMemo(() => {
     });
   };
 
-  // fetch existing daily expenses for a date
+  // Fetch existing daily expenses for a date
   const fetchExpenses = async (date) => {
     const dateStr = date.toISOString().split("T")[0];
     try {
@@ -171,7 +198,7 @@ const totals = useMemo(() => {
     fetchExpenses(viewDate);
   }, [viewDate]);
 
-  // save new daily expenses
+  // Save new daily expenses
   const handleSave = async () => {
     const entriesToSave = [];
     tableData.forEach((row) => {
@@ -179,7 +206,8 @@ const totals = useMemo(() => {
         row.dailyTotal.trim() ||
         row.cashDailyTotal.trim() ||
         row.expenses.some(
-          (exp) => exp.expense.trim() || exp.amount.trim() || exp.description.trim()
+          (exp) =>
+            exp.expense.trim() || exp.amount.trim() || exp.description.trim()
         );
       if (!rowHasData) return;
 
@@ -249,7 +277,11 @@ const totals = useMemo(() => {
         })),
       }))
     );
-    toast({ title: "Cleared", description: "All daily expenses cleared", status: "info" });
+    toast({
+      title: "Cleared",
+      description: "All daily expenses cleared",
+      status: "info",
+    });
   };
 
   // Delete a single daily expense
@@ -285,55 +317,14 @@ const totals = useMemo(() => {
       });
       return { seller: group.seller, totalExpenseCombined };
     });
-
     return totalsBySeller;
   }, [groupedExpenses]);
 
   return (
     <Box p={1}>
-    {/* Animated Heading */}
-    <Box
-      bgGradient="linear(to-r, green.300, teal.300)"
-      border={5}
-      borderRadius="md"
-      borderColor={"blackAlpha.100"}
-      p={4}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: -30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 1,
-          ease: "easeOut",
-          type: "spring",
-          stiffness: 100,
-        }}
-        whileHover={{
-          scale: 1.1,
-          transition: { duration: 0.3 },
-        }}
-      >
-        <Heading
-          textAlign="center"
-          mb={4}
-          padding={10}
-          borderBottom={1}
-          marginBottom={1}
-          color="white"
-          fontSize="4xl"
-        >
-          XHIRO DITORE
-        </Heading>
-      </motion.div>
-    </Box>
-
-
-  
-
-
       {/* Entry Table */}
-      <FormLabel fontWeight="bold" fontSize="md"  mb={5}>
-         ZGJIDH DATEN:
+      <FormLabel fontWeight="bold" fontSize="md" mb={5} textColor="black.100">
+        ZGJIDH DATEN
       </FormLabel>
       <CalendarIcon boxSize={10} mr={7} />
       <DatePicker
@@ -343,13 +334,13 @@ const totals = useMemo(() => {
         className="custom-datepicker"
       />
 
-      <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md" >
+      <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
         <Table variant="simple">
           <Thead>
             <Tr bg="gray.200">
               <Th>Seller</Th>
-              <Th> TOTAL</Th>
-              <Th>Cash  Total</Th>
+              <Th>TOTAL</Th>
+              <Th>Cash Total</Th>
               {[...Array(expenseSetsCount)].map((_, i) => (
                 <React.Fragment key={i}>
                   <Th>Expense {i + 1}</Th>
@@ -405,12 +396,7 @@ const totals = useMemo(() => {
                       <Input
                         value={row.expenses[expIndex].description}
                         onChange={(e) =>
-                          handleExpenseChange(
-                            rowIndex,
-                            expIndex,
-                            "description",
-                            e.target.value
-                          )
+                          handleExpenseChange(rowIndex, expIndex, "description", e.target.value)
                         }
                         placeholder="Description"
                       />
@@ -420,16 +406,15 @@ const totals = useMemo(() => {
               </Tr>
             ))}
 
-             {/* Totals Row */}
-  <Tr bg="gray.100" fontWeight="bold" >
-    <Td>TOTALI       {totals.totalDaily}</Td>
-    <Td>TOTALI CASH   {totals.totalCashDaily}</Td>
-    <Td colSpan={3 * expenseSetsCount} textAlign="center">
-    <Td>TOTALI BLERJEVE                                                  {totals.totalExpenseCombined}
-      </Td>
-    </Td>
-  </Tr>
-</Tbody>
+            {/* Totals Row */}
+            <Tr bg="gray.100" fontWeight="bold">
+              <Td>TOTALI {totals.totalDaily}</Td>
+              <Td>TOTALI CASH {totals.totalCashDaily}</Td>
+              <Td colSpan={3 * expenseSetsCount} textAlign="center">
+                <Td>TOTALI BLERJEVE {totals.totalExpenseCombined}</Td>
+              </Td>
+            </Tr>
+          </Tbody>
         </Table>
       </TableContainer>
 
@@ -450,11 +435,10 @@ const totals = useMemo(() => {
 
       {/* View Existing */}
       <Box mt={8}>
-      
-      <FormLabel fontWeight="bold" fontSize="md"  mb={5}>
-         ZGJIDH DATEN PER TE SHIKUAR HISTORIKUN
-      </FormLabel>
-      <CalendarIcon boxSize={10} mr={7} />
+        <FormLabel fontWeight="bold" fontSize="md" mb={5} textColor="black.100">
+          ZGJIDH DATEN PER TE SHIKUAR HISTORIKUN
+        </FormLabel>
+        <CalendarIcon boxSize={10} mr={7} />
         <DatePicker
           selected={viewDate}
           onChange={setViewDate}
@@ -463,7 +447,9 @@ const totals = useMemo(() => {
         />
         {groupedExpenses.data.length > 0 ? (
           groupedExpenses.data.map((group, idx) => {
-            const sellerTotal = viewTotals.find(total => total.seller === group.seller)?.totalExpenseCombined || 0;
+            const sellerTotal =
+              viewTotals.find((total) => total.seller === group.seller)
+                ?.totalExpenseCombined || 0;
             return (
               <Card key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
                 <CardHeader>
@@ -527,9 +513,11 @@ const totals = useMemo(() => {
                   </TableContainer>
                 </CardBody>
                 <CardFooter>
-                  <Text fontWeight="bold">Total Expense Combined: {sellerTotal}</Text>
+                  <Text fontWeight="bold">
+                    Total Expense Combined: {sellerTotal}
+                  </Text>
                 </CardFooter>
-                <Box mb={4} /> {/* Add margin at the bottom */}
+                <Box mb={4} /> {/* Margin at the bottom */}
               </Card>
             );
           })

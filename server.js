@@ -1,21 +1,19 @@
-
 require("dotenv").config();
-
 
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
 const moment = require("moment");
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 const port = process.env.PORT || 5000;
 
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const app = express();
 const path = require("path");
 app.use(cors());
 app.use(express.json());
 
-app.use(express.static(path.join(__dirname, 'build')));
+app.use(express.static(path.join(__dirname, "build")));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -24,17 +22,14 @@ const pool = new Pool({
   },
 });
 
-
-
 /* ===============================
    LOGIN & AUTHENTICATION  (Existing)
    =============================== */
 
-
 // Middleware to authenticate token
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
   if (!token) return res.sendStatus(401);
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
@@ -44,43 +39,41 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-
 const authenticateAdmin = (req, res, next) => {
   authenticateToken(req, res, () => {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.sendStatus(403);
     }
     next();
   });
 };
 
-
-
-
-app.post('/auth/login', async (req, res) => {
+app.post("/auth/login", async (req, res) => {
   const { email, password } = req.body;
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ error: "Invalid email or password" });
     }
     const user = result.rows[0];
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ error: "Invalid email or password" });
     }
-    const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
     res.json({ token });
   } catch (error) {
-    console.error('Error logging in user:', error);
-    res.status(500).json({ error: 'Failed to login user' });
+    console.error("Error logging in user:", error);
+    res.status(500).json({ error: "Failed to login user" });
   }
 });
 
-
-
 // Register a new user
-app.post('/auth/register', async (req, res) => {
+app.post("/auth/register", async (req, res) => {
   const { email, password, role } = req.body; // role can be 'admin' or 'user'
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -90,44 +83,26 @@ app.post('/auth/register', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error registering user:', error);
-    res.status(500).json({ error: 'Failed to register user' });
+    console.error("Error registering user:", error);
+    res.status(500).json({ error: "Failed to register user" });
   }
 });
 
-
-
-
-
-
 // Example of a protected admin route
-app.get('/admin', authenticateAdmin, (req, res) => {
-  res.json({ message: 'This is an admin route', user: req.user });
+app.get("/admin", authenticateAdmin, (req, res) => {
+  res.json({ message: "This is an admin route", user: req.user });
 });
-
 
 // Example of a protected route
-app.get('/protected', authenticateToken, (req, res) => {
-  res.json({ message: 'This is a protected route', user: req.user });
+app.get("/protected", authenticateToken, (req, res) => {
+  res.json({ message: "This is a protected route", user: req.user });
 });
-
-
-
-
-
-
-
-
-
 
 /* ===============================
    SALES ENDPOINTS (Existing)
    =============================== */
 
-// Example: Endpoint for all data with dynamic filters
-
-
-// Add table creation for 'sales' to ensure endpoints work
+// Create table for 'sales' if it does not exist
 const createSalesTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS sales (
@@ -151,7 +126,169 @@ const createSalesTable = async () => {
 };
 createSalesTable();
 
+// Helper: if hours query parameter exists, add hour filter condition.
+// For endpoints that do NOT subtract an hour from Datetime.
+const addHourFilter = (req, queryFragment = 'EXTRACT(HOUR FROM "Datetime")') => {
+  if (req.query.hours) {
+    const hoursArray = req.query.hours.split(",").map(Number);
+    return {
+      condition: ` AND ${queryFragment} = ANY($PARAM::int[])`,
+      hoursArray,
+    };
+  }
+  return null;
+};
 
+// Endpoint: Seller Categories Total (for pie chart)
+app.get("/sales/seller-categories-total", async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      sellers,
+      sellerCategories,
+      articleNames,
+      categories,
+    } = req.query;
+    if (!startDate || !endDate) {
+      return res
+        .status(400)
+        .json({ error: "Please provide startDate and endDate" });
+    }
+
+    // Adjust dates to cover the full day
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
+
+    let query = `
+      SELECT "Seller Category", SUM("Total_Article_Price") AS total_sales
+      FROM "sales"
+      WHERE "Datetime" BETWEEN $1 AND $2
+    `;
+    const params = [adjustedStartDate, adjustedEndDate];
+    let paramIndex = 3;
+
+    if (sellers) {
+      const sellerArray = sellers.split(",");
+      query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
+      params.push(sellerArray);
+      paramIndex++;
+    }
+    if (sellerCategories) {
+      const sellerCategoryArray = sellerCategories.split(",");
+      query += ` AND "Seller Category" = ANY($${paramIndex}::text[])`;
+      params.push(sellerCategoryArray);
+      paramIndex++;
+    }
+    if (articleNames) {
+      const articleNameArray = articleNames.split(",");
+      query += ` AND "Article_Name" = ANY($${paramIndex}::text[])`;
+      params.push(articleNameArray);
+      paramIndex++;
+    }
+    if (categories) {
+      const categoryArray = categories.split(",");
+      query += ` AND "Category" = ANY($${paramIndex}::text[])`;
+      params.push(categoryArray);
+      paramIndex++;
+    }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
+
+    query += `
+      GROUP BY "Seller Category"
+      ORDER BY total_sales DESC;
+    `;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching seller categories total:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint: Hourly Sales (uses a slightly different hour extraction)
+app.get("/sales/hourly-sales", async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      sellers,
+      sellerCategories,
+      articleNames,
+      categories,
+    } = req.query;
+
+    if (!startDate || !endDate) {
+      return res
+        .status(400)
+        .json({ error: "Please provide startDate and endDate" });
+    }
+
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
+
+    const sellerArray = sellers ? sellers.split(",") : [];
+    const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
+    const articleNameArray = articleNames ? articleNames.split(",") : [];
+    const categoryArray = categories ? categories.split(",") : [];
+
+    let query = `
+      SELECT EXTRACT(HOUR FROM ("Datetime" - interval '1 hour')) AS hour,
+             SUM("Total_Article_Price"::numeric) AS total_sales
+      FROM "sales"
+      WHERE "Datetime" BETWEEN $1 AND $2
+    `;
+    const params = [adjustedStartDate, adjustedEndDate];
+    let paramIndex = 3;
+
+    if (sellerArray.length) {
+      query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
+      params.push(sellerArray);
+      paramIndex++;
+    }
+    if (sellerCategoryArray.length) {
+      query += ` AND "Seller Category" = ANY($${paramIndex}::text[])`;
+      params.push(sellerCategoryArray);
+      paramIndex++;
+    }
+    if (articleNameArray.length) {
+      query += ` AND "Article_Name" = ANY($${paramIndex}::text[])`;
+      params.push(articleNameArray);
+      paramIndex++;
+    }
+    if (categoryArray.length) {
+      query += ` AND "Category" = ANY($${paramIndex}::text[])`;
+      params.push(categoryArray);
+      paramIndex++;
+    }
+    // For hourly-sales, use the same expression as grouping:
+    const hourFilter = addHourFilter(req, 'EXTRACT(HOUR FROM ("Datetime" - interval \'1 hour\'))');
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
+
+    query += `
+      GROUP BY hour
+      ORDER BY hour;
+    `;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint: All Data
 app.get("/sales/all-data", async (req, res) => {
   try {
     const {
@@ -165,18 +302,20 @@ app.get("/sales/all-data", async (req, res) => {
       categories,
     } = req.query;
     if (!startDate || !endDate) {
-      return res.status(400).json({ error: "Please provide startDate and endDate" });
+      return res
+        .status(400)
+        .json({ error: "Please provide startDate and endDate" });
     }
-    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
-    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
     const categoryArray = categories ? categories.split(",") : [];
 
     let query = `
-      SELECT "Order_ID", "Seller", "Article_Name", "Category", "Quantity"::numeric, "Article_Price"::numeric,
-             "Total_Article_Price"::numeric, "Datetime", "Seller Category"
+      SELECT "Order_ID", "Seller", "Article_Name", "Category", "Quantity"::numeric,
+             "Article_Price"::numeric, "Total_Article_Price"::numeric, "Datetime", "Seller Category"
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
@@ -202,6 +341,13 @@ app.get("/sales/all-data", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     query += ` ORDER BY "Datetime" DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
 
@@ -212,7 +358,7 @@ app.get("/sales/all-data", async (req, res) => {
   }
 });
 
-// Endpoint to get distinct Sellers
+// Endpoint: Distinct Sellers
 app.get("/sales/sellers", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -220,13 +366,13 @@ app.get("/sales/sellers", async (req, res) => {
       FROM "sales"
       ORDER BY "Seller";
     `);
-    res.json(result.rows.map(row => row.Seller));
+    res.json(result.rows.map((row) => row.Seller));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint to get distinct Seller Categories
+// Endpoint: Distinct Seller Categories
 app.get("/sales/seller-categories", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -234,13 +380,13 @@ app.get("/sales/seller-categories", async (req, res) => {
       FROM "sales"
       ORDER BY "Seller Category";
     `);
-    res.json(result.rows.map(row => row["Seller Category"]));
+    res.json(result.rows.map((row) => row["Seller Category"]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint for dynamic Categories based on filters
+// Endpoint: Dynamic Categories based on filters
 app.get("/sales/categories", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames } = req.query;
@@ -272,18 +418,25 @@ app.get("/sales/categories", async (req, res) => {
       params.push(articleNameArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
     query += " ORDER BY \"Category\"";
     const result = await pool.query(query, params);
-    res.json(result.rows.map(row => row.Category));
+    res.json(result.rows.map((row) => row.Category));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint for distinct Article Names with filters
+// Endpoint: Distinct Article Names with filters
 app.get("/sales/article-names", async (req, res) => {
   try {
     const { categories, sellers, sellerCategories, startDate, endDate } = req.query;
@@ -315,18 +468,25 @@ app.get("/sales/article-names", async (req, res) => {
       params.push(sellerCategoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
     query += " ORDER BY \"Article_Name\"";
     const result = await pool.query(query, params);
-    res.json(result.rows.map(row => row.Article_Name));
+    res.json(result.rows.map((row) => row.Article_Name));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint for most sold items by quantity
+// Endpoint: Most Sold Items by Quantity
 app.get("/sales/most-sold-items", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
@@ -334,8 +494,8 @@ app.get("/sales/most-sold-items", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
-    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
-    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -367,6 +527,13 @@ app.get("/sales/most-sold-items", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     query += `
       GROUP BY "Article_Name"
       ORDER BY total_quantity DESC;
@@ -378,7 +545,7 @@ app.get("/sales/most-sold-items", async (req, res) => {
   }
 });
 
-// Endpoint for most sold items by price
+// Endpoint: Most Sold Items by Price
 app.get("/sales/most-sold-items-by-price", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
@@ -386,8 +553,8 @@ app.get("/sales/most-sold-items-by-price", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
-    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
-    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -421,6 +588,13 @@ app.get("/sales/most-sold-items-by-price", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     query += `
       GROUP BY "Article_Name"
       ORDER BY total_price DESC;
@@ -432,7 +606,7 @@ app.get("/sales/most-sold-items-by-price", async (req, res) => {
   }
 });
 
-// Endpoint for Total Sales
+// Endpoint: Total Sales
 app.get("/sales/total-sales", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
@@ -440,8 +614,8 @@ app.get("/sales/total-sales", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
-    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
-    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
 
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
@@ -474,6 +648,13 @@ app.get("/sales/total-sales", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     const result = await pool.query(query, params);
     res.json(result.rows[0]);
   } catch (err) {
@@ -481,7 +662,7 @@ app.get("/sales/total-sales", async (req, res) => {
   }
 });
 
-// Endpoint for sales by seller category
+// Endpoint: Sales by Seller Category
 app.get("/sales/sales-by-seller-category", async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -489,30 +670,41 @@ app.get("/sales/sales-by-seller-category", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
-    const query = `
+    let query = `
       SELECT "Seller Category", SUM("Total_Article_Price") AS total_sales
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
+    `;
+    const params = [startDate, endDate];
+    let paramIndex = 3;
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
+    query += `
       GROUP BY "Seller Category"
       ORDER BY total_sales DESC;
     `;
 
-    const result = await pool.query(query, [startDate, endDate]);
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint for Total Quantity
+// Endpoint: Total Quantity
 app.get("/sales/total-quantity", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
-    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
-    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -544,6 +736,13 @@ app.get("/sales/total-quantity", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     const result = await pool.query(query, params);
     res.json(result.rows[0]);
   } catch (err) {
@@ -551,15 +750,15 @@ app.get("/sales/total-quantity", async (req, res) => {
   }
 });
 
-// Endpoint for Average Article Price
+// Endpoint: Average Article Price
 app.get("/sales/avg-article-price", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
-    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
-    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
     const articleNameArray = articleNames ? articleNames.split(",") : [];
@@ -591,6 +790,13 @@ app.get("/sales/avg-article-price", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     const result = await pool.query(query, params);
     res.json(result.rows[0]);
   } catch (err) {
@@ -598,7 +804,7 @@ app.get("/sales/avg-article-price", async (req, res) => {
   }
 });
 
-// Endpoint for Daily Sales Data
+// Endpoint: Daily Sales Data
 app.get("/sales/daily-sales", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
@@ -642,6 +848,13 @@ app.get("/sales/daily-sales", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
     
     query += `
       GROUP BY to_char("Datetime", 'DD/MM')
@@ -655,7 +868,7 @@ app.get("/sales/daily-sales", async (req, res) => {
   }
 });
 
-// Endpoint for unique Order_ID count (order count)
+// Endpoint: Unique Order_ID count (order count)
 app.get("/sales/order-count", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames, categories } = req.query;
@@ -663,8 +876,8 @@ app.get("/sales/order-count", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
 
-    const adjustedStartDate = moment(startDate).startOf('day').toISOString();
-    const adjustedEndDate = moment(endDate).endOf('day').toISOString();
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
 
     const sellerArray = sellers ? sellers.split(",") : [];
     const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
@@ -699,6 +912,13 @@ app.get("/sales/order-count", async (req, res) => {
       params.push(categoryArray);
       paramIndex++;
     }
+    // Hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
 
     const result = await pool.query(query, params);
     res.json(result.rows[0]);
@@ -707,32 +927,9 @@ app.get("/sales/order-count", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
 /******************************************************
  * DAILY_EXPENSES TABLE & ENDPOINTS
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
  ******************************************************/
-
-
-
-
 
 const createDailyExpensesTable = async () => {
   const query = `
@@ -792,8 +989,8 @@ app.get("/expenses/bulk", async (req, res) => {
   }
   try {
     // Use moment.utc to avoid local timezone shifts
-    const adjustedStartDate = moment.utc(date).startOf('day').toISOString();
-    const adjustedEndDate = moment.utc(date).endOf('day').toISOString();
+    const adjustedStartDate = moment.utc(date).startOf("day").toISOString();
+    const adjustedEndDate = moment.utc(date).endOf("day").toISOString();
 
     const result = await pool.query(
       `SELECT id, seller, daily_total, cash_daily_total, expense, amount, description, date
@@ -826,23 +1023,9 @@ app.delete("/expenses/bulk/:id", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 /****************************************************
  *   SUPPLIER EXPENSES TABLE (ORDER YOU REQUESTED)
  ****************************************************/
-
 
 const createSupplierExpensesTable = async () => {
   const query = `
@@ -850,7 +1033,7 @@ const createSupplierExpensesTable = async () => {
       id SERIAL PRIMARY KEY,
       date DATE NOT NULL,
       supplier TEXT NOT NULL,
-      transaction_type TEXT NOT NULL, -- New column for transaction type
+      transaction_type TEXT NOT NULL,
       total_amount TEXT,
       amount_unpaid TEXT,
       item_name TEXT,
@@ -872,7 +1055,6 @@ app.post("/suppliers/bulk", async (req, res) => {
   if (!selectedDate || !entries || !Array.isArray(entries)) {
     return res.status(400).json({ error: "Invalid request payload" });
   }
-
   
   const client = await pool.connect();
   try {
@@ -881,7 +1063,7 @@ app.post("/suppliers/bulk", async (req, res) => {
     for (const entry of entries) {
       const {
         supplier,
-        transactionType, // new field
+        transactionType,
         totalAmount,
         amountUnpaid,
         itemName,
@@ -895,7 +1077,7 @@ app.post("/suppliers/bulk", async (req, res) => {
         [
           selectedDate,
           supplier,
-          transactionType, // insert transactionType here
+          transactionType,
           totalAmount,
           amountUnpaid,
           itemName,
@@ -925,8 +1107,8 @@ app.get("/suppliers/bulk", async (req, res) => {
     return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
   }
   try {
-    const adjustedStartDate = moment.utc(date).startOf('day').toISOString();
-    const adjustedEndDate = moment.utc(date).endOf('day').toISOString();
+    const adjustedStartDate = moment.utc(date).startOf("day").toISOString();
+    const adjustedEndDate = moment.utc(date).endOf("day").toISOString();
 
     const result = await pool.query(
       `SELECT id, supplier, transaction_type, total_amount, amount_unpaid, item_name, quantity, date
@@ -962,13 +1144,6 @@ app.delete("/suppliers/bulk/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete supplier expense" });
   }
 });
-
-
-
-
-
-
-
 
 /******************************************************
  * ARTICLE_INGREDIENTS TABLE & ENDPOINTS (Manual Entry)
@@ -1082,7 +1257,6 @@ app.get("/article-ingredients", async (req, res) => {
   }
 });
 
-
 app.patch("/article-ingredients/:article_name", async (req, res) => {
   const { article_name } = req.params;
   const { new_article_name } = req.body;
@@ -1123,7 +1297,7 @@ app.put("/article-ingredients/:article_name", async (req, res) => {
   const updates = req.body;
 
   // Convert empty string fields to null
-  Object.keys(updates).forEach(key => {
+  Object.keys(updates).forEach((key) => {
     if (updates[key] === "") {
       updates[key] = null;
     }
@@ -1174,7 +1348,6 @@ app.put("/article-ingredients/:article_name", async (req, res) => {
   }
 });
 
-
 // DELETE /article-ingredients/:article_name - Delete an article by name
 app.delete("/article-ingredients/:article_name", async (req, res) => {
   const { article_name } = req.params;
@@ -1203,14 +1376,9 @@ app.delete("/article-ingredients/:article_name", async (req, res) => {
   }
 });
 
-
-
-
 /******************************************************
  * report endpoint total ingredient usage for article names
  ******************************************************/
-
-
 
 // GET /report/ingredient-usage - Report total ingredient usage based on sales
 app.get("/report/ingredient-usage", async (req, res) => {
@@ -1263,24 +1431,17 @@ app.get("/report/ingredient-usage", async (req, res) => {
     const result = await pool.query(query, params);
     
     // For each article row, calculate total ingredient usage.
-    // (e.g., if each unit of article "X" uses 0.05 of ingredient1 and 100 units were sold, then total usage = 5)
     const report = result.rows.map(row => {
-      // Create an object for ingredient usage calculations.
       const ingredientUsage = {};
-      
-      // Loop over the 5 possible ingredient columns.
       for (let i = 1; i <= 5; i++) {
         const ingKey = `ingredient_name_0${i}`;
         const usageKey = `usage_amount_0${i}`;
         const ingredient = row[ingKey];
         const usagePerUnit = row[usageKey];
-        
-        // Only include this ingredient if there is a name and a valid usage value.
         if (ingredient && usagePerUnit != null) {
           ingredientUsage[ingredient] = parseFloat(usagePerUnit) * parseFloat(row.total_sold);
         }
       }
-      
       return {
         articleName: row.article_name,
         totalSold: parseFloat(row.total_sold),
@@ -1298,12 +1459,6 @@ app.get("/report/ingredient-usage", async (req, res) => {
 /******************************************************
  * MISSING ARTICLES PAGE
  ******************************************************/
-
-
-
-
-
-
 
 // GET /report/missing-articles - Find articles from sales not in article_ingredients
 app.get("/report/missing-articles", async (req, res) => {
@@ -1335,7 +1490,6 @@ app.get("/report/missing-articles", async (req, res) => {
 
     const result = await pool.query(query, params);
 
-    // Return only article names
     const missingArticles = result.rows.map(row => ({
       articleName: row.article_name,
     }));
@@ -1347,23 +1501,19 @@ app.get("/report/missing-articles", async (req, res) => {
   }
 });
 
-
 /* ===============================
    SERVING THE REACT APP
    =============================== */
 
-   
-   app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "build", "index.html"));
-  });
-  
-  // Serve the React app for all other routes (React Router)
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "build", "index.html"));
-  });
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
+// Serve the React app for all other routes (React Router)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
-  
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
