@@ -2,7 +2,7 @@ import psycopg2
 import bcrypt
 
 table_name = 'users'
-
+## CREATING USERS AND ACCOUNTS
 db_params = {
     "host": "dpg-cumpfg8gph6c7387r200-a.frankfurt-postgres.render.com",
     "database": "restaurant_db_mg7q",

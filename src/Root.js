@@ -1,7 +1,7 @@
 // Root.js - Main Routing Configuration with Layout
 import { ChakraProvider } from '@chakra-ui/react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Header/Layout.js'; // Updated Layout component with header toggle and Outlet
+import Layout from './components/Header/Layout.js'; // Layout with header toggle & Outlet
 import Home from './pages/Home_Page/Home.js';
 import Dashboard from './pages/Shitjet_Analitike/Dashboard.js';
 import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice.js';
@@ -13,6 +13,7 @@ import MissingArticles from './pages/Receta_Mungojn/MissingArticles.js';
 import Login from './pages/Login_Page/Login';
 import NotAuthorized from './pages/Login_Page/NotAuthorized';
 import ProtectedRoute from './pages/Login_Page/ProtectedRoute.jsx';
+import Inventory from './pages/Inventory/Inventory.js';
 
 const Root = () => {
   // Check for a token in localStorage to determine if the user is authenticated
@@ -88,6 +89,15 @@ const Root = () => {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <MissingArticles />
+              </ProtectedRoute>
+            }
+          />
+          {/* Move Inventory route inside the Layout */}
+          <Route
+            path="/inventory"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'economist']}>
+                <Inventory />
               </ProtectedRoute>
             }
           />

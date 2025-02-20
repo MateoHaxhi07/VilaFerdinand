@@ -436,6 +436,112 @@ app.get("/sales/categories", async (req, res) => {
   }
 });
 
+
+
+
+//********************************//
+//  */ CATEGORY ENDPOINT  = USED FOR TREEMAP
+//********************************//
+
+
+
+
+
+app.get("/sales/category-total-price", async (req, res) => {
+  try {
+    const { startDate, endDate, categories, sellers, sellerCategories } = req.query;
+    if (!startDate || !endDate) {
+      return res
+        .status(400)
+        .json({ error: "Please provide startDate and endDate" });
+    }
+
+    // Adjust datetime to start/end of day
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
+
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // Base query
+    let query = `
+      SELECT "Category", SUM("Total_Article_Price"::numeric) AS total_price
+      FROM "sales"
+    `;
+
+    // Date filter using adjusted dates
+    conditions.push(`"Datetime" BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+    params.push(adjustedStartDate, adjustedEndDate);
+    paramIndex += 2;
+
+    // Filter by categories if provided
+    if (categories) {
+      const categoryArray = categories.split(",");
+      conditions.push(`"Category" = ANY($${paramIndex}::text[])`);
+      params.push(categoryArray);
+      paramIndex++;
+    }
+
+    // Filter by sellers if provided
+    if (sellers) {
+      const sellerArray = sellers.split(",");
+      conditions.push(`"Seller" = ANY($${paramIndex}::text[])`);
+      params.push(sellerArray);
+      paramIndex++;
+    }
+
+    // Filter by seller categories if provided
+    if (sellerCategories) {
+      const sellerCategoryArray = sellerCategories.split(",");
+      conditions.push(`"Seller Category" = ANY($${paramIndex}::text[])`);
+      params.push(sellerCategoryArray);
+      paramIndex++;
+    }
+
+    // Hour filter if exists
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
+
+    // Append conditions to query
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+
+    // Group by category and order by total_price descending
+    query += `
+      GROUP BY "Category"
+      ORDER BY total_price DESC
+    `;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
+
+
+//********************************//
+//  */ END OF CATEGORY ENDPOINT
+//********************************//
+
+
+
+
+
+
+
+
+
 // Endpoint: Distinct Article Names with filters
 app.get("/sales/article-names", async (req, res) => {
   try {
@@ -1503,6 +1609,148 @@ app.get("/report/missing-articles", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+
+
+
+
+
+
+/* ===============================
+   INVENTORY ENDPOINTS
+   =============================== */
+
+
+
+
+   app.get("/inventory", async (req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT id, article_name, total, created_at 
+         FROM inventory 
+         ORDER BY id ASC`
+      );
+      res.json(result.rows);
+    } catch (err) {
+      console.error("Error fetching inventory:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // POST /inventory - Add a new inventory item
+  app.post("/inventory", async (req, res) => {
+    try {
+      const { article_name, total } = req.body;
+      if (!article_name || total === undefined) {
+        return res.status(400).json({ error: "article_name and total are required" });
+      }
+      const result = await pool.query(
+        `INSERT INTO inventory (article_name, total)
+         VALUES ($1, $2)
+         RETURNING id, article_name, total, created_at`,
+        [article_name, total]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error("Error adding inventory item:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // PUT /inventory/:id - Update an inventory item
+  app.put("/inventory/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { article_name, total } = req.body;
+      if (!article_name || total === undefined) {
+        return res.status(400).json({ error: "article_name and total are required" });
+      }
+      const result = await pool.query(
+        `UPDATE inventory
+         SET article_name = $1, total = $2
+         WHERE id = $3
+         RETURNING id, article_name, total, created_at`,
+        [article_name, total, id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error("Error updating inventory item:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // DELETE /inventory/:id - Delete an inventory item
+  app.delete("/inventory/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query(
+        `DELETE FROM inventory WHERE id = $1 RETURNING id`,
+        [id]
+      );
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      res.json({ message: "Inventory item deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting inventory item:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Optional: GET /inventory/date - Get inventory items created on a given date
+  app.get("/inventory/date", async (req, res) => {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
+    }
+    try {
+      // Use moment.utc to get the full day range in UTC
+      const adjustedStartDate = moment.utc(date).startOf("day").toISOString();
+      const adjustedEndDate = moment.utc(date).endOf("day").toISOString();
+      const result = await pool.query(
+        `SELECT id, article_name, total, created_at 
+         FROM inventory
+         WHERE created_at BETWEEN $1 AND $2
+         ORDER BY created_at ASC`,
+         [adjustedStartDate, adjustedEndDate]
+      );
+      res.json(result.rows);
+    } catch (err) {
+      console.error("Error fetching inventory by date:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ===============================
    SERVING THE REACT APP

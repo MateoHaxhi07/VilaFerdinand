@@ -139,6 +139,18 @@ const Header = () => {
           >
             RECETA MUNGOJN
           </Button>
+
+          <Button
+            as={Link}
+            to="/inventory"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
+            INVENTORY
+          </Button>
         </Flex>
 
         {/* Right Section - Logout */}

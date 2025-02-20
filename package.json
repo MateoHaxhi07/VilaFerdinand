@@ -11,8 +11,10 @@
     "@nivo/bar": "^0.88.0",
     "@nivo/core": "^0.88.0",
     "@nivo/funnel": "^0.88.0",
+    "@nivo/heatmap": "^0.88.0",
     "@nivo/line": "^0.88.0",
     "@nivo/pie": "^0.88.0",
+    "@nivo/treemap": "^0.88.0",
     "animejs": "^3.2.2",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
@@ -39,12 +41,13 @@
     "react-scripts": "^5.0.1",
     "react-select": "^5.10.0"
   },
+
   "scripts": {
      "start": "node server.js",
-    "start-frontend": "react-scripts start",
+     "start-frontend": "react-scripts start",
     "start-backend": "node server.js",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
+     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
    },
  

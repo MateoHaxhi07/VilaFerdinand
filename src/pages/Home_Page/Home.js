@@ -21,6 +21,9 @@ import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
 import { ResponsivePie } from "@nivo/pie";
 import { scaleOrdinal } from "d3-scale";
+import { ResponsiveTreeMap } from "@nivo/treemap";
+import { scaleQuantile } from "d3-scale";
+
 import { schemeSet3 } from "d3-scale-chromatic";
 
 // -----------------------------------------------------------------------------
@@ -498,6 +501,89 @@ const SellerCategoriesChart = ({ pieData }) => {
   );
 };
 
+
+// -----------------------------------------------------------------------------
+// COMPONENT: HEATMAP
+// Description: Renders a card that displays an hourly sales bar chart and aggregated totals.
+// -----------------------------------------------------------------------------
+
+const CategoryTreemap = ({ data }) => {
+  // 1) Transform your raw data (array of objects) into the hierarchical structure 
+  //    Nivo Treemap needs. The top-level "root" can be named anything.
+  //    Each child has "name" and "value".
+  const treemapData = {
+    name: "root",
+    children: data.map((item) => ({
+      name: item.Category,
+      value: parseFloat(item.total_price),
+    })),
+  };
+
+  // 2) Determine the min & max so we can color big values green and small red
+  const values = treemapData.children.map((d) => d.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+
+  // 3) Create a 5-color scale that goes from red (small) to green (large).
+  //    (Adjust the colors to your preference.)
+  const colorScale = scaleQuantile()
+    .domain([minValue, maxValue])
+    .range(["#fc5534",  "#fcc234", "#6afe6a"]);
+
+  return (
+    <Box height="500px">
+      <Heading as="h2" size="md" mb={4} color = "black" fontWeight="bold" textAlign="center">
+        Category Treemap
+      </Heading>
+
+
+
+      <ResponsiveTreeMap
+        data={treemapData}
+        identity="name"      // the property to use as the node name
+        value="value"        // the property to use as the node value
+        valueFormat=">-.4s"  // e.g. format large numbers like 15.2k
+        margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+        // color the rectangles by their "value" using our scale
+        colors={(node) => colorScale(node.value)}
+        label={(node) => node.data.name}
+        
+        labelSkipSize={15}
+         labelTextColor="#000000"
+         theme={{
+          labels: {
+            text: {
+              fontSize: 16,
+              fill: "#000000", // label color
+            },
+          },
+        }}
+        borderColor="#ffffff"
+        parentLabelPosition="left"
+        parentLabelTextColor="#333333"
+        // optional tooltip
+        tooltip={({ node }) => (
+          <div
+            style={{
+              padding: 8,
+              background: "black",
+              border: "1px solid #ccc",
+              borderRadius: 4,
+            }}
+          >
+            <strong>{node.data.name}</strong>: {node.value.toLocaleString()} ALL
+          </div>
+        )}
+      />
+    </Box>
+  );
+};
+
+
+
+
+
+
 // -----------------------------------------------------------------------------
 // COMPONENT: HourlySalesChart
 // Description: Renders a card that displays an hourly sales bar chart and aggregated totals.
@@ -686,6 +772,10 @@ const Home = () => {
   // Pie Chart Data State
   const [pieData, setPieData] = useState([]);
 
+  // treemap
+
+  const [categoryTreemapData, setCategoryTreemapData] = useState([]);
+
   // Hourly Sales Data State
   const [hourlySales, setHourlySales] = useState([]);
 
@@ -701,6 +791,49 @@ const Home = () => {
     value: i,
     label: i.toString().padStart(2, "0"),
   }));
+
+  const fetchCategoryTotals = async () => {
+    try {
+      const queryParams = new URLSearchParams({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+      
+      // Append other filters if they exist.
+      if (selectedCategories && selectedCategories.length) {
+        queryParams.append(
+          "categories",
+          selectedCategories.map(cat => cat.value).join(",")
+        );
+      }
+      if (selectedSellers && selectedSellers.length) {
+        queryParams.append(
+          "sellers",
+          selectedSellers.map(s => s.value).join(",")
+        );
+      }
+      if (selectedSellerCategories && selectedSellerCategories.length) {
+        queryParams.append(
+          "sellerCategories",
+          selectedSellerCategories.map(sc => sc.value).join(",")
+        );
+      }
+      // If you have an hours filter, add it too:
+      if (selectedHours && selectedHours.length) {
+        queryParams.append(
+          "hours",
+          selectedHours.map(h => h.value).join(",")
+        );
+      }
+      
+      const url = `${API_URL}/sales/category-total-price?${queryParams.toString()}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setCategoryTreemapData(data);
+    } catch (error) {
+      console.error("Error fetching category totals:", error);
+    }
+  };
 
   // Custom Select Styles
   const selectStyles = {
@@ -946,6 +1079,7 @@ const Home = () => {
     fetchDailySales();
     fetchSellerCategoriesTotal();
     fetchHourlySales();
+    fetchCategoryTotals();
   }, [
     startDate,
     endDate,
@@ -1046,6 +1180,11 @@ const Home = () => {
 
       {/* Render Hourly Sales Chart */}
       <HourlySalesChart data={hourlyChartData} />
+
+
+      <CategoryTreemap data={categoryTreemapData} />
+
+
     </Box>
   );
 };
