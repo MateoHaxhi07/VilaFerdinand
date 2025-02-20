@@ -1,7 +1,7 @@
 // Root.js - Main Routing Configuration with Layout
 import { ChakraProvider } from '@chakra-ui/react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout'; // Updated Layout component with header toggle and Outlet
+import Layout from './components/Header/Layout.js'; // Updated Layout component with header toggle and Outlet
 import Home from './pages/Home_Page/Home.js';
 import Dashboard from './pages/Shitjet_Analitike/Dashboard.js';
 import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice.js';
