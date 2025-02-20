@@ -1,8 +1,10 @@
+// src/components/Layout.js
 import React, { useState } from 'react';
 import { Box, Button } from '@chakra-ui/react';
-import Header from './index.js'; 
+import { Outlet } from 'react-router-dom';
+import Header from './Header'; // Assumes Header is exported from src/components/Header/index.js
 
-const Layout = ({ children }) => {
+const Layout = () => {
   const [showHeader, setShowHeader] = useState(true);
 
   return (
@@ -19,8 +21,9 @@ const Layout = ({ children }) => {
       </Button>
       {/* Conditionally render Header */}
       {showHeader && <Header />}
+      {/* Render nested routes */}
       <Box mt={4}>
-        {children}
+        <Outlet />
       </Box>
     </Box>
   );
