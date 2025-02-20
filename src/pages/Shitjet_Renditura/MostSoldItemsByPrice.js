@@ -18,52 +18,14 @@ import {
   Select as ChakraSelect,
   Grid,
   GridItem,
+  Text,
+  VStack,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import Select from 'react-select';
 
 // Use environment variable for API URL
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-const customSelectStyles = {
-  control: (base, state) => ({
-    ...base,
-    backgroundColor: "#2D3748",
-    borderColor: state.isFocused ? "#63B3ED" : "#4A5568",
-    color: "#fff",
-    fontWeight: "bold",
-    minHeight: "40px",
-  }),
-  menu: (base) => ({
-    ...base,
-    backgroundColor: "#2D3748",
-  }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isFocused ? "#4A5568" : "#2D3748",
-    color: "#fff",
-    fontWeight: "bold",
-  }),
-  singleValue: (base) => ({
-    ...base,
-    color: "#fff",
-    fontWeight: "bold",
-  }),
-  multiValue: (base) => ({
-    ...base,
-    backgroundColor: "#4A5568",
-  }),
-  multiValueLabel: (base) => ({
-    ...base,
-    color: "#fff",
-    fontWeight: "bold",
-  }),
-  placeholder: (base) => ({
-    ...base,
-    color: "#A0AEC0",
-    fontWeight: "bold",
-  }),
-};
-
-
 
 const MostSoldItemsByPrice = () => {
   const {
@@ -77,7 +39,6 @@ const MostSoldItemsByPrice = () => {
     setSelectedArticleNames,
     selectedCategories,
     setSelectedCategories,
-    customSelectStyles,
   } = useOutletContext();
 
   // Data & Pagination state
@@ -91,11 +52,58 @@ const MostSoldItemsByPrice = () => {
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  const totalQuantity = data.reduce((sum, item) => sum + Number(item.total_quantity ?? 0), 0);
-  const totalSales = data.reduce((sum, item) => sum + Number(item.total_price ?? 0), 0);
+  const totalQuantity = data.reduce(
+    (sum, item) => sum + Number(item.total_quantity ?? 0),
+    0
+  );
+  const totalSales = data.reduce(
+    (sum, item) => sum + Number(item.total_price ?? 0),
+    0
+  );
 
-  // Heatmap colors from worst (red) to best (green)
-  const heatmapColors = ["#FF0000", "#FF7F00", "#FFFF00", "#7FFF00", "#00FF00"];
+  // Custom react-select styles
+  const customSelectStyles = {
+    control: (base, state) => ({
+      ...base,
+      backgroundColor: "#2D3748",
+      borderColor: state.isFocused ? "#63B3ED" : "#4A5568",
+      color: "#fff",
+      fontWeight: "bold",
+      minHeight: "40px",
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: "#2D3748",
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused ? "#4A5568" : "#2D3748",
+      color: "#fff",
+      fontWeight: "bold",
+    }),
+    singleValue: (base) => ({
+      ...base,
+      color: "#fff",
+      fontWeight: "bold",
+    }),
+    multiValue: (base) => ({
+      ...base,
+      backgroundColor: "#4A5568",
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      color: "#fff",
+      fontWeight: "bold",
+    }),
+    placeholder: (base) => ({
+      ...base,
+      color: "#A0AEC0",
+      fontWeight: "bold",
+    }),
+  };
+
+  // Determine if we're in mobile view
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   // Fetch most sold items by total article price with filters & pagination
   const fetchData = async (limit, offset) => {
@@ -196,108 +204,162 @@ const MostSoldItemsByPrice = () => {
   };
 
   return (
-    <Card bg="white.900" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
+    <Card bg="white" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
       <CardBody>
-        <Heading size="md" mb={6} color="black" fontWeight="bold" textAlign="center">
-          SHITJET SIPAS RENDITJES SASISE / CMIMIT 
+        <Heading
+          size="md"
+          mb={6}
+          color="black"
+          fontWeight="bold"
+          textAlign="center"
+        >
+          SHITJET SIPAS RENDITJES SASISE / CMIMIT
         </Heading>
-        <Flex wrap="wrap" gap={6} justifyContent="center">
-          {[{ label: 'Sellers', options: sellers, value: selectedSellers, onChange: setSelectedSellers },
+        {/* Filters */}
+        <Flex wrap="wrap" gap={6} justifyContent="center" mb={4}>
+          {[
+            { label: 'Sellers', options: sellers, value: selectedSellers, onChange: setSelectedSellers },
             { label: 'Seller Categories', options: sellerCategories, value: selectedSellerCategories, onChange: setSelectedSellerCategories },
             { label: 'Article Names', options: articleNames, value: selectedArticleNames, onChange: setSelectedArticleNames },
-            { label: 'Categories', options: categories, value: selectedCategories, onChange: setSelectedCategories }]
-            .map(({ label, options, value, onChange }) => (
-              <Box bgGradient="linear(to-r, green.600, teal.400)"  key={label} minW={{ base: "150px", md: "200px" }}>
-                <Box bgGradient="linear(to-r, green.600, teal.400)" mb={2} color="white" fontWeight="bold" fontSize="sm">
-                  {label}
-                </Box>
-                <Select
-                  isMulti
-                  options={options}
-                  onChange={onChange}
-                  placeholder={`Select ${label.toLowerCase()}`}
-                  menuPortalTarget={document.body}
-                  styles={customSelectStyles}
-                  value={value}
-                />
+            { label: 'Categories', options: categories, value: selectedCategories, onChange: setSelectedCategories }
+          ].map(({ label, options, value, onChange }) => (
+            <Box
+              bgGradient="linear(to-r, green.600, teal.400)"
+              key={label}
+              minW={{ base: "150px", md: "200px" }}
+              p={2}
+              borderRadius="md"
+            >
+              <Box
+                mb={2}
+                color="white"
+                fontWeight="bold"
+                fontSize="sm"
+              >
+                {label}
               </Box>
-            ))}
+              <Select
+                isMulti
+                options={options}
+                onChange={onChange}
+                placeholder={`Select ${label.toLowerCase()}`}
+                menuPortalTarget={document.body}
+                styles={customSelectStyles}
+                value={value}
+              />
+            </Box>
+          ))}
         </Flex>
-      </CardBody>
-      
-      <Card bgGradient="linear(to-r, gray.200, gray.300)" borderRadius="lg" boxShadow="lg" mt={6} p={4}>
-      <CardBody>
-      <TableContainer overflowY="auto" maxH="60vh" overflowX="auto"  mt={6} borderRadius="lg" boxShadow="md" bg=".700" p={4}>
-        <Table variant="striped" colorScheme="gray">
-          <Thead>
-            <Tr>
-            <Th fontSize={{ base: "sm", md: "md" }}>Rank</Th>
+
+        {/* Data Display */}
+        {isMobile ? (
+          // Mobile: Render each row as a card in a vertical stack
+          <VStack spacing={4} align="stretch" mt={6}>
+            {data.length > 0 ? (
+              data.map((item, idx) => (
+                <Box
+                  key={idx}
+                  borderWidth="1px"
+                  borderRadius="md"
+                  p={4}
+                  bg="gray.50"
+                  boxShadow="sm"
+                >
+                  <Heading as="h4" size="sm" mb={2}>
+                    Rank: {idx + 1}
+                  </Heading>
+                  <Text><strong>Article Name:</strong> {item.Article_Name}</Text>
+                  <Text>
+                    <strong>Total Quantity Sold:</strong> {item.total_quantity?.toLocaleString() || '-'}
+                  </Text>
+                  <Text fontSize={{ base: "xs", md: "sm" }}>
+                    <strong>Total Article Price (ALL):</strong> {item.total_price ? Number(item.total_price).toLocaleString() : '-'} ALL
+                  </Text>
+                </Box>
+              ))
+            ) : (
+              <Box textAlign="center" color="gray.600">
+                No Data Available
+              </Box>
+            )}
+            {/* Totals */}
+            <Box borderTop="1px solid #ccc" pt={2} mt={4}>
+              <Flex justifyContent="space-between">
+                <Text fontWeight="bold">TOTAL Quantity:</Text>
+                <Text fontWeight="bold">{totalQuantity.toLocaleString()} Units</Text>
+              </Flex>
+              <Flex justifyContent="space-between">
+                <Text fontWeight="bold">TOTAL Sales:</Text>
+                <Text fontWeight="bold">{totalSales.toLocaleString()} ALL</Text>
+              </Flex>
+            </Box>
+          </VStack>
+        ) : (
+          // Desktop: Render table view
+          <TableContainer
+            overflowY="auto"
+            maxH="60vh"
+            overflowX="auto"
+            mt={6}
+            borderRadius="lg"
+            boxShadow="md"
+            p={4}
+          >
+            <Table variant="striped" colorScheme="gray">
+              <Thead>
+                <Tr>
+                  <Th fontSize={{ base: "sm", md: "md" }}>Rank</Th>
                   <Th fontSize={{ base: "sm", md: "md" }}>Article Name</Th>
                   <Th fontSize={{ base: "sm", md: "md" }}>Total Quantity Sold</Th>
                   <Th fontSize={{ base: "sm", md: "md" }}>Total Article Price (ALL)</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {data.length > 0 ? (
-              data.map((item, idx) => (
-                <Tr key={idx}>
-                  <Td>{idx + 1}</Td>
-                  <Td>{item.Article_Name}</Td>
-                  <Td>{item.total_quantity?.toLocaleString() || '-'}</Td>
-                  <Td fontSize={{ base: "xs", md: "sm" }}>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {data.length > 0 ? (
+                  data.map((item, idx) => (
+                    <Tr key={idx}>
+                      <Td>{idx + 1}</Td>
+                      <Td>{item.Article_Name}</Td>
+                      <Td>{item.total_quantity?.toLocaleString() || '-'}</Td>
+                      <Td fontSize={{ base: "xs", md: "sm" }}>
                         {item.total_price ? Number(item.total_price).toLocaleString() : '-'} ALL
                       </Td>
+                    </Tr>
+                  ))
+                ) : (
+                  <Tr>
+                    <Td colSpan={4} textAlign="center" color="gray.600">
+                      No Data Available
+                    </Td>
+                  </Tr>
+                )}
+              </Tbody>
+              <Tfoot>
+                <Tr bg="gray.100" fontWeight="bold">
+                  <Td colSpan={2} textAlign="center">TOTAL</Td>
+                  <Td>{totalQuantity.toLocaleString()} Units</Td>
+                  <Td>{totalSales.toLocaleString()} ALL</Td>
                 </Tr>
-              ))
-            ) : (
-              <Tr>
-                <Td colSpan={4} textAlign="center" color="white">
-                  No Data Available
-                </Td>
-              </Tr>
-            )}
-          </Tbody>
-          <Tfoot>
-          <Tr bg="gray.100" fontWeight="bold">
-            <Td colSpan={2} textAlign="center">TOTAL</Td>
-            <Td>{totalQuantity.toLocaleString()} Units</Td>
-            <Td>{totalSales.toLocaleString()} ALL</Td>
+              </Tfoot>
+            </Table>
+          </TableContainer>
+        )}
 
-          </Tr>
-        </Tfoot>
-
-
-
-
-
-
-        </Table>
-      </TableContainer>
-
-      <Flex justifyContent="space-between" mb={4}>
-       
-        </Flex>  
-        <Flex mt={4} justifyContent="space-between">
-            <Button onClick={handleLoadLess} isDisabled={offset === 0}>
-              Previous
-            </Button>
-            <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
-          <option value={50}>50 rows</option>
-          <option value={200}>200 rows</option>
-          <option value={500}>500 rows</option>
-        </ChakraSelect>
-            <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
-              Next
-            </Button>
-          </Flex>
-
-
-
-
-
-
+        {/* Pagination Controls */}
+        <Flex mt={4} justifyContent="space-between" alignItems="center">
+          <Button onClick={handleLoadLess} isDisabled={offset === 0}>
+            Previous
+          </Button>
+          <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
+            <option value={50}>50 rows</option>
+            <option value={200}>200 rows</option>
+            <option value={500}>500 rows</option>
+          </ChakraSelect>
+          <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
+            Next
+          </Button>
+        </Flex>
       </CardBody>
-      </Card>
     </Card>
   );
 };

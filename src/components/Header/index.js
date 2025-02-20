@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, HStack, Flex } from '@chakra-ui/react';
+import { Box, Button, HStack, Flex, VStack } from '@chakra-ui/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import vfLogo from './vf.jpeg'; // Import the image
@@ -25,51 +25,129 @@ const Header = () => {
       top={0}
       zIndex={1000}
     >
-      <Flex align="center" justify="space-between">
+      <Flex
+        direction={{ base: 'column', md: 'row' }}
+        align="center"
+        justify="space-between"
+      >
         {/* Left Section - Logo and Animated Title */}
-        <HStack spacing={4}>
-          <img src={vfLogo} alt="Logo" style={{ height: '50px', borderRadius: '50%' }} />
-          
+        <HStack spacing={4} mb={{ base: 4, md: 0 }} w={{ base: '100%', md: 'auto' }}>
+          <img
+            src={vfLogo}
+            alt="Logo"
+            style={{ height: '50px', borderRadius: '50%' }}
+          />
           {/* Animated Vila Ferdinand Text */}
           <MotionText
-  fontSize="xl"
-  fontWeight="bold"
-  color="white"
-  initial={{ opacity: 0, x: -50 }}
-  animate={{ opacity: [1, 0], x: [0, 50] }}
-  transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
->
-  Vila Ferdinand
-</MotionText>
+            fontSize="xl"
+            fontWeight="bold"
+            color="white"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: [1, 0], x: [0, 50] }}
+            transition={{ repeat: Infinity, duration: 5, ease: 'easeInOut' }}
+          >
+            Vila Ferdinand
+          </MotionText>
         </HStack>
 
         {/* Middle Section - Navigation Links */}
-        <HStack spacing={6}>
-          <Button as={Link} to="/home" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+        <Flex
+          direction={{ base: 'column', md: 'row' }}
+          align="center"
+          justify="center"
+          wrap="wrap"
+          mb={{ base: 4, md: 0 }}
+          w={{ base: '100%', md: 'auto' }}
+        >
+          <Button
+            as={Link}
+            to="/home"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             HOME
           </Button>
-          <Button as={Link} to="/dashboard" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+          <Button
+            as={Link}
+            to="/dashboard"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             SHITJET ANALITKE
           </Button>
-          <Button as={Link} to="/most-sold-items-by-price" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+          <Button
+            as={Link}
+            to="/most-sold-items-by-price"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             SHITJET RENDITURA
           </Button>
-          <Button as={Link} to="/daily-expenses" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+          <Button
+            as={Link}
+            to="/daily-expenses"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             XHIRO DITORE
           </Button>
-          <Button as={Link} to="/supplier" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+          <Button
+            as={Link}
+            to="/supplier"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             FURNITOR
           </Button>
-          <Button as={Link} to="/article-ingredients" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+          <Button
+            as={Link}
+            to="/article-ingredients"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             RECETA
           </Button>
-          <Button as={Link} to="/usage" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+          <Button
+            as={Link}
+            to="/usage"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             MALLI SHITUR
           </Button>
-          <Button as={Link} to="/missing-articles" variant="ghost" color="white" _hover={{ bg: 'teal.700' }}>
+          <Button
+            as={Link}
+            to="/missing-articles"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
             RECETA MUNGOJN
           </Button>
-        </HStack>
+        </Flex>
 
         {/* Right Section - Logout */}
         <Button
@@ -77,6 +155,7 @@ const Header = () => {
           colorScheme="red"
           variant="solid"
           _hover={{ bg: 'red.600' }}
+          w={{ base: '100%', md: 'auto' }}
         >
           Logout
         </Button>

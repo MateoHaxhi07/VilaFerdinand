@@ -18,6 +18,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { ResponsiveBar } from "@nivo/bar";
+import { ResponsiveLine } from "@nivo/line";
 import { ResponsivePie } from "@nivo/pie";
 import { scaleOrdinal } from "d3-scale";
 import { schemeSet3 } from "d3-scale-chromatic";
@@ -502,6 +503,7 @@ const SellerCategoriesChart = ({ pieData }) => {
 // Description: Renders a card that displays an hourly sales bar chart and aggregated totals.
 // -----------------------------------------------------------------------------
 const HourlySalesChart = ({ data }) => {
+  // Calculate aggregated totals as before.
   const morningTotal = data
     .filter((item) => {
       const hr = parseInt(item.hour, 10);
@@ -525,6 +527,18 @@ const HourlySalesChart = ({ data }) => {
 
   const grandTotal = morningTotal + lunchTotal + dinnerTotal;
 
+  // Transform the data for the line chart.
+  // Nivo's ResponsiveLine expects an array of series with { id, data }.
+  const seriesData = [
+    {
+      id: "Hourly Sales",
+      data: data.map((item) => ({
+        x: item.hour, // x-axis: hour in "00", "01", etc.
+        y: item.total,
+      })),
+    },
+  ];
+
   return (
     <Card mt={6}>
       <CardBody>
@@ -532,40 +546,57 @@ const HourlySalesChart = ({ data }) => {
           Hourly Sales
         </Heading>
         <Flex direction={{ base: "column", md: "row" }} gap={4}>
-          {/* Hourly Bar Chart */}
+          {/* Hourly Line Chart */}
           <Box flex="1" height="400px">
-            <ResponsiveBar
-              data={data}
-              keys={["total"]}
-              indexBy="hour"
+            <ResponsiveLine
+              data={seriesData}
               margin={{ top: 20, right: 20, bottom: 50, left: 60 }}
-              padding={0.3}
-              valueScale={{ type: "linear" }}
-              indexScale={{ type: "band", round: true }}
-              colors={(bar) => {
-                const hr = parseInt(bar.data.hour, 10);
-                const timeframe = getTimeframe(hr);
-                return timeframeScale(timeframe);
+              xScale={{ type: "point" }}
+              yScale={{
+                type: "linear",
+                min: "auto",
+                max: "auto",
+                stacked: false,
+                reverse: false,
               }}
               axisBottom={{
+                orient: "bottom",
                 tickSize: 5,
                 tickPadding: 5,
                 tickRotation: 0,
                 legend: "Hour of Day",
-                legendPosition: "middle",
                 legendOffset: 36,
+                legendPosition: "middle",
               }}
               axisLeft={{
+                orient: "left",
                 tickSize: 5,
                 tickPadding: 5,
                 tickRotation: 0,
                 legend: "Total Sales",
-                legendPosition: "middle",
                 legendOffset: -40,
+                legendPosition: "middle",
               }}
-              labelSkipWidth={12}
-              labelSkipHeight={12}
-              labelTextColor="white"
+              pointSize={10}
+              pointColor={{ theme: "background" }}
+              pointBorderWidth={2}
+              pointBorderColor={{ from: "serieColor" }}
+              pointLabelYOffset={-12}
+              useMesh={true}
+              tooltip={({ point }) => (
+                <Box p="8px" bg="white" border="1px solid #ccc" borderRadius="md">
+                  <strong style={{ color: "black", fontWeight: "bold" }}>
+                    {point.data.xFormatted}
+                  </strong>
+                  <br />
+                  <Box as="span" color="black">
+                    Total Sales:
+                  </Box>{" "}
+                  <Box as="span" fontWeight="bold" color="black">
+                    {Number(point.data.y).toLocaleString()} ALL
+                  </Box>
+                </Box>
+              )}
             />
           </Box>
           {/* Aggregated Totals */}
