@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, HStack, Flex, VStack } from '@chakra-ui/react';
+import { Box, Button, Flex } from '@chakra-ui/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import vfLogo from './vf.jpeg'; // Import the image
@@ -31,24 +31,14 @@ const Header = () => {
         justify="space-between"
       >
         {/* Left Section - Logo and Animated Title */}
-        <HStack spacing={4} mb={{ base: 4, md: 0 }} w={{ base: '100%', md: 'auto' }}>
+        <Flex align="center" mb={{ base: 4, md: 0 }}>
           <img
             src={vfLogo}
             alt="Logo"
-            style={{ height: '50px', borderRadius: '50%' }}
+            style={{ height: '50px', borderRadius: '50%', marginRight: '8px' }}
           />
-          {/* Animated Vila Ferdinand Text */}
-          <MotionText
-            fontSize="xl"
-            fontWeight="bold"
-            color="white"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: [1, 0], x: [0, 50] }}
-            transition={{ repeat: Infinity, duration: 5, ease: 'easeInOut' }}
-          >
-            Vila Ferdinand
-          </MotionText>
-        </HStack>
+         
+        </Flex>
 
         {/* Middle Section - Navigation Links */}
         <Flex
