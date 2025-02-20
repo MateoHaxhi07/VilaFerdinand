@@ -140,7 +140,7 @@ const Dashboard = () => {
       if (selectedHours && selectedHours.length > 0) {
         const selectedHourValues = selectedHours.map((h) => Number(h.value));
         fetchedData = fetchedData.filter((row) => {
-          const rowHour = new Date(row.Datetime).getUTCHours();
+          const rowHour = new Date(row.Datetime).toLocaleString("en-US", { timeZone: "Europe/Tirane" })
           console.log("Row Datetime:", row.Datetime, "UTC Hour:", rowHour);
           return selectedHourValues.includes(rowHour);
         });

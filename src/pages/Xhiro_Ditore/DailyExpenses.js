@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
   Heading,
@@ -24,8 +24,23 @@ import {
   CardBody,
   CardFooter,
   Center,
+  VStack,
+  Stack,
+  useBreakpointValue,
+  Spinner,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
 } from "@chakra-ui/react";
-import { DeleteIcon, AddIcon, CalendarIcon, RepeatIcon } from "@chakra-ui/icons";
+import {
+  DeleteIcon,
+  AddIcon,
+  CalendarIcon,
+  RepeatIcon,
+} from "@chakra-ui/icons";
 import { motion } from "framer-motion";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -40,8 +55,9 @@ const ROW_COLOR = "#e8f5e9";
 
 export default function DailyExpenses() {
   const toast = useToast();
+  const cancelRef = useRef();
 
-  // Inject custom DatePicker styles for dark theme (inside the component)
+  // Inject custom DatePicker styles for dark theme
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -69,9 +85,8 @@ export default function DailyExpenses() {
     };
   }, []);
 
-  // Entry date for new daily expenses
+  // Entry date for new daily expenses and view date for history
   const [entryDate, setEntryDate] = useState(new Date());
-  // View date for existing daily expenses
   const [viewDate, setViewDate] = useState(new Date());
 
   // How many dynamic expense columns we show
@@ -94,7 +109,7 @@ export default function DailyExpenses() {
   // Fetched data from the server for the selected "view date"
   const [rawExpenses, setRawExpenses] = useState([]);
 
-  // Group raw expenses by seller and date
+  // Group raw expenses by seller and date (only one declaration)
   const groupedExpenses = useMemo(() => {
     const byKey = {};
     rawExpenses.forEach((row) => {
@@ -115,7 +130,6 @@ export default function DailyExpenses() {
         description: row.description,
       });
     });
-
     const groupedArr = Object.values(byKey);
     let maxCols = 0;
     groupedArr.forEach((g) => {
@@ -124,7 +138,7 @@ export default function DailyExpenses() {
     return { data: groupedArr, maxCols };
   }, [rawExpenses]);
 
-  /* Total calculation for daily expenses */
+  /* Total calculation for daily expenses from input table */
   const totals = useMemo(() => {
     let totalDaily = 0;
     let totalCashDaily = 0;
@@ -157,7 +171,7 @@ export default function DailyExpenses() {
     if (expenseSetsCount > 1) setExpenseSetsCount(expenseSetsCount - 1);
   };
 
-  // Handle changes in dailyTotal, cashDailyTotal
+  // Handle changes in dailyTotal and cashDailyTotal
   const handleInputChange = (rowIndex, field, value) => {
     setTableData((prev) => {
       const updated = [...prev];
@@ -210,7 +224,6 @@ export default function DailyExpenses() {
             exp.expense.trim() || exp.amount.trim() || exp.description.trim()
         );
       if (!rowHasData) return;
-
       for (let i = 0; i < expenseSetsCount; i++) {
         const { expense, amount, description } = row.expenses[i];
         if (expense.trim() || amount.trim() || description.trim()) {
@@ -225,7 +238,6 @@ export default function DailyExpenses() {
         }
       }
     });
-
     if (entriesToSave.length === 0) {
       toast({
         title: "No Data",
@@ -235,7 +247,6 @@ export default function DailyExpenses() {
       return;
     }
     const dateStr = entryDate.toISOString().split("T")[0];
-
     try {
       const resp = await fetch(`${API_URL}/expenses/bulk`, {
         method: "POST",
@@ -308,9 +319,39 @@ export default function DailyExpenses() {
     }
   };
 
-  // Calculate totals for the view table
+  // Grouped expenses for view (history)
+  // (Only one declaration of groupedExpenses is here)
+  const groupedExpensesMemo = useMemo(() => {
+    const byKey = {};
+    rawExpenses.forEach((row) => {
+      const key = `${row.seller}||${row.date}`;
+      if (!byKey[key]) {
+        byKey[key] = {
+          seller: row.seller,
+          date: row.date,
+          dailyTotal: row.daily_total || "",
+          cashDailyTotal: row.cash_daily_total || "",
+          items: [],
+        };
+      }
+      byKey[key].items.push({
+        id: row.id,
+        expense: row.expense,
+        amount: row.amount,
+        description: row.description,
+      });
+    });
+    const groupedArr = Object.values(byKey);
+    let maxCols = 0;
+    groupedArr.forEach((g) => {
+      if (g.items.length > maxCols) maxCols = g.items.length;
+    });
+    return { data: groupedArr, maxCols };
+  }, [rawExpenses]);
+
+  // Calculate totals for the view table (grouped by seller)
   const viewTotals = useMemo(() => {
-    const totalsBySeller = groupedExpenses.data.map((group) => {
+    const totalsBySeller = groupedExpensesMemo.data.map((group) => {
       let totalExpenseCombined = 0;
       group.items.forEach((item) => {
         totalExpenseCombined += parseFloat(item.amount) || 0;
@@ -318,106 +359,394 @@ export default function DailyExpenses() {
       return { seller: group.seller, totalExpenseCombined };
     });
     return totalsBySeller;
-  }, [groupedExpenses]);
+  }, [groupedExpensesMemo]);
 
-  return (
-    <Box p={1}>
-      {/* Entry Table */}
-      <FormLabel fontWeight="bold" fontSize="md" mb={5} textColor="black.100">
-        ZGJIDH DATEN
-      </FormLabel>
-      <CalendarIcon boxSize={10} mr={7} />
-      <DatePicker
-        selected={entryDate}
-        onChange={setEntryDate}
-        dateFormat="dd/MM/yyyy"
-        className="custom-datepicker"
-      />
+  // Determine if we are in mobile view
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
-      <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
-        <Table variant="simple">
-          <Thead>
-            <Tr bg="gray.200">
-              <Th>Seller</Th>
-              <Th>TOTAL</Th>
-              <Th>Cash Total</Th>
-              {[...Array(expenseSetsCount)].map((_, i) => (
-                <React.Fragment key={i}>
-                  <Th>Expense {i + 1}</Th>
-                  <Th>Amount {i + 1}</Th>
-                  <Th>Description {i + 1}</Th>
-                </React.Fragment>
+  // Responsive rendering for the "Entry Table" section
+  const renderEntrySection = () => {
+    if (isMobile) {
+      return (
+        <VStack spacing={4} align="stretch">
+          {tableData.map((row, rowIndex) => (
+            <Box
+              key={rowIndex}
+              borderWidth="1px"
+              borderRadius="md"
+              p={4}
+              bg="white"
+              boxShadow="md"
+            >
+              <Text>
+                <strong>Seller:</strong> {row.seller}
+              </Text>
+              <Text>
+                <strong>TOTAL:</strong>{" "}
+                <Input
+                  value={row.dailyTotal}
+                  onChange={(e) =>
+                    handleInputChange(rowIndex, "dailyTotal", e.target.value)
+                  }
+                  placeholder="0"
+                  size="sm"
+                  mt={1}
+                />
+              </Text>
+              <Text>
+                <strong>Cash Total:</strong>{" "}
+                <Input
+                  value={row.cashDailyTotal}
+                  onChange={(e) =>
+                    handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
+                  }
+                  placeholder="0"
+                  size="sm"
+                  mt={1}
+                />
+              </Text>
+              {Array.from({ length: expenseSetsCount }).map((_, expIndex) => (
+                <Box key={expIndex} mt={2} p={2} border="1px dashed gray">
+                  <Text>
+                    <strong>Expense {expIndex + 1}:</strong>{" "}
+                    <Input
+                      value={row.expenses[expIndex].expense}
+                      onChange={(e) =>
+                        handleExpenseChange(
+                          rowIndex,
+                          expIndex,
+                          "expense",
+                          e.target.value
+                        )
+                      }
+                      placeholder={`Expense ${expIndex + 1}`}
+                      size="sm"
+                      mt={1}
+                    />
+                  </Text>
+                  <Text>
+                    <strong>Amount {expIndex + 1}:</strong>{" "}
+                    <Input
+                      value={row.expenses[expIndex].amount}
+                      onChange={(e) =>
+                        handleExpenseChange(
+                          rowIndex,
+                          expIndex,
+                          "amount",
+                          e.target.value
+                        )
+                      }
+                      placeholder="0"
+                      size="sm"
+                      mt={1}
+                    />
+                  </Text>
+                  <Text>
+                    <strong>Description {expIndex + 1}:</strong>{" "}
+                    <Input
+                      value={row.expenses[expIndex].description}
+                      onChange={(e) =>
+                        handleExpenseChange(
+                          rowIndex,
+                          expIndex,
+                          "description",
+                          e.target.value
+                        )
+                      }
+                      placeholder="Description"
+                      size="sm"
+                      mt={1}
+                    />
+                  </Text>
+                </Box>
               ))}
-            </Tr>
-          </Thead>
-          <Tbody>
-            {tableData.map((row, rowIndex) => (
-              <Tr key={rowIndex} bg={ROW_COLOR}>
-                <Td>{row.seller}</Td>
-                <Td>
-                  <Input
-                    value={row.dailyTotal}
-                    onChange={(e) =>
-                      handleInputChange(rowIndex, "dailyTotal", e.target.value)
-                    }
-                    placeholder="0"
-                  />
-                </Td>
-                <Td>
-                  <Input
-                    value={row.cashDailyTotal}
-                    onChange={(e) =>
-                      handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
-                    }
-                    placeholder="0"
-                  />
-                </Td>
-                {[...Array(expenseSetsCount)].map((_, expIndex) => (
-                  <React.Fragment key={expIndex}>
-                    <Td>
-                      <Input
-                        value={row.expenses[expIndex].expense}
-                        onChange={(e) =>
-                          handleExpenseChange(rowIndex, expIndex, "expense", e.target.value)
-                        }
-                        placeholder={`Expense ${expIndex + 1}`}
-                      />
-                    </Td>
-                    <Td>
-                      <Input
-                        value={row.expenses[expIndex].amount}
-                        onChange={(e) =>
-                          handleExpenseChange(rowIndex, expIndex, "amount", e.target.value)
-                        }
-                        placeholder="0"
-                      />
-                    </Td>
-                    <Td>
-                      <Input
-                        value={row.expenses[expIndex].description}
-                        onChange={(e) =>
-                          handleExpenseChange(rowIndex, expIndex, "description", e.target.value)
-                        }
-                        placeholder="Description"
-                      />
-                    </Td>
+            </Box>
+          ))}
+          {/* Totals Row */}
+          <Box borderTop="1px solid #ccc" pt={2} mt={4}>
+            <Flex justifyContent="space-between">
+              <Text fontWeight="bold">TOTAL DAILY:</Text>
+              <Text fontWeight="bold">{totals.totalDaily}</Text>
+            </Flex>
+            <Flex justifyContent="space-between">
+              <Text fontWeight="bold">TOTAL CASH DAILY:</Text>
+              <Text fontWeight="bold">{totals.totalCashDaily}</Text>
+            </Flex>
+            <Flex justifyContent="space-between">
+              <Text fontWeight="bold">TOTAL EXPENSES:</Text>
+              <Text fontWeight="bold">{totals.totalExpenseCombined}</Text>
+            </Flex>
+          </Box>
+        </VStack>
+      );
+    } else {
+      return (
+        <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
+          <Table variant="simple">
+            <Thead>
+              <Tr bg="gray.200">
+                <Th>Seller</Th>
+                <Th>TOTAL</Th>
+                <Th>Cash Total</Th>
+                {[...Array(expenseSetsCount)].map((_, i) => (
+                  <React.Fragment key={i}>
+                    <Th>Expense {i + 1}</Th>
+                    <Th>Amount {i + 1}</Th>
+                    <Th>Description {i + 1}</Th>
                   </React.Fragment>
                 ))}
               </Tr>
-            ))}
+            </Thead>
+            <Tbody>
+              {tableData.map((row, rowIndex) => (
+                <Tr key={rowIndex} bg={ROW_COLOR}>
+                  <Td>{row.seller}</Td>
+                  <Td>
+                    <Input
+                      value={row.dailyTotal}
+                      onChange={(e) =>
+                        handleInputChange(rowIndex, "dailyTotal", e.target.value)
+                      }
+                      placeholder="0"
+                      size="sm"
+                    />
+                  </Td>
+                  <Td>
+                    <Input
+                      value={row.cashDailyTotal}
+                      onChange={(e) =>
+                        handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
+                      }
+                      placeholder="0"
+                      size="sm"
+                    />
+                  </Td>
+                  {[...Array(expenseSetsCount)].map((_, expIndex) => (
+                    <React.Fragment key={expIndex}>
+                      <Td>
+                        <Input
+                          value={row.expenses[expIndex].expense}
+                          onChange={(e) =>
+                            handleExpenseChange(
+                              rowIndex,
+                              expIndex,
+                              "expense",
+                              e.target.value
+                            )
+                          }
+                          placeholder={`Expense ${expIndex + 1}`}
+                          size="sm"
+                        />
+                      </Td>
+                      <Td>
+                        <Input
+                          value={row.expenses[expIndex].amount}
+                          onChange={(e) =>
+                            handleExpenseChange(
+                              rowIndex,
+                              expIndex,
+                              "amount",
+                              e.target.value
+                            )
+                          }
+                          placeholder="0"
+                          size="sm"
+                        />
+                      </Td>
+                      <Td>
+                        <Input
+                          value={row.expenses[expIndex].description}
+                          onChange={(e) =>
+                            handleExpenseChange(
+                              rowIndex,
+                              expIndex,
+                              "description",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Description"
+                          size="sm"
+                        />
+                      </Td>
+                    </React.Fragment>
+                  ))}
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+      );
+    }
+  };
 
-            {/* Totals Row */}
-            <Tr bg="gray.100" fontWeight="bold">
-              <Td>TOTALI {totals.totalDaily}</Td>
-              <Td>TOTALI CASH {totals.totalCashDaily}</Td>
-              <Td colSpan={3 * expenseSetsCount} textAlign="center">
-                <Td>TOTALI BLERJEVE {totals.totalExpenseCombined}</Td>
-              </Td>
-            </Tr>
-          </Tbody>
-        </Table>
-      </TableContainer>
+  // Responsive rendering for the "View Existing" section
+  const renderViewSection = () => {
+    if (isMobile) {
+      return (
+        <VStack spacing={4} align="stretch">
+          {groupedExpensesMemo.data.map((group, idx) => {
+            const sellerTotal =
+              viewTotals.find((total) => total.seller === group.seller)
+                ?.totalExpenseCombined || 0;
+            return (
+              <Card key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
+                <CardHeader>
+                  <Heading size="sm" mb={2}>
+                    {group.seller}
+                  </Heading>
+                </CardHeader>
+                <CardBody>
+                  <Text>
+                    <strong>Daily Total:</strong> {group.dailyTotal}
+                  </Text>
+                  <Text>
+                    <strong>Cash Daily Total:</strong> {group.cashDailyTotal}
+                  </Text>
+                  {group.items.map((item, ci) => (
+                    <Box key={ci} borderWidth="1px" borderRadius="md" p={2} my={1}>
+                      <Text>
+                        <strong>Expense:</strong> {item.expense}
+                      </Text>
+                      <Text>
+                        <strong>Amount:</strong> {item.amount}
+                      </Text>
+                      <Text>
+                        <strong>Description:</strong> {item.description}
+                      </Text>
+                      <IconButton
+                        aria-label="Delete"
+                        icon={<DeleteIcon />}
+                        colorScheme="red"
+                        size="sm"
+                        onClick={() => handleDeleteExpense(item.id)}
+                        mt={1}
+                      />
+                    </Box>
+                  ))}
+                </CardBody>
+                <CardFooter>
+                  <Text fontWeight="bold">
+                    Total Expense Combined: {sellerTotal}
+                  </Text>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </VStack>
+      );
+    } else {
+      return (
+        <Box mt={8}>
+          <Heading fontSize="md" mb={5} textColor="black.100">
+            ZGJIDH DATEN PER TE SHIKUAR HISTORIKUN
+          </Heading>
+          <Flex align="center">
+            <CalendarIcon boxSize={10} mr={7} />
+            <DatePicker
+              selected={viewDate}
+              onChange={setViewDate}
+              dateFormat="dd/MM/yyyy"
+              className="custom-datepicker"
+            />
+          </Flex>
+          {groupedExpensesMemo.data.length > 0 ? (
+            groupedExpensesMemo.data.map((group, idx) => {
+              const sellerTotal =
+                viewTotals.find((total) => total.seller === group.seller)
+                  ?.totalExpenseCombined || 0;
+              return (
+                <Card key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
+                  <CardHeader>
+                    <Heading size="sm" mb={2}>
+                      {group.seller}
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <TableContainer>
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr bg="gray.200">
+                            <Th>Daily Total</Th>
+                            <Th>Cash Daily Total</Th>
+                            {[...Array(groupedExpensesMemo.maxCols)].map((_, colIndex) => (
+                              <React.Fragment key={colIndex}>
+                                <Th>Expense {colIndex + 1}</Th>
+                                <Th>Amount {colIndex + 1}</Th>
+                                <Th>Description {colIndex + 1}</Th>
+                                <Th>Action</Th>
+                              </React.Fragment>
+                            ))}
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          <Tr bg={ROW_COLOR}>
+                            <Td>{group.dailyTotal}</Td>
+                            <Td>{group.cashDailyTotal}</Td>
+                            {[...Array(groupedExpensesMemo.maxCols)].map((_, ci) => {
+                              const item = group.items[ci];
+                              if (!item)
+                                return (
+                                  <React.Fragment key={ci}>
+                                    <Td />
+                                    <Td />
+                                    <Td />
+                                    <Td />
+                                  </React.Fragment>
+                                );
+                              return (
+                                <React.Fragment key={ci}>
+                                  <Td>{item.expense}</Td>
+                                  <Td>{item.amount}</Td>
+                                  <Td>{item.description}</Td>
+                                  <Td>
+                                    <IconButton
+                                      aria-label="Delete"
+                                      colorScheme="red"
+                                      icon={<DeleteIcon />}
+                                      onClick={() => handleDeleteExpense(item.id)}
+                                      size="sm"
+                                    />
+                                  </Td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </Tr>
+                        </Tbody>
+                      </Table>
+                    </TableContainer>
+                  </CardBody>
+                  <CardFooter>
+                    <Text fontWeight="bold">
+                      Total Expense Combined: {sellerTotal}
+                    </Text>
+                  </CardFooter>
+                </Card>
+              );
+            })
+          ) : (
+            <Box mt={4}>No daily expenses for this date.</Box>
+          )}
+        </Box>
+      );
+    }
+  };
 
+  return (
+    <Box p={1}>
+      {/* Entry Section */}
+      <FormLabel fontWeight="bold" fontSize="md" mb={5} textColor="black.100">
+        ZGJIDH DATEN
+      </FormLabel>
+      <Flex align="center">
+        <CalendarIcon boxSize={10} mr={7} />
+        <DatePicker
+          selected={entryDate}
+          onChange={setEntryDate}
+          dateFormat="dd/MM/yyyy"
+          className="custom-datepicker"
+        />
+      </Flex>
+      {renderEntrySection()}
       <Flex mt={4} gap={3} justify="center">
         <Button leftIcon={<AddIcon />} onClick={handleAddExpenseSet}>
           Add Columns
@@ -433,98 +762,8 @@ export default function DailyExpenses() {
         </Button>
       </Flex>
 
-      {/* View Existing */}
-      <Box mt={8}>
-        <FormLabel fontWeight="bold" fontSize="md" mb={5} textColor="black.100">
-          ZGJIDH DATEN PER TE SHIKUAR HISTORIKUN
-        </FormLabel>
-        <CalendarIcon boxSize={10} mr={7} />
-        <DatePicker
-          selected={viewDate}
-          onChange={setViewDate}
-          dateFormat="dd/MM/yyyy"
-          className="custom-datepicker"
-        />
-        {groupedExpenses.data.length > 0 ? (
-          groupedExpenses.data.map((group, idx) => {
-            const sellerTotal =
-              viewTotals.find((total) => total.seller === group.seller)
-                ?.totalExpenseCombined || 0;
-            return (
-              <Card key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
-                <CardHeader>
-                  <Box>
-                    <Heading size="sm" mb={2}>
-                      {group.seller}
-                    </Heading>
-                  </Box>
-                </CardHeader>
-                <CardBody>
-                  <TableContainer>
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr bg="gray.200">
-                          <Th>Daily Total</Th>
-                          <Th>Cash Daily Total</Th>
-                          {[...Array(groupedExpenses.maxCols)].map((_, colIndex) => (
-                            <React.Fragment key={colIndex}>
-                              <Th>Expense {colIndex + 1}</Th>
-                              <Th>Amount {colIndex + 1}</Th>
-                              <Th>Description {colIndex + 1}</Th>
-                              <Th>Action</Th>
-                            </React.Fragment>
-                          ))}
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        <Tr bg={ROW_COLOR}>
-                          <Td>{group.dailyTotal}</Td>
-                          <Td>{group.cashDailyTotal}</Td>
-                          {[...Array(groupedExpenses.maxCols)].map((_, ci) => {
-                            const item = group.items[ci];
-                            if (!item)
-                              return (
-                                <React.Fragment key={ci}>
-                                  <Td />
-                                  <Td />
-                                  <Td />
-                                  <Td />
-                                </React.Fragment>
-                              );
-                            return (
-                              <React.Fragment key={ci}>
-                                <Td>{item.expense}</Td>
-                                <Td>{item.amount}</Td>
-                                <Td>{item.description}</Td>
-                                <Td>
-                                  <IconButton
-                                    aria-label="Delete"
-                                    colorScheme="red"
-                                    icon={<DeleteIcon />}
-                                    onClick={() => handleDeleteExpense(item.id)}
-                                  />
-                                </Td>
-                              </React.Fragment>
-                            );
-                          })}
-                        </Tr>
-                      </Tbody>
-                    </Table>
-                  </TableContainer>
-                </CardBody>
-                <CardFooter>
-                  <Text fontWeight="bold">
-                    Total Expense Combined: {sellerTotal}
-                  </Text>
-                </CardFooter>
-                <Box mb={4} /> {/* Margin at the bottom */}
-              </Card>
-            );
-          })
-        ) : (
-          <Box mt={4}>No daily expenses for this date.</Box>
-        )}
-      </Box>
+      {/* View Existing Section */}
+      <Box mt={8}>{renderViewSection()}</Box>
     </Box>
   );
 }

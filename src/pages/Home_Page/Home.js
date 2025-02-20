@@ -559,15 +559,7 @@ const HourlySalesChart = ({ data }) => {
                 stacked: false,
                 reverse: false,
               }}
-              axisBottom={{
-                orient: "bottom",
-                tickSize: 5,
-                tickPadding: 5,
-                tickRotation: 0,
-                legend: "Hour of Day",
-                legendOffset: 36,
-                legendPosition: "middle",
-              }}
+              axisBottom={null} 
               axisLeft={{
                 orient: "left",
                 tickSize: 5,
@@ -585,12 +577,12 @@ const HourlySalesChart = ({ data }) => {
               useMesh={true}
               tooltip={({ point }) => (
                 <Box p="8px" bg="white" border="1px solid #ccc" borderRadius="md">
-                  <strong style={{ color: "black", fontWeight: "bold" }}>
-                    {point.data.xFormatted}
+                  <strong style={{ color: "black" }}>
+                    ORA : {point.data.xFormatted}
                   </strong>
                   <br />
                   <Box as="span" color="black">
-                    Total Sales:
+                    TOTALI :
                   </Box>{" "}
                   <Box as="span" fontWeight="bold" color="black">
                     {Number(point.data.y).toLocaleString()} ALL
@@ -602,7 +594,7 @@ const HourlySalesChart = ({ data }) => {
           {/* Aggregated Totals */}
           <Box flex="1" p={4}>
             <Heading as="h4" size="sm" mb={2}>
-              Aggregated Totals
+               TOTALS
             </Heading>
             <Flex justifyContent="space-between" mb={2}>
               <Flex alignItems="center">
