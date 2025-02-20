@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Box, Button } from '@chakra-ui/react';
 import { Outlet } from 'react-router-dom';
-import Header from './Header'; // Assumes Header is exported from src/components/Header/index.js
+import Header from './index.js'; // Assumes Header is exported from src/components/Header/index.js
 
 const Layout = () => {
   const [showHeader, setShowHeader] = useState(true);
