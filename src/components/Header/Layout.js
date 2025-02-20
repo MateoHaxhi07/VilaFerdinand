@@ -5,6 +5,14 @@ import { Outlet } from 'react-router-dom';
 import Header from './index.js'; // Assumes Header is exported from src/components/Header/index.js
 
 const Layout = () => {
+  // Provide the expected context values.
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [selectedSellers, setSelectedSellers] = useState([]);
+  const [selectedSellerCategories, setSelectedSellerCategories] = useState([]);
+  const [selectedArticleNames, setSelectedArticleNames] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+
   const [showHeader, setShowHeader] = useState(true);
 
   return (
@@ -21,9 +29,24 @@ const Layout = () => {
       </Button>
       {/* Conditionally render Header */}
       {showHeader && <Header />}
-      {/* Render nested routes */}
       <Box mt={4}>
-        <Outlet />
+        {/* Pass the context to nested routes */}
+        <Outlet
+          context={{
+            startDate,
+            setStartDate,
+            endDate,
+            setEndDate,
+            selectedSellers,
+            setSelectedSellers,
+            selectedSellerCategories,
+            setSelectedSellerCategories,
+            selectedArticleNames,
+            setSelectedArticleNames,
+            selectedCategories,
+            setSelectedCategories,
+          }}
+        />
       </Box>
     </Box>
   );
