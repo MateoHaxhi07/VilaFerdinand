@@ -83,7 +83,7 @@ const Dashboard = () => {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Local state for filter options (if needed elsewhere)
+  // (Optional) Local state for filter options
   const [sellers, setSellers] = useState([]);
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
@@ -95,13 +95,14 @@ const Dashboard = () => {
     label: i.toString().padStart(2, "0"),
   }));
 
-  // Calculate totals for display (using API field names)
+  // Calculate totals using API field names
   const totalQuantity = data.reduce(
-    (sum, item) => sum + Number(item.total_quantity ?? 0),
+    (sum, item) => sum + Number(item.Quantity ?? item.quantity ?? 0),
     0
   );
   const totalSales = data.reduce(
-    (sum, item) => sum + Number(item.total_price ?? 0),
+    (sum, item) =>
+      sum + Number(item.Total_Article_Price ?? item.total_price ?? 0),
     0
   );
 
@@ -151,9 +152,6 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-
-  // (Optional) Fetch filter options for sellers, seller categories, etc.
-  // ...
 
   // Reset offset when any filter changes
   useEffect(() => {
@@ -219,8 +217,8 @@ const Dashboard = () => {
   }
 
   return (
-    <Box p={4}>
-      <Heading mb={4}>Dashboard</Heading>
+    <Box p={4} align="center"marginBottom={4}>
+      <Heading mb={4}>SHITJET ANALITIKE</Heading>
       {isMobile ? (
         // Mobile view: Render each data row as a card in a vertical stack
         <VStack spacing={4} align="stretch">
@@ -233,17 +231,23 @@ const Dashboard = () => {
               bg="gray.50"
               boxShadow="sm"
             >
-              <Text>
-                <strong>ID:</strong> {row.id}
+                        <Text>
+                <strong>Seller:</strong> {row.Seller}
               </Text>
               <Text>
                 <strong>Article:</strong> {row.Article_Name || row.item}
               </Text>
+        
               <Text>
-                <strong>Quantity:</strong> {row.total_quantity || row.quantity}
+                <strong>Quantity:</strong> {row.Quantity ?? row.quantity ?? 0}
               </Text>
               <Text>
-                <strong>Sales:</strong> {row.total_price || row.sales}
+                <strong>Sales:</strong>{" "}
+                {row.Total_Article_Price ?? row.total_price ?? 0}
+              </Text>
+              <Text>
+                <strong>Datetime:</strong>{" "}
+                {new Date(row.Datetime).toLocaleString()}
               </Text>
             </Box>
           ))}
@@ -260,33 +264,36 @@ const Dashboard = () => {
           </Box>
         </VStack>
       ) : (
-        // Desktop view: Render the data in a table
+        // Desktop view: Render the data in a table with Datetime and Seller columns
         <TableContainer mt={6} overflowX="auto">
           <Table variant="striped" colorScheme="gray">
             <Thead>
               <Tr>
-                <Th>ID</Th>
+              <Th>Seller</Th>
                 <Th>Article</Th>
                 <Th>Quantity</Th>
                 <Th>Sales</Th>
+                <Th>Datetime</Th>
               </Tr>
             </Thead>
             <Tbody>
               {data.map((row) => (
                 <Tr key={row.id}>
-                  <Td>{row.id}</Td>
+                  <Td>{row.Seller}</Td>
                   <Td>{row.Article_Name || row.item}</Td>
-                  <Td>{row.total_quantity || row.quantity}</Td>
-                  <Td>{row.total_price || row.sales}</Td>
+                  <Td>{row.Quantity ?? row.quantity ?? 0}</Td>
+                  <Td>{row.Total_Article_Price ?? row.total_price ?? 0}</Td>
+                  <Td>{new Date(row.Datetime).toLocaleString()}</Td>
                 </Tr>
               ))}
             </Tbody>
             <Tfoot>
               <Tr>
-                <Th>Total</Th>
+                <Th>TOTAL</Th>
                 <Th />
                 <Th>{totalQuantity}</Th>
                 <Th>{totalSales}</Th>
+                <Th />
               </Tr>
             </Tfoot>
           </Table>
