@@ -18,6 +18,10 @@ import {
   Select as ChakraSelect,
   Grid,
   GridItem,
+  VStack,
+  Text,
+  useBreakpointValue,
+  Spinner,
 } from "@chakra-ui/react";
 import Select from "react-select";
 
@@ -82,10 +86,11 @@ const Dashboard = () => {
     setSelectedHours,
   } = useOutletContext();
 
-  // Local state for table data and pagination
+  // Local state for table data, pagination and loading indicator
   const [data, setData] = useState([]);
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // Local state for filter options
   const [sellers, setSellers] = useState([]);
@@ -150,8 +155,10 @@ const Dashboard = () => {
         });
       }
       setData(fetchedData);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
+      setLoading(false);
     }
   };
 
@@ -213,6 +220,7 @@ const Dashboard = () => {
 
   // Fetch table data when filters or pagination change
   useEffect(() => {
+    setLoading(true);
     fetchData(limit, offset);
   }, [
     limit,
@@ -239,143 +247,117 @@ const Dashboard = () => {
     setOffset(0);
   };
 
+  // Determine if we are in mobile view (iPhone, etc.)
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
+  if (loading) {
+    return (
+      <Flex justify="center" align="center" minH="200px">
+        <Spinner size="xl" />
+      </Flex>
+    );
+  }
+
   return (
-    <Card bg="white.100" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
-      <CardBody>
-        <Heading
-          size="md"
-          mb={6}
-          color="black"
-          fontWeight="bold"
-          textAlign="center"
-        >
-          SHITJET ANALITIKE
-        </Heading>
-        <Flex wrap="wrap" gap={6} justifyContent="center">
-          {[
-            {
-              label: "Sellers",
-              options: sellers,
-              value: selectedSellers,
-              onChange: setSelectedSellers,
-            },
-            {
-              label: "Seller Categories",
-              options: sellerCategories,
-              value: selectedSellerCategories,
-              onChange: setSelectedSellerCategories,
-            },
-            {
-              label: "Article Names",
-              options: articleNames,
-              value: selectedArticleNames,
-              onChange: setSelectedArticleNames,
-            },
-            {
-              label: "Categories",
-              options: categories,
-              value: selectedCategories,
-              onChange: setSelectedCategories,
-            },
-            {
-              label: "Hour",
-              options: hoursOptions,
-              value: selectedHours,
-              onChange: setSelectedHours,
-            },
-          ].map(({ label, options, value, onChange }) => (
-            <Box
-              key={label}
-              bgGradient="linear(to-r, green.600, teal.400)"
-              minW={{ base: "150px", md: "200px" }}
-            >
+    <Box p={4}>
+      <Heading mb={4}>Dashboard</Heading>
+      {isMobile ? (
+        // Mobile view: Render each data row as a card in a vertical stack
+        <VStack spacing={4} align="stretch">
+          {data.length > 0 ? (
+            data.map((row) => (
               <Box
-                mb={2}
-                color="white"
-                fontWeight="bold"
-                bgGradient="linear(to-r, green.600, teal.400)"
-                fontSize="sm"
+                key={row.id}
+                borderWidth="1px"
+                borderRadius="md"
+                p={4}
+                bg="gray.50"
+                boxShadow="sm"
               >
-                {label}
+                <Text>
+                  <strong>ID:</strong> {row.id}
+                </Text>
+                <Text>
+                  <strong>Item:</strong> {row.item}
+                </Text>
+                <Text>
+                  <strong>Quantity:</strong> {row.quantity}
+                </Text>
+                <Text>
+                  <strong>Sales:</strong> {row.sales}
+                </Text>
               </Box>
-              <Select
-                isMulti
-                options={options}
-                onChange={onChange}
-                placeholder={`Select ${label.toLowerCase()}`}
-                menuPortalTarget={document.body}
-                styles={customSelectStyles}
-                value={value}
-              />
-            </Box>
-          ))}
-        </Flex>
-      </CardBody>
-      <Card
-        bg="white.800"
-        borderRadius="lg"
-        boxShadow="lg"
-        bgGradient="linear(to-r, gray.200, gray.300)"
-        mt={6}
-        p={4}
-      >
-        <CardBody>
-          <TableContainer overflowY="auto" maxH="60vh" overflowX="auto">
-            <Table variant="striped" colorScheme="gray">
-              <Thead>
-                <Tr>
-                  <Th>Seller</Th>
-                  <Th>Article Name</Th>
-                  <Th>Category</Th>
-                  <Th>Quantity</Th>
-                  <Th>Article Price</Th>
-                  <Th>Total Article Price</Th>
-                  <Th>Datetime</Th>
-                  <Th>Seller Category</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {data.map((row, index) => (
-                  <Tr key={index}>
-                    <Td>{row.Seller}</Td>
-                    <Td>{row.Article_Name}</Td>
-                    <Td>{row.Category}</Td>
-                    <Td>{row.Quantity}</Td>
-                    <Td>{parseFloat(row.Article_Price).toFixed(0)} ALL</Td>
-                    <Td>{parseFloat(row.Total_Article_Price).toFixed(0)} ALL</Td>
-                    <Td>{new Date(row.Datetime).toUTCString()}</Td>
-                    <Td>{row["Seller Category"]}</Td>
+            ))
+          ) : (
+            <Text textAlign="center">No data available</Text>
+          )}
+          {/* Totals */}
+          <Box borderTop="1px solid #ccc" pt={2} mt={4}>
+            <Flex justifyContent="space-between">
+              <Text fontWeight="bold">Total Quantity:</Text>
+              <Text fontWeight="bold">{totalQuantity}</Text>
+            </Flex>
+            <Flex justifyContent="space-between">
+              <Text fontWeight="bold">Total Sales:</Text>
+              <Text fontWeight="bold">{totalSales}</Text>
+            </Flex>
+          </Box>
+        </VStack>
+      ) : (
+        // Desktop view: Render the data in a table
+        <TableContainer mt={6} overflowX="auto">
+          <Table variant="striped" colorScheme="gray">
+            <Thead>
+              <Tr>
+                <Th>ID</Th>
+                <Th>Item</Th>
+                <Th>Quantity</Th>
+                <Th>Sales</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {data.length > 0 ? (
+                data.map((row) => (
+                  <Tr key={row.id}>
+                    <Td>{row.id}</Td>
+                    <Td>{row.item}</Td>
+                    <Td>{row.quantity}</Td>
+                    <Td>{row.sales}</Td>
                   </Tr>
-                ))}
-              </Tbody>
-              <Tfoot>
-                <Tr bg="gray.100" fontWeight="bold">
-                  <Td colSpan={3} textAlign="center">
-                    TOTAL
+                ))
+              ) : (
+                <Tr>
+                  <Td colSpan={4} textAlign="center">
+                    No data available
                   </Td>
-                  <Td>{totalQuantity.toLocaleString()} Units</Td>
-                  <Td colSpan={1} textAlign="center"></Td>
-                  <Td>{totalSales.toLocaleString()} ALL</Td>
                 </Tr>
-              </Tfoot>
-            </Table>
-          </TableContainer>
-          <Flex mt={4} justifyContent="space-between">
-            <Button onClick={handleLoadLess} isDisabled={offset === 0}>
-              Previous
-            </Button>
-            <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
-              <option value={50}>50 rows</option>
-              <option value={200}>200 rows</option>
-              <option value={500}>500 rows</option>
-            </ChakraSelect>
-            <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
-              Next
-            </Button>
-          </Flex>
-        </CardBody>
-      </Card>
-    </Card>
+              )}
+            </Tbody>
+            <Tfoot>
+              <Tr>
+                <Th>Total</Th>
+                <Th />
+                <Th>{totalQuantity}</Th>
+                <Th>{totalSales}</Th>
+              </Tr>
+            </Tfoot>
+          </Table>
+        </TableContainer>
+      )}
+      <Flex mt={4} justifyContent="space-between" alignItems="center">
+        <Button onClick={handleLoadLess} isDisabled={offset === 0}>
+          Previous
+        </Button>
+        <ChakraSelect width="200px" value={limit} onChange={handleLimitChange}>
+          <option value={50}>50 rows</option>
+          <option value={200}>200 rows</option>
+          <option value={500}>500 rows</option>
+        </ChakraSelect>
+        <Button onClick={handleLoadMore} isDisabled={data.length < limit}>
+          Next
+        </Button>
+      </Flex>
+    </Box>
   );
 };
 
