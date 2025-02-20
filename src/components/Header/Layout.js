@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Button } from '@chakra-ui/react';
-import Header from './components/Header/index.js'; 
+import Header from './index.js'; 
 
 const Layout = ({ children }) => {
   const [showHeader, setShowHeader] = useState(true);
