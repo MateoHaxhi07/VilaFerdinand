@@ -745,7 +745,7 @@ export default function Supplier() {
       {/* Input Section */}
       <Card mb={10} borderRadius="md" boxShadow="md">
         <CardHeader bg="teal.500" color="white">
-          <Heading size="md">Add Supplier Expenses</Heading>
+          <Heading size="md">SHTO BLERJE & BORXHE</Heading>
         </CardHeader>
         <CardBody>
           <FormLabel fontWeight="bold">ZGJIDH DATEN</FormLabel>
@@ -792,7 +792,7 @@ export default function Supplier() {
       {/* View Existing Section */}
       <Card borderRadius="md" boxShadow="md">
         <CardHeader bg="teal.500" color="white">
-          <Heading size="md">View Existing Supplier Records</Heading>
+          <Heading size="md">SHIKO HISTORIKUN BLERJEVE & BORXHEVE</Heading>
         </CardHeader>
         <CardBody>
           {renderViewSection()}

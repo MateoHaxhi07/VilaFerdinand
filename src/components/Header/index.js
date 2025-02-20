@@ -104,17 +104,7 @@ const Header = () => {
           >
             FURNITOR
           </Button>
-          <Button
-            as={Link}
-            to="/article-ingredients"
-            variant="ghost"
-            color="white"
-            _hover={{ bg: 'teal.700' }}
-            w={{ base: '100%', md: 'auto' }}
-            m={1}
-          >
-            RECETA
-          </Button>
+
           <Button
             as={Link}
             to="/usage"
@@ -126,6 +116,18 @@ const Header = () => {
           >
             MALLI SHITUR
           </Button>
+          <Button
+            as={Link}
+            to="/article-ingredients"
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'teal.700' }}
+            w={{ base: '100%', md: 'auto' }}
+            m={1}
+          >
+            RECETA
+          </Button>
+        
           <Button
             as={Link}
             to="/missing-articles"

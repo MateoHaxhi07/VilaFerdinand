@@ -1388,6 +1388,10 @@ app.get("/report/ingredient-usage", async (req, res) => {
       return res.status(400).json({ error: "Please provide startDate and endDate" });
     }
     
+    // Adjust dates to UTC start and end of day
+    const adjustedStartDate = moment.utc(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment.utc(endDate).endOf("day").toISOString();
+    
     // Base query: aggregate total quantity sold per article within the date range,
     // and join with article_ingredients table to get per-article ingredient mapping.
     let query = `
@@ -1409,7 +1413,7 @@ app.get("/report/ingredient-usage", async (req, res) => {
       WHERE s."Datetime" BETWEEN $1 AND $2
     `;
     
-    const params = [startDate, endDate];
+    const params = [adjustedStartDate, adjustedEndDate];
     
     // Optionally filter by a list of article names if provided.
     if (articleNames) {
@@ -1455,7 +1459,6 @@ app.get("/report/ingredient-usage", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 /******************************************************
  * MISSING ARTICLES PAGE
  ******************************************************/
