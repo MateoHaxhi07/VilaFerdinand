@@ -10,14 +10,10 @@ import {
   Td,
   TableContainer,
   Box,
-  Card,
   Heading,
   Button,
-  CardBody,
   Flex,
   Select as ChakraSelect,
-  Grid,
-  GridItem,
   VStack,
   Text,
   useBreakpointValue,
@@ -75,15 +71,10 @@ const Dashboard = () => {
     startDate,
     endDate,
     selectedSellers,
-    setSelectedSellers,
     selectedSellerCategories,
-    setSelectedSellerCategories,
     selectedArticleNames,
-    setSelectedArticleNames,
     selectedCategories,
-    setSelectedCategories,
     selectedHours,
-    setSelectedHours,
   } = useOutletContext();
 
   // Local state for table data, pagination and loading indicator
@@ -92,7 +83,7 @@ const Dashboard = () => {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Local state for filter options
+  // Local state for filter options (if needed elsewhere)
   const [sellers, setSellers] = useState([]);
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
@@ -104,13 +95,13 @@ const Dashboard = () => {
     label: i.toString().padStart(2, "0"),
   }));
 
-  // Calculate totals for display
+  // Calculate totals for display (using API field names)
   const totalQuantity = data.reduce(
-    (sum, item) => sum + Number(item.Quantity ?? 0),
+    (sum, item) => sum + Number(item.total_quantity ?? 0),
     0
   );
   const totalSales = data.reduce(
-    (sum, item) => sum + Number(item.Total_Article_Price ?? 0),
+    (sum, item) => sum + Number(item.total_price ?? 0),
     0
   );
 
@@ -148,7 +139,6 @@ const Dashboard = () => {
       if (selectedHours && selectedHours.length > 0) {
         const selectedHourValues = selectedHours.map((h) => Number(h.value));
         fetchedData = fetchedData.filter((row) => {
-          // Use getUTCHours() as in your working Home.js
           const rowHour = new Date(row.Datetime).getUTCHours();
           console.log("Row Datetime:", row.Datetime, "UTC Hour:", rowHour);
           return selectedHourValues.includes(rowHour);
@@ -162,48 +152,8 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch filter options
-  const fetchSellers = async () => {
-    try {
-      const response = await fetch(`${API_URL}/sales/sellers`);
-      const result = await response.json();
-      setSellers(result.map((seller) => ({ value: seller, label: seller })));
-    } catch (error) {
-      console.error("Error fetching sellers:", error);
-    }
-  };
-
-  const fetchSellerCategories = async () => {
-    try {
-      const response = await fetch(`${API_URL}/sales/seller-categories`);
-      const result = await response.json();
-      setSellerCategories(result.map((cat) => ({ value: cat, label: cat })));
-    } catch (error) {
-      console.error("Error fetching seller categories:", error);
-    }
-  };
-
-  const fetchArticleNames = async () => {
-    try {
-      const response = await fetch(`${API_URL}/sales/article-names`);
-      const result = await response.json();
-      setArticleNames(
-        result.map((article) => ({ value: article, label: article }))
-      );
-    } catch (error) {
-      console.error("Error fetching article names:", error);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch(`${API_URL}/sales/categories`);
-      const result = await response.json();
-      setCategories(result.map((cat) => ({ value: cat, label: cat })));
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
+  // (Optional) Fetch filter options for sellers, seller categories, etc.
+  // ...
 
   // Reset offset when any filter changes
   useEffect(() => {
@@ -258,39 +208,45 @@ const Dashboard = () => {
     );
   }
 
+  // If no data is returned, show a message
+  if (!data || data.length === 0) {
+    return (
+      <Box p={4}>
+        <Heading mb={4}>Dashboard</Heading>
+        <Text textAlign="center">No data available.</Text>
+      </Box>
+    );
+  }
+
   return (
     <Box p={4}>
       <Heading mb={4}>Dashboard</Heading>
       {isMobile ? (
         // Mobile view: Render each data row as a card in a vertical stack
         <VStack spacing={4} align="stretch">
-          {data.length > 0 ? (
-            data.map((row) => (
-              <Box
-                key={row.id}
-                borderWidth="1px"
-                borderRadius="md"
-                p={4}
-                bg="gray.50"
-                boxShadow="sm"
-              >
-                <Text>
-                  <strong>ID:</strong> {row.id}
-                </Text>
-                <Text>
-                  <strong>Item:</strong> {row.item}
-                </Text>
-                <Text>
-                  <strong>Quantity:</strong> {row.quantity}
-                </Text>
-                <Text>
-                  <strong>Sales:</strong> {row.sales}
-                </Text>
-              </Box>
-            ))
-          ) : (
-            <Text textAlign="center">No data available</Text>
-          )}
+          {data.map((row) => (
+            <Box
+              key={row.id}
+              borderWidth="1px"
+              borderRadius="md"
+              p={4}
+              bg="gray.50"
+              boxShadow="sm"
+            >
+              <Text>
+                <strong>ID:</strong> {row.id}
+              </Text>
+              <Text>
+                <strong>Article:</strong> {row.Article_Name || row.item}
+              </Text>
+              <Text>
+                <strong>Quantity:</strong> {row.total_quantity || row.quantity}
+              </Text>
+              <Text>
+                <strong>Sales:</strong> {row.total_price || row.sales}
+              </Text>
+            </Box>
+          ))}
           {/* Totals */}
           <Box borderTop="1px solid #ccc" pt={2} mt={4}>
             <Flex justifyContent="space-between">
@@ -310,28 +266,20 @@ const Dashboard = () => {
             <Thead>
               <Tr>
                 <Th>ID</Th>
-                <Th>Item</Th>
+                <Th>Article</Th>
                 <Th>Quantity</Th>
                 <Th>Sales</Th>
               </Tr>
             </Thead>
             <Tbody>
-              {data.length > 0 ? (
-                data.map((row) => (
-                  <Tr key={row.id}>
-                    <Td>{row.id}</Td>
-                    <Td>{row.item}</Td>
-                    <Td>{row.quantity}</Td>
-                    <Td>{row.sales}</Td>
-                  </Tr>
-                ))
-              ) : (
-                <Tr>
-                  <Td colSpan={4} textAlign="center">
-                    No data available
-                  </Td>
+              {data.map((row) => (
+                <Tr key={row.id}>
+                  <Td>{row.id}</Td>
+                  <Td>{row.Article_Name || row.item}</Td>
+                  <Td>{row.total_quantity || row.quantity}</Td>
+                  <Td>{row.total_price || row.sales}</Td>
                 </Tr>
-              )}
+              ))}
             </Tbody>
             <Tfoot>
               <Tr>
