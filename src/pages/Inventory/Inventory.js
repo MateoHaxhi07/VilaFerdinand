@@ -1,445 +1,554 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
+  Heading,
+  FormLabel,
+  Input,
+  Button,
   Table,
   Thead,
   Tbody,
   Tr,
   Th,
-  Tfoot,
   Td,
   TableContainer,
-  Heading,
-  Button,
-  Input,
-  IconButton,
-  VStack,
   Flex,
+  IconButton,
+  useToast,
+  Text,
+  Card,
+  CardHeader,
+  CardBody,
+  VStack,
   Center,
   Spinner,
-  useToast,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogBody,
-  AlertDialogFooter,
   Stack,
   useBreakpointValue,
+  Select,
 } from "@chakra-ui/react";
-import { EditIcon, CheckIcon, CloseIcon, AddIcon, DeleteIcon } from "@chakra-ui/icons";
+import {
+  EditIcon,
+  CheckIcon,
+  CloseIcon,
+  AddIcon,
+  DeleteIcon,
+  CalendarIcon,
+} from "@chakra-ui/icons";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const Inventory = () => {
-  const [inventory, setInventory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editValues, setEditValues] = useState({});
-  const [newInventory, setNewInventory] = useState({ article_name: "", total: "" });
-  const [adding, setAdding] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
   const toast = useToast();
   const cancelRef = useRef();
 
-  // Fetch inventory data from the server
-  const fetchInventory = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/inventory`);
-      if (!response.ok) throw new Error("Failed to fetch inventory");
-      const data = await response.json();
-      setInventory(data);
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
+  // ================= Bulk Add Section State =================
+  // entryDate is used to select the date for the new inventory record.
+  const [entryDate, setEntryDate] = useState(new Date());
+  // Each new row now includes an "inventory_type" field ("entry" or "removal")
+  const [inventoryRows, setInventoryRows] = useState([
+    { article_name: "", total: "", inventory_type: "entry" },
+  ]);
+  const [loadingInput, setLoadingInput] = useState(false);
+
+  // ================= Date‑Filtered View State =================
+  const [viewDate, setViewDate] = useState(new Date());
+  const [dateInventory, setDateInventory] = useState([]);
+  const [loadingDate, setLoadingDate] = useState(true);
+
+  // ================= All Inventory Summary State =================
+  const [allInventory, setAllInventory] = useState([]);
+  const [loadingAll, setLoadingAll] = useState(true);
+
+  // ================ State for Editing Summary Group =================
+  const [editingGroupKey, setEditingGroupKey] = useState(null); // article_name as key
+  const [editingGroupValue, setEditingGroupValue] = useState("");
+
+  // ================ Handlers for Bulk Input Section ================
+  const handleAddInventoryRow = () => {
+    setInventoryRows((prev) => [
+      ...prev,
+      { article_name: "", total: "", inventory_type: "entry" },
+    ]);
+  };
+
+  const handleRemoveInventoryRow = (index) => {
+    if (inventoryRows.length === 1) {
       toast({
-        title: "Error",
-        description: "Failed to fetch inventory",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchInventory();
-  }, []);
-
-  // Inline edit handlers
-  const handleEdit = (row) => {
-    setEditingId(row.id);
-    setEditValues({ article_name: row.article_name, total: row.total });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditValues({});
-  };
-
-  const handleChange = (field, value) => {
-    setEditValues((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Update inventory item via PUT
-  const handleSave = async () => {
-    try {
-      const response = await fetch(`${API_URL}/inventory/${editingId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editValues),
-      });
-      if (!response.ok) throw new Error("Failed to update inventory");
-      toast({
-        title: "Success",
-        description: "Inventory updated successfully",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      setEditingId(null);
-      setEditValues({});
-      fetchInventory();
-    } catch (error) {
-      console.error("Error updating inventory:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update inventory",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
-  // New inventory handlers
-  const handleNewInventoryChange = (field, value) => {
-    setNewInventory((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleAddInventory = async () => {
-    if (!newInventory.article_name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Article Name is required",
+        title: "Cannot remove",
+        description: "At least one row is required",
         status: "warning",
-        duration: 3000,
-        isClosable: true,
       });
       return;
     }
-    setAdding(true);
-    try {
-      const response = await fetch(`${API_URL}/inventory`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newInventory),
+    setInventoryRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleInputChange = (index, field, value) => {
+    setInventoryRows((prev) => {
+      const newRows = [...prev];
+      newRows[index][field] = value;
+      return newRows;
+    });
+  };
+
+  const handleSaveInventory = async () => {
+    // Filter out empty rows (article_name is required)
+    const entries = inventoryRows.filter(
+      (row) => row.article_name.trim() !== ""
+    );
+    if (entries.length === 0) {
+      toast({
+        title: "No Data",
+        description: "Please fill in at least one row with an article name",
+        status: "warning",
       });
-      if (!response.ok) throw new Error("Failed to add inventory");
+      return;
+    }
+    setLoadingInput(true);
+    try {
+      // Send each entry individually (or adjust to your bulk endpoint)
+      await Promise.all(
+        entries.map((entry) =>
+          fetch(`${API_URL}/inventory`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // Send the selected date (formatted as YYYY-MM-DD) and inventory_type
+            body: JSON.stringify({
+              ...entry,
+              date: entryDate.toLocaleDateString("en-CA"),
+            }),
+          })
+        )
+      );
       toast({
         title: "Success",
-        description: "New inventory item added successfully",
+        description: "Inventory entries added successfully",
         status: "success",
-        duration: 3000,
-        isClosable: true,
       });
-      setNewInventory({ article_name: "", total: "" });
-      fetchInventory();
+      setInventoryRows([{ article_name: "", total: "", inventory_type: "entry" }]);
+      fetchAllInventory();
+      fetchDateInventory(viewDate);
     } catch (error) {
       console.error("Error adding inventory:", error);
       toast({
         title: "Error",
         description: "Failed to add inventory",
         status: "error",
-        duration: 3000,
-        isClosable: true,
       });
     } finally {
-      setAdding(false);
+      setLoadingInput(false);
     }
   };
 
-  // Delete inventory item
-  const handleDeleteInventory = async () => {
+  // ================ Fetching Date‑Filtered Inventory =================
+  const fetchDateInventory = async (date) => {
+    setLoadingDate(true);
+    const dateStr = date.toLocaleDateString("en-CA");
     try {
-      const response = await fetch(`${API_URL}/inventory/${deletingId}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete inventory");
-      toast({
-        title: "Success",
-        description: "Inventory item deleted successfully",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      setDeletingId(null);
-      fetchInventory();
+      const response = await fetch(
+        `${API_URL}/inventory/date?date=${dateStr}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch date inventory");
+      const data = await response.json();
+      setDateInventory(data);
     } catch (error) {
-      console.error("Error deleting inventory:", error);
+      console.error("Error fetching date inventory:", error);
       toast({
         title: "Error",
-        description: "Failed to delete inventory",
+        description: "Failed to fetch inventory for the selected date",
         status: "error",
-        duration: 3000,
-        isClosable: true,
+      });
+    } finally {
+      setLoadingDate(false);
+    }
+  };
+
+  // ================ Fetching All Inventory =================
+  const fetchAllInventory = async () => {
+    setLoadingAll(true);
+    try {
+      const response = await fetch(`${API_URL}/inventory`);
+      if (!response.ok) throw new Error("Failed to fetch all inventory");
+      const data = await response.json();
+      setAllInventory(data);
+    } catch (error) {
+      console.error("Error fetching all inventory:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch all inventory",
+        status: "error",
+      });
+    } finally {
+      setLoadingAll(false);
+    }
+  };
+
+  // ================ Effects to Fetch Data =================
+  useEffect(() => {
+    fetchDateInventory(viewDate);
+  }, [viewDate]);
+
+  useEffect(() => {
+    fetchAllInventory();
+  }, []);
+
+  // ================ Grouping Logic ================
+  // Group date-filtered inventory by article name, date, and inventory_type
+  const groupedDateInventory = useMemo(() => {
+    const groups = {};
+    dateInventory.forEach((row) => {
+      // Convert created_at (or entry_date) to a date string (YYYY-MM-DD)
+      const dateOnly = new Date(row.created_at).toLocaleDateString("en-CA");
+      const key = `${row.article_name.trim()}_${dateOnly}_${row.inventory_type}`;
+      if (!groups[key]) {
+        groups[key] = {
+          article_name: row.article_name,
+          date: dateOnly,
+          inventory_type: row.inventory_type,
+          total: 0,
+          entries: [],
+        };
+      }
+      groups[key].total += Number(row.total) || 0;
+      groups[key].entries.push(row);
+    });
+    return Object.values(groups);
+  }, [dateInventory]);
+
+  // Group all inventory by article name and compute net total (entries minus removals)
+  const groupedAllInventory = useMemo(() => {
+    const groups = {};
+    allInventory.forEach((row) => {
+      const key = row.article_name.trim();
+      if (!groups[key]) {
+        groups[key] = {
+          article_name: row.article_name,
+          netTotal: 0, // netTotal = sum(entry totals) - sum(removal totals)
+          count: 0,
+          entries: [],
+        };
+      }
+      // Add total for entries; subtract for removals
+      groups[key].netTotal += row.inventory_type === "entry"
+        ? Number(row.total) || 0
+        : - (Number(row.total) || 0);
+      groups[key].count += 1;
+      groups[key].entries.push(row);
+    });
+    return Object.values(groups);
+  }, [allInventory]);
+
+  // ================ Delete Group Functionality ================
+  const handleDeleteGroup = async (group) => {
+    try {
+      await Promise.all(
+        group.entries.map((row) =>
+          fetch(`${API_URL}/inventory/${row.id}`, { method: "DELETE" })
+        )
+      );
+      toast({
+        title: "Deleted",
+        description: "Group deleted successfully",
+        status: "success",
+      });
+      fetchDateInventory(viewDate);
+      fetchAllInventory();
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete group",
+        status: "error",
       });
     }
   };
 
-  // Responsive layout determination
+  // ================ Edit Group Functionality for Summary ================
+  // In the summary, allow editing the net total value. Here we update the most recent record.
+  const handleSaveGroupEdit = async (group) => {
+    try {
+      // Sort the group's entries by created_at descending to find the most recent record.
+      const sortedEntries = group.entries.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+      const latestRecord = sortedEntries[0];
+      const response = await fetch(`${API_URL}/inventory/${latestRecord.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          article_name: latestRecord.article_name,
+          // When editing a summary, we assume the update represents a correction for the record.
+          // In a real scenario, you might update multiple records or use a dedicated field.
+          total: editingGroupValue,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to update inventory record");
+      toast({
+        title: "Success",
+        description: "Inventory updated successfully",
+        status: "success",
+      });
+      setEditingGroupKey(null);
+      setEditingGroupValue("");
+      fetchAllInventory();
+      fetchDateInventory(viewDate);
+    } catch (error) {
+      console.error("Error updating group:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update inventory group",
+        status: "error",
+      });
+    }
+  };
+
+  // ================ Responsive Layout ================
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  if (loading) {
-    return (
-      <Center h="100vh">
-        <Spinner size="xl" />
-      </Center>
-    );
-  }
+  // ================= Render Functions =================
 
-  // Mobile view: Render inventory items as vertical cards
-  const renderMobile = () => {
+  // Bulk Add Section
+  const renderInputSection = () => {
     return (
-      <VStack spacing={4} align="stretch">
-        {inventory.length > 0 ? (
-          inventory.map((row) => (
-            <Box key={row.id} borderWidth="1px" borderRadius="md" p={4} bg="white" boxShadow="sm">
-              <Text>
-                <strong>ID:</strong> {row.id}
-              </Text>
-              <Text>
-                <strong>Article Name:</strong>{" "}
-                {editingId === row.id ? (
-                  <Input
-                    value={editValues.article_name || ""}
-                    onChange={(e) => handleChange("article_name", e.target.value)}
-                  />
-                ) : (
-                  row.article_name
-                )}
-              </Text>
-              <Text>
-                <strong>Total:</strong>{" "}
-                {editingId === row.id ? (
-                  <Input
-                    value={editValues.total || ""}
-                    type="number"
-                    onChange={(e) => handleChange("total", e.target.value)}
-                  />
-                ) : (
-                  row.total
-                )}
-              </Text>
-              <Flex mt={2}>
-                {editingId === row.id ? (
-                  <>
-                    <IconButton
-                      aria-label="Save"
-                      icon={<CheckIcon />}
-                      size="sm"
-                      onClick={handleSave}
-                      mr={2}
-                    />
-                    <IconButton
-                      aria-label="Cancel"
-                      icon={<CloseIcon />}
-                      size="sm"
-                      onClick={handleCancelEdit}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <IconButton
-                      aria-label="Edit"
-                      icon={<EditIcon />}
-                      size="sm"
-                      onClick={() => handleEdit(row)}
-                      mr={2}
-                    />
-                    <IconButton
-                      aria-label="Delete"
-                      icon={<DeleteIcon />}
-                      colorScheme="red"
-                      size="sm"
-                      onClick={() => setDeletingId(row.id)}
-                    />
-                  </>
-                )}
-              </Flex>
-            </Box>
-          ))
-        ) : (
-          <Text textAlign="center">No inventory available</Text>
-        )}
-        <Box borderTop="1px solid #ccc" pt={2} mt={4}>
-          <Flex justifyContent="space-between">
-            <Text fontWeight="bold">Total Quantity:</Text>
-            <Text fontWeight="bold">
-              {inventory.reduce((sum, row) => sum + Number(row.total || 0), 0)}
-            </Text>
+      <Card mb={6} p={4} borderRadius="md" boxShadow="md" bg="white">
+        <Heading size="md" mb={4}>
+          Add Inventory Items
+        </Heading>
+        {/* Date Picker for selecting entry date */}
+        <Flex align="center" mb={4}>
+          <CalendarIcon boxSize={6} mr={2} />
+          <DatePicker
+            selected={entryDate}
+            onChange={setEntryDate}
+            dateFormat="dd/MM/yyyy"
+            className="custom-datepicker"
+          />
+        </Flex>
+        {inventoryRows.map((row, index) => (
+          <Flex key={index} mb={2} align="center">
+            <Input
+              placeholder="Article Name"
+              value={row.article_name}
+              onChange={(e) =>
+                handleInputChange(index, "article_name", e.target.value)
+              }
+              mr={2}
+            />
+            <Input
+              placeholder="Total Quantity"
+              type="number"
+              value={row.total}
+              onChange={(e) =>
+                handleInputChange(index, "total", e.target.value)
+              }
+              mr={2}
+            />
+            <Select
+              value={row.inventory_type}
+              onChange={(e) =>
+                handleInputChange(index, "inventory_type", e.target.value)
+              }
+              width="120px"
+              mr={2}
+            >
+              <option value="entry">Entry</option>
+              <option value="removal">Removal</option>
+            </Select>
+            <IconButton
+              aria-label="Remove row"
+              icon={<DeleteIcon />}
+              size="sm"
+              onClick={() => handleRemoveInventoryRow(index)}
+            />
           </Flex>
-        </Box>
-      </VStack>
+        ))}
+        <Button leftIcon={<AddIcon />} onClick={handleAddInventoryRow} mt={2}>
+          Add Another Row
+        </Button>
+        <Button
+          colorScheme="blue"
+          onClick={handleSaveInventory}
+          mt={4}
+          isLoading={loadingInput}
+        >
+          Save Inventory
+        </Button>
+      </Card>
     );
   };
 
-  // Desktop view: Render inventory in a table
-  const renderDesktop = () => {
+  // Date-Filtered View Section
+  const renderDateViewSection = () => {
     return (
-      <TableContainer bg="white" p={4} borderRadius="md" boxShadow="md">
-        <Table variant="striped" size="sm">
-          <Thead bg="gray.200">
-            <Tr>
-              <Th>ID</Th>
-              <Th>Article Name</Th>
-              <Th>Total</Th>
-              <Th>Actions</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {inventory.length > 0 ? (
-              inventory.map((row) => (
-                <Tr key={row.id}>
-                  <Td>{row.id}</Td>
-                  <Td>
-                    {editingId === row.id ? (
-                      <Input
-                        value={editValues.article_name || ""}
-                        onChange={(e) => handleChange("article_name", e.target.value)}
-                      />
-                    ) : (
-                      row.article_name
-                    )}
-                  </Td>
-                  <Td>
-                    {editingId === row.id ? (
-                      <Input
-                        value={editValues.total || ""}
-                        type="number"
-                        onChange={(e) => handleChange("total", e.target.value)}
-                      />
-                    ) : (
-                      row.total
-                    )}
-                  </Td>
-                  <Td>
-                    {editingId === row.id ? (
-                      <>
+      <Card mb={6} p={4} borderRadius="md" boxShadow="md" bg="white">
+        <CardHeader>
+          <Heading size="md">Inventory Added on Selected Date</Heading>
+        </CardHeader>
+        <CardBody>
+          <Flex align="center" mb={4}>
+            <CalendarIcon boxSize={6} mr={2} />
+            <DatePicker
+              selected={viewDate}
+              onChange={setViewDate}
+              dateFormat="dd/MM/yyyy"
+              className="custom-datepicker"
+            />
+          </Flex>
+          {loadingDate ? (
+            <Center>
+              <Spinner size="xl" />
+            </Center>
+          ) : groupedDateInventory.length > 0 ? (
+            <TableContainer>
+              <Table variant="simple">
+                <Thead bg="gray.200">
+                  <Tr>
+                    <Th>Date</Th>
+                    <Th>Article Name</Th>
+                    <Th>Type</Th>
+                    <Th isNumeric>Total {`(${"Entry"}/{ "Removal" })`}</Th>
+                    <Th>Action</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {groupedDateInventory.map((group, idx) => (
+                    <Tr key={idx}>
+                      <Td>{group.date}</Td>
+                      <Td>{group.article_name}</Td>
+                      <Td>{group.inventory_type}</Td>
+                      <Td isNumeric>
+                        {group.inventory_type === "removal"
+                          ? `- ${group.total}`
+                          : group.total}
+                      </Td>
+                      <Td>
                         <IconButton
-                          aria-label="Save"
-                          icon={<CheckIcon />}
-                          size="sm"
-                          onClick={handleSave}
-                          mr={2}
-                        />
-                        <IconButton
-                          aria-label="Cancel"
-                          icon={<CloseIcon />}
-                          size="sm"
-                          onClick={handleCancelEdit}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <IconButton
-                          aria-label="Edit"
-                          icon={<EditIcon />}
-                          size="sm"
-                          onClick={() => handleEdit(row)}
-                          mr={2}
-                        />
-                        <IconButton
-                          aria-label="Delete"
+                          aria-label="Delete group"
                           icon={<DeleteIcon />}
-                          colorScheme="red"
                           size="sm"
-                          onClick={() => setDeletingId(row.id)}
+                          colorScheme="red"
+                          onClick={() => handleDeleteGroup(group)}
                         />
-                      </>
-                    )}
-                  </Td>
-                </Tr>
-              ))
-            ) : (
-              <Tr>
-                <Td colSpan={4} textAlign="center">
-                  No inventory available
-                </Td>
-              </Tr>
-            )}
-          </Tbody>
-          <Tfoot>
-            <Tr>
-              <Th colSpan={2}>Totals</Th>
-              <Th>
-                {inventory.reduce((sum, row) => sum + Number(row.total || 0), 0)}
-              </Th>
-              <Th />
-            </Tr>
-          </Tfoot>
-        </Table>
-      </TableContainer>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Text>No inventory added on this date.</Text>
+          )}
+        </CardBody>
+      </Card>
+    );
+  };
+
+  // All Inventory Summary Section (Editable)
+  const renderAllInventorySection = () => {
+    return (
+      <Card p={4} borderRadius="md" boxShadow="md" bg="white">
+        <CardHeader>
+          <Heading size="md">All Inventory Summary</Heading>
+        </CardHeader>
+        <CardBody>
+          {loadingAll ? (
+            <Center>
+              <Spinner size="xl" />
+            </Center>
+          ) : groupedAllInventory.length > 0 ? (
+            <TableContainer>
+              <Table variant="simple">
+                <Thead bg="gray.200">
+                  <Tr>
+                    <Th>Article Name</Th>
+                    <Th isNumeric>Net Quantity</Th>
+                    <Th isNumeric>Entries Count</Th>
+                    <Th>Action</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {groupedAllInventory.map((group, idx) => (
+                    <Tr key={idx}>
+                      <Td>{group.article_name}</Td>
+                      <Td isNumeric>
+                        {editingGroupKey === group.article_name ? (
+                          <Input
+                            value={editingGroupValue}
+                            onChange={(e) =>
+                              setEditingGroupValue(e.target.value)
+                            }
+                            size="sm"
+                          />
+                        ) : (
+                          group.netTotal
+                        )}
+                      </Td>
+                      <Td isNumeric>{group.count}</Td>
+                      <Td>
+                        {editingGroupKey === group.article_name ? (
+                          <>
+                            <IconButton
+                              aria-label="Save"
+                              icon={<CheckIcon />}
+                              size="sm"
+                              colorScheme="green"
+                              onClick={() => handleSaveGroupEdit(group)}
+                              mr={2}
+                            />
+                            <IconButton
+                              aria-label="Cancel"
+                              icon={<CloseIcon />}
+                              size="sm"
+                              onClick={() => {
+                                setEditingGroupKey(null);
+                                setEditingGroupValue("");
+                              }}
+                              mr={2}
+                            />
+                          </>
+                        ) : (
+                          <IconButton
+                            aria-label="Edit group"
+                            icon={<EditIcon />}
+                            size="sm"
+                            onClick={() => {
+                              setEditingGroupKey(group.article_name);
+                              setEditingGroupValue(group.netTotal);
+                            }}
+                            mr={2}
+                          />
+                        )}
+                        <IconButton
+                          aria-label="Delete group"
+                          icon={<DeleteIcon />}
+                          size="sm"
+                          colorScheme="red"
+                          onClick={() => handleDeleteGroup(group)}
+                        />
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Text>No inventory data available.</Text>
+          )}
+        </CardBody>
+      </Card>
     );
   };
 
   return (
-    <Box p={4} bg="gray.50" minH="100vh">
-      <Heading mb={6} textAlign="center">Inventory</Heading>
-
-      {/* Add New Inventory Section */}
-      <Box bg="white" p={4} borderRadius="md" boxShadow="md" mb={6}>
-        <Heading fontSize="lg" mb={4}>Add New Inventory Item</Heading>
-        <Stack direction="row" spacing={2} wrap="wrap">
-          <Input
-            placeholder="Article Name"
-            value={newInventory.article_name}
-            onChange={(e) => handleNewInventoryChange("article_name", e.target.value)}
-          />
-          <Input
-            placeholder="Total Quantity"
-            type="number"
-            value={newInventory.total}
-            onChange={(e) => handleNewInventoryChange("total", e.target.value)}
-          />
-          <Button
-            leftIcon={<AddIcon />}
-            colorScheme="green"
-            isLoading={adding}
-            onClick={handleAddInventory}
-          >
-            Add
-          </Button>
-        </Stack>
-      </Box>
-
-      {isMobile ? renderMobile() : renderDesktop()}
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        isOpen={!!deletingId}
-        leastDestructiveRef={cancelRef}
-        onClose={() => setDeletingId(null)}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete Inventory Item
-            </AlertDialogHeader>
-            <AlertDialogBody>
-              Are you sure you want to delete this inventory item? This action cannot be undone.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button onClick={() => setDeletingId(null)}>Cancel</Button>
-              <Button colorScheme="red" onClick={handleDeleteInventory} ml={3}>
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+    <Box p={isMobile ? 2 : 4} bg="gray.50" minH="100vh">
+      <Heading mb={6} textAlign="center">
+        Inventory Management
+      </Heading>
+      {renderInputSection()}
+      {renderDateViewSection()}
+      {renderAllInventorySection()}
     </Box>
   );
 };

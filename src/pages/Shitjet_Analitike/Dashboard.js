@@ -283,7 +283,7 @@ const Dashboard = () => {
                   <Td>{row.Article_Name || row.item}</Td>
                   <Td>{row.Quantity ?? row.quantity ?? 0}</Td>
                   <Td>{row.Total_Article_Price ?? row.total_price ?? 0}</Td>
-                  <Td>{new Date(row.Datetime).toLocaleString()}</Td>
+                  <Td>{new Date(row.Datetime).toLocaleString("en-US", { timeZone: "Europe/Tirane" })}</Td>
                 </Tr>
               ))}
             </Tbody>

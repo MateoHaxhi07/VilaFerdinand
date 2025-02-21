@@ -22,7 +22,7 @@ def fetch_article_ingredients():
         print("✅ Connected to the online database successfully.")
 
         # SQL query to select the first 100 rows
-        select_query = "SELECT * FROM sales LIMIT 100;"
+        select_query = "SELECT * FROM users LIMIT 100;"
         cur.execute(select_query)
 
         # Fetch and display results

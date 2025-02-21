@@ -1228,6 +1228,23 @@ const createSupplierExpensesTable = async () => {
 };
 createSupplierExpensesTable();
 
+
+app.get("/suppliers/all", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, supplier, transaction_type, total_amount, amount_unpaid, item_name, quantity, date
+       FROM supplier_expenses
+       ORDER BY date ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching all supplier expenses:", err);
+    res.status(500).json({ error: "Failed to fetch all supplier expenses" });
+  }
+});
+
+
+
 app.post("/suppliers/bulk", async (req, res) => {
   const { selectedDate, entries } = req.body;
   if (!selectedDate || !entries || !Array.isArray(entries)) {
@@ -1697,16 +1714,22 @@ app.get("/report/missing-articles", async (req, res) => {
 
 
 
-   app.get("/inventory", async (req, res) => {
+   app.get("/inventory/date", async (req, res) => {
+    const { date } = req.query; // date expected in YYYY-MM-DD format
+    if (!date) {
+      return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
+    }
     try {
       const result = await pool.query(
-        `SELECT id, article_name, total, created_at 
-         FROM inventory 
-         ORDER BY id ASC`
+        `SELECT id, article_name, total, inventory_type, entry_date, created_at
+         FROM inventory
+         WHERE entry_date = $1
+         ORDER BY entry_date ASC`,
+        [date]
       );
       res.json(result.rows);
     } catch (err) {
-      console.error("Error fetching inventory:", err);
+      console.error("Error fetching inventory by date:", err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -1714,15 +1737,15 @@ app.get("/report/missing-articles", async (req, res) => {
   // POST /inventory - Add a new inventory item
   app.post("/inventory", async (req, res) => {
     try {
-      const { article_name, total } = req.body;
-      if (!article_name || total === undefined) {
-        return res.status(400).json({ error: "article_name and total are required" });
+      const { article_name, total, inventory_type, date } = req.body;
+      if (!article_name || total === undefined || !inventory_type || !date) {
+        return res.status(400).json({ error: "article_name, total, inventory_type and date are required" });
       }
       const result = await pool.query(
-        `INSERT INTO inventory (article_name, total)
-         VALUES ($1, $2)
-         RETURNING id, article_name, total, created_at`,
-        [article_name, total]
+        `INSERT INTO inventory (article_name, total, inventory_type, entry_date)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, article_name, total, inventory_type, entry_date, created_at`,
+        [article_name, total, inventory_type, date]
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -1730,21 +1753,21 @@ app.get("/report/missing-articles", async (req, res) => {
       res.status(500).json({ error: err.message });
     }
   });
-  
   // PUT /inventory/:id - Update an inventory item
   app.put("/inventory/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const { article_name, total } = req.body;
+      // Allow updating article_name, total and optionally inventory_type and entry_date.
+      const { article_name, total, inventory_type, date } = req.body;
       if (!article_name || total === undefined) {
         return res.status(400).json({ error: "article_name and total are required" });
       }
       const result = await pool.query(
         `UPDATE inventory
-         SET article_name = $1, total = $2
-         WHERE id = $3
-         RETURNING id, article_name, total, created_at`,
-        [article_name, total, id]
+         SET article_name = $1, total = $2, inventory_type = COALESCE($3, inventory_type), entry_date = COALESCE($4, entry_date)
+         WHERE id = $5
+         RETURNING id, article_name, total, inventory_type, entry_date, created_at`,
+        [article_name, total, inventory_type, date, id]
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Inventory item not found" });
@@ -1756,7 +1779,7 @@ app.get("/report/missing-articles", async (req, res) => {
     }
   });
   
-  // DELETE /inventory/:id - Delete an inventory item
+  
   app.delete("/inventory/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -1781,15 +1804,12 @@ app.get("/report/missing-articles", async (req, res) => {
       return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
     }
     try {
-      // Use moment.utc to get the full day range in UTC
-      const adjustedStartDate = moment.utc(date).startOf("day").toISOString();
-      const adjustedEndDate = moment.utc(date).endOf("day").toISOString();
       const result = await pool.query(
-        `SELECT id, article_name, total, created_at 
+        `SELECT id, article_name, total, entry_date, created_at
          FROM inventory
-         WHERE created_at BETWEEN $1 AND $2
-         ORDER BY created_at ASC`,
-         [adjustedStartDate, adjustedEndDate]
+         WHERE entry_date = $1
+         ORDER BY entry_date ASC`,
+        [date]
       );
       res.json(result.rows);
     } catch (err) {
@@ -1797,7 +1817,6 @@ app.get("/report/missing-articles", async (req, res) => {
       res.status(500).json({ error: err.message });
     }
   });
-
 
 
 

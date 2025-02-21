@@ -18,12 +18,12 @@ try:
     fetch_columns_query = """
         SELECT column_name, data_type 
         FROM information_schema.columns 
-        WHERE table_name = 'users';
+        WHERE table_name = 'inventory';
     """
     cur.execute(fetch_columns_query)
     columns = cur.fetchall()
 
-    print("Columns in 'users' table:")
+    print("Columns in 'inventory' table:")
     for column in columns:
         print(f"- {column[0]} ({column[1]})")
 

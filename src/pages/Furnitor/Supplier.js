@@ -19,21 +19,11 @@ import {
   Card,
   CardHeader,
   CardBody,
-  CardFooter,
-  Center,
   VStack,
-  Stack,
   useBreakpointValue,
-  Spinner,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogBody,
-  AlertDialogFooter,
   Select,
 } from "@chakra-ui/react";
-import { DeleteIcon, AddIcon, CalendarIcon, RepeatIcon } from "@chakra-ui/icons";
+import { DeleteIcon, AddIcon, CalendarIcon } from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -94,16 +84,19 @@ export default function Supplier() {
     },
   ]);
 
-  // Fetched supplier records for viewing
+  // Fetched supplier records for the date-filtered view
   const [fetchedRows, setFetchedRows] = useState([]);
 
-  // -------------- GROUPING & HELPER FUNCTIONS -------------- //
+  // All historical supplier data (without date filter)
+  const [historicalData, setHistoricalData] = useState([]);
 
-  // Group fetched rows by supplier and transaction type
+  // Group data for the date-filtered view (group by supplier + transaction type + date)
   const groupedData = useMemo(() => {
     const groups = {};
     fetchedRows.forEach((row) => {
       const type = row.transaction_type || row.transactionType;
+      const total = parseFloat(row.total_amount || row.totalAmount) || 0;
+      const unpaid = parseFloat(row.amount_unpaid || row.amountUnpaid) || 0;
       const key = `${row.supplier.trim()}_${type}_${row.date}`;
       if (!groups[key]) {
         groups[key] = {
@@ -116,34 +109,71 @@ export default function Supplier() {
           mainEntryId: null,
         };
       }
-      // If no item_name, this row is the main entry for total amounts
       if (!row.item_name || row.item_name.trim() === "") {
-        groups[key].total_amount += parseFloat(row.total_amount) || 0;
-        groups[key].amount_unpaid += parseFloat(row.amount_unpaid) || 0;
+        groups[key].total_amount += total;
+        groups[key].amount_unpaid += unpaid;
         if (!groups[key].mainEntryId) {
           groups[key].mainEntryId = row.id;
         }
       } else {
-        // Otherwise, it's an item line
         groups[key].line_items.push({
           item_name: row.item_name,
           quantity: row.quantity,
         });
       }
     });
-    // Calculate amount_paid from total_amount - amount_unpaid
     Object.values(groups).forEach((group) => {
       group.amount_paid = (group.total_amount - group.amount_unpaid).toFixed(2);
     });
     return Object.values(groups);
   }, [fetchedRows]);
 
-  // Translate transaction type for display
+  // Group historical data by supplier and transaction type (ignoring date)
+  const groupedHistoricalData = useMemo(() => {
+    const groups = {};
+    historicalData.forEach((row) => {
+      const type = row.transaction_type || row.transactionType;
+      const total = parseFloat(row.total_amount || row.totalAmount) || 0;
+      const unpaid = parseFloat(row.amount_unpaid || row.amountUnpaid) || 0;
+      // Group by supplier and transaction type only
+      const key = `${row.supplier.trim()}_${type}`;
+      if (!groups[key]) {
+        groups[key] = {
+          supplier: row.supplier,
+          transaction_type: type,
+          total_amount: 0,
+          amount_unpaid: 0,
+          line_items: [],
+          mainEntryId: null,
+          dates: new Set(),
+        };
+      }
+      groups[key].total_amount += total;
+      groups[key].amount_unpaid += unpaid;
+      groups[key].dates.add(row.date);
+      if (!row.item_name || row.item_name.trim() === "") {
+        if (!groups[key].mainEntryId) {
+          groups[key].mainEntryId = row.id;
+        }
+      } else {
+        groups[key].line_items.push({
+          item_name: row.item_name,
+          quantity: row.quantity,
+        });
+      }
+    });
+    Object.values(groups).forEach((group) => {
+      group.amount_paid = (group.total_amount - group.amount_unpaid).toFixed(2);
+      group.dates = Array.from(group.dates).sort();
+    });
+    return Object.values(groups);
+  }, [historicalData]);
+
   function translateTransactionType(type) {
     return type === "purchase" ? "Blerje" : "Borxh Klienta";
   }
 
-  // -------------- HANDLERS FOR MANUAL INPUT -------------- //
+  // Handlers for manual input
   const handleAddSupplierRow = () => {
     setSupplierRows((prev) => [
       ...prev,
@@ -204,54 +234,45 @@ export default function Supplier() {
     });
   };
 
-  // -------------- SAVE MANUAL ENTRIES -------------- //
+  // Save manual entries
   const handleSave = async () => {
     const dateStr = entryDate.toLocaleDateString("en-CA");
     const finalEntries = [];
-
     supplierRows.forEach((row) => {
-      // Check if row has any data
       const rowHasData =
         row.supplier.trim() ||
         row.totalAmount.trim() ||
         row.amountPaid.trim() ||
         row.items.some((it) => it.name.trim() || it.quantity.trim());
       if (!rowHasData) return;
-
-      // Calculate unpaid
       const total = parseFloat(row.totalAmount) || 0;
       const paid = parseFloat(row.amountPaid) || 0;
       const unpaid = (total - paid).toFixed(2);
-
-      // Main entry row
       const mainEntry = {
         supplier: row.supplier.trim(),
         transactionType: row.transactionType,
-        total_amount: row.totalAmount.trim(),
-        amount_unpaid: unpaid,
-        item_name: "",
-        quantity: "",
+        totalAmount: row.totalAmount.trim(),
+        amountUnpaid: unpaid,
+        itemName: "",
+        itemQuantity: "",
         date: dateStr,
       };
       finalEntries.push(mainEntry);
-
-      // Additional items
       for (let i = 0; i < itemSetsCount; i++) {
         const { name, quantity } = row.items[i];
         if (name.trim() || quantity.trim()) {
           finalEntries.push({
             supplier: row.supplier.trim(),
             transactionType: row.transactionType,
-            total_amount: "0",
-            amount_unpaid: "0",
-            item_name: name.trim(),
-            quantity: quantity.trim(),
+            totalAmount: "0",
+            amountUnpaid: "0",
+            itemName: name.trim(),
+            itemQuantity: quantity.trim(),
             date: dateStr,
           });
         }
       }
     });
-
     if (finalEntries.length === 0) {
       toast({
         title: "No Data",
@@ -260,7 +281,7 @@ export default function Supplier() {
       });
       return;
     }
-
+    console.log("Final Entries:", finalEntries);
     try {
       const resp = await fetch(`${API_URL}/suppliers/bulk`, {
         method: "POST",
@@ -275,7 +296,6 @@ export default function Supplier() {
         description: "Supplier expenses saved successfully",
         status: "success",
       });
-      // Reset
       setSupplierRows([
         {
           supplier: "",
@@ -289,6 +309,7 @@ export default function Supplier() {
         },
       ]);
       fetchExisting(viewDate);
+      fetchHistoricalData();
     } catch (error) {
       toast({
         title: "Error",
@@ -298,7 +319,7 @@ export default function Supplier() {
     }
   };
 
-  // -------------- FETCH & DELETE -------------- //
+  // Fetch records for a specific date
   const fetchExisting = async (date) => {
     const dateStr = date.toLocaleDateString("en-CA");
     try {
@@ -307,6 +328,7 @@ export default function Supplier() {
         throw new Error("Failed to fetch supplier data");
       }
       const data = await resp.json();
+      console.log("Fetched Rows:", data);
       setFetchedRows(data);
     } catch (error) {
       toast({
@@ -317,12 +339,34 @@ export default function Supplier() {
     }
   };
 
+  // Fetch all historical data (requires backend endpoint /suppliers/all)
+  const fetchHistoricalData = async () => {
+    try {
+      const resp = await fetch(`${API_URL}/suppliers/all`);
+      if (!resp.ok) {
+        throw new Error("Failed to fetch historical data");
+      }
+      const data = await resp.json();
+      console.log("Historical Data:", data);
+      setHistoricalData(data);
+    } catch (error) {
+      toast({
+        title: "Error fetching historical data",
+        description: error.message,
+        status: "error",
+      });
+    }
+  };
+
   useEffect(() => {
     fetchExisting(viewDate);
   }, [viewDate]);
 
+  useEffect(() => {
+    fetchHistoricalData();
+  }, []);
+
   const handleDeleteGroup = async (group) => {
-    // Identify which rows to delete
     const rowsToDelete = fetchedRows.filter((row) => {
       const type = row.transaction_type || row.transactionType;
       return (
@@ -331,7 +375,6 @@ export default function Supplier() {
         row.date === group.date
       );
     });
-
     try {
       await Promise.all(
         rowsToDelete.map((row) =>
@@ -344,6 +387,7 @@ export default function Supplier() {
         status: "success",
       });
       fetchExisting(viewDate);
+      fetchHistoricalData();
     } catch (error) {
       toast({
         title: "Error",
@@ -353,19 +397,14 @@ export default function Supplier() {
     }
   };
 
-  // -------------- MOBILE vs DESKTOP RENDER -------------- //
+  // Determine if the device is mobile or desktop
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  // Renders the input table or card layout
+  // Render entry section (input form)
   const renderEntrySection = () => {
-    if (isMobile) {
-      return renderEntryMobile();
-    } else {
-      return renderEntryDesktop();
-    }
+    return isMobile ? renderEntryMobile() : renderEntryDesktop();
   };
 
-  // Mobile version of entry section
   const renderEntryMobile = () => {
     return (
       <VStack spacing={4} align="stretch">
@@ -400,8 +439,12 @@ export default function Supplier() {
                 size="sm"
                 mt={1}
               >
-                <option value="purchase">Blerje (Me borxh ose pa borxh)</option>
-                <option value="service">Borxh Klienta (Na kan borxh ose jo)</option>
+                <option value="purchase">
+                  Blerje (Me borxh ose pa borxh)
+                </option>
+                <option value="service">
+                  Borxh Klienta (Na kan borxh ose jo)
+                </option>
               </Select>
             </Text>
             <Text mt={2}>
@@ -448,7 +491,9 @@ export default function Supplier() {
             {Array.from({ length: itemSetsCount }).map((_, itemIndex) => (
               <Box key={itemIndex} mt={2} p={2} border="1px dashed gray">
                 <Text>
-                  <strong>Item {String(itemIndex + 1).padStart(2, "0")}:</strong>{" "}
+                  <strong>
+                    Item {String(itemIndex + 1).padStart(2, "0")}:
+                  </strong>{" "}
                   <Input
                     placeholder={`Item ${String(itemIndex + 1).padStart(2, "0")}`}
                     value={row.items[itemIndex].name}
@@ -460,7 +505,9 @@ export default function Supplier() {
                   />
                 </Text>
                 <Text mt={1}>
-                  <strong>Qty {String(itemIndex + 1).padStart(2, "0")}:</strong>{" "}
+                  <strong>
+                    Qty {String(itemIndex + 1).padStart(2, "0")}:
+                  </strong>{" "}
                   <Input
                     placeholder={`Qty ${String(itemIndex + 1).padStart(2, "0")}`}
                     value={row.items[itemIndex].quantity}
@@ -479,7 +526,6 @@ export default function Supplier() {
     );
   };
 
-  // Desktop version of entry section
   const renderEntryDesktop = () => {
     return (
       <TableContainer overflowX="auto" border="1px solid" borderColor="gray.200">
@@ -595,16 +641,11 @@ export default function Supplier() {
     );
   };
 
-  // Renders the view (existing data) section
+  // Render view section (date-filtered data)
   const renderViewSection = () => {
-    if (isMobile) {
-      return renderViewMobile();
-    } else {
-      return renderViewDesktop();
-    }
+    return isMobile ? renderViewMobile() : renderViewDesktop();
   };
 
-  // Mobile version of view section
   const renderViewMobile = () => {
     return (
       <VStack spacing={4} align="stretch">
@@ -646,13 +687,7 @@ export default function Supplier() {
                   {parseFloat(group.amount_unpaid).toFixed(0)}
                 </Text>
                 {group.line_items.map((item, ci) => (
-                  <Box
-                    key={ci}
-                    borderWidth="1px"
-                    borderRadius="md"
-                    p={2}
-                    my={1}
-                  >
+                  <Box key={ci} borderWidth="1px" borderRadius="md" p={2} my={1}>
                     <Text>
                       <strong>Item:</strong> {item.item_name}
                     </Text>
@@ -679,7 +714,7 @@ export default function Supplier() {
     );
   };
 
-  // Desktop version of view section
+  // Desktop view for date-filtered data
   const renderViewDesktop = () => {
     return (
       <Box mt={8}>
@@ -717,9 +752,7 @@ export default function Supplier() {
                     <Td>{translateTransactionType(group.transaction_type)}</Td>
                     <Td isNumeric>{group.total_amount.toFixed(0)}</Td>
                     <Td isNumeric>{group.amount_paid}</Td>
-                    <Td isNumeric>
-                      {parseFloat(group.amount_unpaid).toFixed(0)}
-                    </Td>
+                    <Td isNumeric>{parseFloat(group.amount_unpaid).toFixed(0)}</Td>
                     <Td>
                       <IconButton
                         aria-label="Delete"
@@ -738,6 +771,85 @@ export default function Supplier() {
         )}
       </Box>
     );
+  };
+
+  // Render historical data (grouped by supplier and transaction type across all dates)
+  const renderHistoricalDataDesktop = () => {
+    return (
+      <Box mt={8}>
+        <Heading fontSize="md" mb={5} textColor="black.100">
+         PERMBLEDHESE HISTORIKE
+        </Heading>
+        <TableContainer>
+          <Table variant="simple">
+            <Thead bg="gray.200">
+              <Tr>
+                <Th>Supplier</Th>
+                <Th>Type</Th>
+                <Th isNumeric>Total Amount</Th>
+                <Th isNumeric>Amount Paid</Th>
+                <Th isNumeric>Amount Unpaid</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {groupedHistoricalData.map((group, idx) => (
+                <Tr key={idx} bg={ROW_COLOR}>
+                  <Td>{group.supplier}</Td>
+                  <Td>{translateTransactionType(group.transaction_type)}</Td>
+                  <Td isNumeric>{group.total_amount.toFixed(0)}</Td>
+                  <Td isNumeric>{group.amount_paid}</Td>
+                  <Td isNumeric>{parseFloat(group.amount_unpaid).toFixed(0)}</Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+      </Box>
+    );
+  };
+
+  const renderHistoricalDataMobile = () => {
+    return (
+      <VStack spacing={4} align="stretch" mt={8}>
+        <Heading fontSize="md" mb={3} textColor="black.100">
+          PERMBLEDHESE HISTORIKE
+        </Heading>
+        {groupedHistoricalData.length > 0 ? (
+          groupedHistoricalData.map((group, idx) => (
+            <Card key={idx} mt={4} p={3} bg="white" borderRadius="md" boxShadow="md">
+              <CardHeader>
+                <Heading size="sm" mb={2}>
+                  {group.supplier} - {translateTransactionType(group.transaction_type)}
+                </Heading>
+              </CardHeader>
+              <CardBody>
+                <Text>
+                  <strong>Dates:</strong> {group.dates.join(", ")}
+                </Text>
+                <Text>
+                  <strong>Total Amount:</strong> {group.total_amount.toFixed(0)}
+                </Text>
+                <Text>
+                  <strong>Amount Paid:</strong> {group.amount_paid}
+                </Text>
+                <Text>
+                  <strong>Amount Unpaid:</strong>{" "}
+                  {parseFloat(group.amount_unpaid).toFixed(0)}
+                </Text>
+              </CardBody>
+            </Card>
+          ))
+        ) : (
+          <Box>No historical data found.</Box>
+        )}
+      </VStack>
+    );
+  };
+
+  const renderHistoricalData = () => {
+    return isMobile
+      ? renderHistoricalDataMobile()
+      : renderHistoricalDataDesktop();
   };
 
   return (
@@ -765,18 +877,10 @@ export default function Supplier() {
             justify="center"
             direction={isMobile ? "column" : "row"}
           >
-            <Button
-              leftIcon={<AddIcon />}
-              onClick={handleAddItemSet}
-              colorScheme="gray"
-            >
+            <Button leftIcon={<AddIcon />} onClick={handleAddItemSet} colorScheme="gray">
               Add Item Columns
             </Button>
-            <Button
-              onClick={handleRemoveItemSet}
-              isDisabled={itemSetsCount <= 1}
-              colorScheme="gray"
-            >
+            <Button onClick={handleRemoveItemSet} isDisabled={itemSetsCount <= 1} colorScheme="gray">
               Remove Item Columns
             </Button>
             <Button colorScheme="green" onClick={handleAddSupplierRow}>
@@ -789,20 +893,21 @@ export default function Supplier() {
         </CardBody>
       </Card>
 
-      {/* View Existing Section */}
-      <Card borderRadius="md" boxShadow="md">
+      {/* Date-Filtered View Section */}
+      <Card mb={10} borderRadius="md" boxShadow="md">
         <CardHeader bg="teal.500" color="white">
           <Heading size="md">SHIKO HISTORIKUN BLERJEVE & BORXHEVE</Heading>
         </CardHeader>
-        <CardBody>
-          {renderViewSection()}
-        </CardBody>
+        <CardBody>{renderViewSection()}</CardBody>
+      </Card>
+
+      {/* All Historical Data Section */}
+      <Card borderRadius="md" boxShadow="md">
+        <CardHeader bg="teal.500" color="white">
+          <Heading size="md">PERMBLEDHJE GJITHE DATAT</Heading>
+        </CardHeader>
+        <CardBody>{renderHistoricalData()}</CardBody>
       </Card>
     </Box>
   );
-}
-
-// Example placeholder; implement your actual logic if needed.
-function handleDeleteGroup(group) {
-  // ...
 }

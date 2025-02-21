@@ -23,9 +23,11 @@ def create_inventory_table():
         create_table_query = """
         CREATE TABLE IF NOT EXISTS inventory (
             id SERIAL PRIMARY KEY,
-            article_name TEXT NOT NULL,
-            total NUMERIC NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  article_name TEXT NOT NULL,
+  total INTEGER NOT NULL,
+  inventory_type TEXT NOT NULL,  -- "entry" or "removal"
+  entry_date DATE,               -- the user-specified date for the record
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
 
