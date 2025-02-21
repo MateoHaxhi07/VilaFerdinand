@@ -743,6 +743,85 @@ const HourlySalesChart = ({ data }) => {
 };
 
 // -----------------------------------------------------------------------------
+// COMPONENT: Average Order Value Line Chart 
+// -----------------------------------------------------------------------------
+
+
+
+const AvgOrderValueChart = ({ data }) => {
+  // Ensure data is available and transformed properly
+  const chartData = [
+    {
+      id: "Average Order Value",
+      data: data.map(item => ({
+        x: item.order_date, // or format this date as needed
+        y: parseFloat(item.avg_order_value),
+      })),
+    },
+  ];
+
+  return (
+    <Box height="400px">
+      <ResponsiveLine
+        data={chartData}
+        margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
+        xScale={{ type: "point" }}
+        yScale={{ type: "linear", min: "auto", max: "auto", stacked: false }}
+        axisBottom={{
+          orient: "bottom",
+          tickSize: 5,
+          tickPadding: 5,
+          tickRotation: 45,
+          legend: "Order Date",
+          legendOffset: 36,
+          legendPosition: "middle",
+        }}
+        axisLeft={{
+          orient: "left",
+          tickSize: 5,
+          tickPadding: 5,
+          tickRotation: 0,
+          legend: "Avg Order Value (ALL)",
+          legendOffset: -40,
+          legendPosition: "middle",
+        }}
+        pointSize={10}
+        pointColor={{ theme: "background" }}
+        pointBorderWidth={2}
+        pointBorderColor={{ from: "serieColor" }}
+        useMesh={true}
+        tooltip={({ point }) => (
+          <Box p="8px" bg="white" border="1px solid #ccc" borderRadius="md">
+            <strong>{point.data.xFormatted}</strong>
+            <br />
+            <span>{Number(point.data.y).toLocaleString()} ALL</span>
+          </Box>
+        )}
+      />
+    </Box>
+  );
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// -----------------------------------------------------------------------------
 // COMPONENT: Home (Main Dashboard)
 // -----------------------------------------------------------------------------
 const Home = () => {
@@ -776,6 +855,10 @@ const Home = () => {
 
   const [categoryTreemapData, setCategoryTreemapData] = useState([]);
 
+  // average order value
+
+  const [avgOrderValueData, setAvgOrderValueData] = useState([]);
+
   // Hourly Sales Data State
   const [hourlySales, setHourlySales] = useState([]);
 
@@ -784,6 +867,15 @@ const Home = () => {
   const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
   const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const lineChartData = [
+    {
+      id: "Average Order Value",
+      data: avgOrderValueData.map(item => ({
+        x: item.order_date,  // formatted date string
+        y: parseFloat(item.avg_order_value),
+      })),
+    },
+  ];
 
   // New Hour Filter State
   const [selectedHours, setSelectedHours] = useState([]);
@@ -899,6 +991,38 @@ const Home = () => {
     }
   };
 
+
+
+
+
+
+ //Fetch Average Order Value
+  const fetchAvgOrderValue = async () => {
+    try {
+      const queryParams = new URLSearchParams({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+      // Append additional filters if needed
+      if (selectedCategories?.length) {
+        queryParams.append("categories", selectedCategories.map(c => c.value).join(","));
+      }
+      if (selectedSellers?.length) {
+        queryParams.append("sellers", selectedSellers.map(s => s.value).join(","));
+      }
+      if (selectedSellerCategories?.length) {
+        queryParams.append("sellerCategories", selectedSellerCategories.map(sc => sc.value).join(","));
+      }
+      
+      const url = `${API_URL}/sales/avg-order-value?${queryParams.toString()}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setAvgOrderValueData(data);
+    } catch (error) {
+      console.error("Error fetching average order value:", error);
+    }
+  };
+  
   const fetchTotalQuantity = async () => {
     try {
       const hoursQuery = getHoursQuery();
@@ -1080,6 +1204,7 @@ const Home = () => {
     fetchSellerCategoriesTotal();
     fetchHourlySales();
     fetchCategoryTotals();
+    fetchAvgOrderValue();
   }, [
     startDate,
     endDate,
@@ -1183,6 +1308,8 @@ const Home = () => {
 
 
       <CategoryTreemap data={categoryTreemapData} />
+
+      <AvgOrderValueChart data={avgOrderValueData} />
 
 
     </Box>

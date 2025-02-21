@@ -358,6 +358,78 @@ app.get("/sales/all-data", async (req, res) => {
   }
 });
 
+// ENDPOINT FOR AVERAGE ORDER VALUE VS TIME
+
+app.get("/sales/avg-order-value", async (req, res) => {
+  try {
+    const { startDate, endDate, categories, sellers, sellerCategories } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Please provide startDate and endDate" });
+    }
+    
+    // Adjust datetime to start/end of day
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
+    
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+    
+    // Base filter for date
+    conditions.push(`"Datetime" BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+    params.push(adjustedStartDate, adjustedEndDate);
+    paramIndex += 2;
+    
+    // Optional filters: categories, sellers, sellerCategories
+    if (categories) {
+      const categoryArray = categories.split(",");
+      conditions.push(`"Category" = ANY($${paramIndex}::text[])`);
+      params.push(categoryArray);
+      paramIndex++;
+    }
+    if (sellers) {
+      const sellerArray = sellers.split(",");
+      conditions.push(`"Seller" = ANY($${paramIndex}::text[])`);
+      params.push(sellerArray);
+      paramIndex++;
+    }
+    if (sellerCategories) {
+      const sellerCategoryArray = sellerCategories.split(",");
+      conditions.push(`"Seller Category" = ANY($${paramIndex}::text[])`);
+      params.push(sellerCategoryArray);
+      paramIndex++;
+    }
+    
+    // Build the inner query to aggregate orders
+    let innerQuery = `
+      SELECT "Order_ID",
+             DATE_TRUNC('day', "Datetime") AS order_date,
+             SUM("Total_Article_Price"::numeric) AS order_total
+      FROM "sales"
+    `;
+    if (conditions.length > 0) {
+      innerQuery += " WHERE " + conditions.join(" AND ");
+    }
+    innerQuery += `
+      GROUP BY "Order_ID", DATE_TRUNC('day', "Datetime")
+    `;
+    
+    // Now, wrap the inner query to calculate the average order value per day
+    const finalQuery = `
+      SELECT order_date, AVG(order_total) AS avg_order_value
+      FROM (${innerQuery}) AS orders
+      GROUP BY order_date
+      ORDER BY order_date
+    `;
+    
+    const result = await pool.query(finalQuery, params);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // Endpoint: Distinct Sellers
 app.get("/sales/sellers", async (req, res) => {
   try {
