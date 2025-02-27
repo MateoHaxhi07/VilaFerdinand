@@ -26,7 +26,14 @@ import "react-datepicker/dist/react-datepicker.css";
 // 1) Configuration & Constants
 // -----------------------------------------------------------------------------
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-const SELLERS = ["KRISTI", "VERA", "JONI", "FLORI", "DEA", "ENISA"];
+const SELLERS = [
+  "Kristian Llupo",
+  "Pranvera Xherahi",
+  "Jonel Demba",
+  "Fjorelo Arapi",
+  "Dea",
+  "Enisa",
+];
 const MAX_EXPENSE_SETS = 15;
 const COL_WIDTH = 150;
 
@@ -48,6 +55,7 @@ export default function DailyExpenses() {
   // --- Dark theme styling for DatePicker ---
   useEffect(() => {
     const style = document.createElement("style");
+    // Use a template literal with backticks to embed your CSS rules
     style.innerHTML = `
       .react-datepicker__input-container input {
         background-color: #2D3748 !important;
@@ -184,6 +192,7 @@ export default function DailyExpenses() {
   async function fetchExpenses(date) {
     const dateStr = date.toISOString().split("T")[0];
     try {
+      // Must use backticks for template strings
       const resp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
       if (!resp.ok) throw new Error("Failed to fetch daily expenses");
       const data = await resp.json();
@@ -248,8 +257,6 @@ export default function DailyExpenses() {
         throw new Error("Failed to fetch sales data");
       }
       const data = await resp.json();
-
-      console.log("Sales data response:", data); // Debug
 
       // Aggregate sums by seller (uppercased)
       const sums = {};
@@ -505,7 +512,8 @@ export default function DailyExpenses() {
     setCustomRows(mergedRows);
     toast({
       title: "Auto Populate",
-      description: "Aggregated custom rows have been merged with existing custom rows.",
+      description:
+        "Aggregated custom rows have been merged with existing custom rows.",
       status: "success",
     });
   }
@@ -518,19 +526,39 @@ export default function DailyExpenses() {
     const entriesToSave = [];
 
     tableData.forEach((row) => {
-      // Check if the row has any data
+      // 1) Check if row has either dailyTotal or cashDailyTotal or some expense
       const rowHasData =
         row.dailyTotal.trim() ||
         row.cashDailyTotal.trim() ||
         row.expenses.some(
           (exp) => exp.expense.trim() || exp.amount.trim() || exp.description.trim()
         );
-      if (!rowHasData) return;
+      if (!rowHasData) {
+        // completely empty row, skip
+        return;
+      }
 
-      // For each used expense column, push it to entriesToSave
-      for (let i = 0; i < expenseSetsCount; i++) {
-        const ex = row.expenses[i];
-        if (ex.expense.trim() || ex.amount.trim() || ex.description.trim()) {
+      // 2) Collect only the “used” expense columns
+      const usedExpenses = row.expenses
+        .slice(0, expenseSetsCount)
+        .filter(
+          (ex) => ex.expense.trim() || ex.amount.trim() || ex.description.trim()
+        );
+
+      // 3) If we have no “used” expenses but the row has daily totals,
+      //    then push exactly one row with blank expense fields
+      if (usedExpenses.length === 0) {
+        entriesToSave.push({
+          seller: row.seller,
+          dailyTotal: row.dailyTotal,
+          cashDailyTotal: row.cashDailyTotal,
+          expense: "",
+          amount: "",
+          description: "",
+        });
+      } else {
+        // 4) Otherwise, push one row per used expense
+        usedExpenses.forEach((ex) => {
           entriesToSave.push({
             seller: row.seller,
             dailyTotal: row.dailyTotal,
@@ -539,19 +567,17 @@ export default function DailyExpenses() {
             amount: ex.amount,
             description: ex.description,
           });
-        }
+        });
       }
     });
 
     try {
-      // First delete existing entries for that date
-      const deleteResp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`, {
+      // Delete old rows for the date
+      await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`, {
         method: "DELETE",
       });
-      if (!deleteResp.ok) {
-        throw new Error("Failed to delete old daily expenses for this date");
-      }
-      // Then insert the new ones
+
+      // If we have anything to save, insert them
       if (entriesToSave.length > 0) {
         const insertResp = await fetch(`${API_URL}/expenses/bulk`, {
           method: "POST",
@@ -562,6 +588,7 @@ export default function DailyExpenses() {
           throw new Error("Failed to save daily expenses");
         }
       }
+
       toast({
         title: "Success",
         description: "Daily expenses saved",
@@ -930,7 +957,11 @@ export default function DailyExpenses() {
           <Button colorScheme="blue" onClick={handleSave}>
             Save Expenses
           </Button>
-          <Button colorScheme="orange" leftIcon={<RepeatIcon />} onClick={handleClearExpenses}>
+          <Button
+            colorScheme="orange"
+            leftIcon={<RepeatIcon />}
+            onClick={handleClearExpenses}
+          >
             Clear
           </Button>
         </Flex>
@@ -961,21 +992,23 @@ export default function DailyExpenses() {
 
         <TableContainer>
           <Heading size="sm" color="gray.500">
-            Xhiro ditore duhet te tregoj si leviz cashi gjate dites qe hedhim faturat, pastaj kjo
-            eshte tablea kryesore ku do te mbahen gjithe shpenzimet
+            Xhiro ditore duhet te tregoj si leviz cashi gjate dites qe hedhim faturat,
+            pastaj kjo eshte tabela kryesore ku do te mbahen gjithe shpenzimet
           </Heading>
           <Heading size="sm" color="gray.500">
-            Si fillim hidh blerjet gjate dites specifike te bere, me pas pasi te plotesohet xhiro
-            ditore shtyp butonin lejla shto blerje nga xhiro ditore qe te hidhen shpenzimet xhiros
-            ditore, pastaj mund te hedesh prap blerje qe skane lidhje xhiron ditore
+            Si fillim hidh blerjet gjate dites specifike te bere, me pas pasi te
+            plotesohet xhiro ditore shtyp butonin lejla "shto blerje nga xhiro ditore"
+            qe te hidhen shpenzimet xhiros ditore, pastaj mund te hedesh prap blerje
+            qe skane lidhje xhiron ditore
           </Heading>
           <Heading size="sm" color="gray.500">
-            Mos harro te zgjedhesh llojin e blerjes, po ishte borxh do te thote qe do te marrim lek
-            nga ajo fature ne te ardhmen dhe amount paid duhet te vihet 0
+            Mos harro te zgjedhesh llojin e blerjes, po ishte borxh do te thote qe do
+            te marrim lek nga ajo fature ne te ardhmen dhe amount paid duhet te vihet 0
           </Heading>
           <Heading size="sm" color="gray.500">
-            Ideja e kesaj tabele eshte te permbaj te gjithe blerjet qe behen gjate dites dhe nga
-            xhiro ditore, bashke me borxhet qe mund te jene nga xhiro ditore ose nga gjate dites
+            Ideja e kesaj tabele eshte te permbaj te gjithe blerjet qe behen gjate
+            dites dhe nga xhiro ditore, bashke me borxhet qe mund te jene nga xhiro
+            ditore ose nga gjate dites
           </Heading>
           <Table variant="simple">
             <Thead>

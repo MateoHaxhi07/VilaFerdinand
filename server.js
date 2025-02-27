@@ -1260,9 +1260,6 @@ app.get("/sales/order-count", async (req, res) => {
 
 
 
-
-
-
 // -----------------------------------------------------------------------------
 // 2) Create daily_expenses table if not exists
 // -----------------------------------------------------------------------------
@@ -1430,10 +1427,6 @@ app.put("/expenses/bulk/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update expense" });
   }
 });
-
-
-
-
 
 
 
