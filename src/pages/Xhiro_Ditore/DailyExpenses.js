@@ -37,6 +37,14 @@ const SELLERS = [
 const MAX_EXPENSE_SETS = 15;
 const COL_WIDTH = 150;
 
+// A helper to always return "YYYY-MM-DD" in local time
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`; // e.g. "2025-02-27"
+}
+
 // -----------------------------------------------------------------------------
 // 2) Main Component
 // -----------------------------------------------------------------------------
@@ -50,12 +58,17 @@ export default function DailyExpenses() {
   const [expenseSetsCount, setExpenseSetsCount] = useState(1);
 
   // State for aggregated sales per seller
-  const [salesSums, setSalesSums] = useState({}); // e.g. { KRISTI: 500, VERA: 150, ... }
+  const [salesSums, setSalesSums] = useState({});
 
-  // --- Dark theme styling for DatePicker ---
+  // ---------------- NEW: Supplier options for auto-fill (from aggregated endpoint)
+  const [supplierOptions, setSupplierOptions] = useState([]);
+
+  // customRows: array for the second table. We'll store “autoFillSuggestion” per row.
+  const [customRows, setCustomRows] = useState([]);
+
+  // --------------- Dark theme styling for DatePicker --------------
   useEffect(() => {
     const style = document.createElement("style");
-    // Use a template literal with backticks to embed your CSS rules
     style.innerHTML = `
       .react-datepicker__input-container input {
         background-color: #2D3748 !important;
@@ -81,13 +94,9 @@ export default function DailyExpenses() {
     };
   }, []);
 
-  /**
-   * tableData: array of objects, one per seller, with:
-   *   - seller: string,
-   *   - dailyTotal: string,
-   *   - cashDailyTotal: string,
-   *   - expenses: array of objects { expense, amount, description }
-   */
+  // ---------------------------------------------------------------------------
+  // 1) tableData for main daily expenses
+  // ---------------------------------------------------------------------------
   const [tableData, setTableData] = useState(
     SELLERS.map((seller) => ({
       seller,
@@ -101,11 +110,8 @@ export default function DailyExpenses() {
     }))
   );
 
-  // customRows: array of custom rows for the selected date
-  const [customRows, setCustomRows] = useState([]);
-
   // ---------------------------------------------------------------------------
-  // Compute Totals for Main Table
+  // 2) Compute Totals for Main Table
   // ---------------------------------------------------------------------------
   const totals = useMemo(() => {
     let totalDaily = 0;
@@ -122,8 +128,25 @@ export default function DailyExpenses() {
   }, [tableData, expenseSetsCount]);
 
   // ---------------------------------------------------------------------------
-  // Helper: Build Table Data from DB Rows
+  // 3) Fetch daily_expenses for main table
   // ---------------------------------------------------------------------------
+  async function fetchExpenses(date) {
+    const dateStr = formatLocalDate(date);
+    try {
+      const resp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
+      if (!resp.ok) throw new Error("Failed to fetch daily expenses");
+      const data = await resp.json();
+      const updatedTableData = buildTableDataFromDB(data);
+      setTableData(updatedTableData);
+    } catch (error) {
+      toast({
+        title: "Error fetching expenses",
+        description: error.message,
+        status: "error",
+      });
+    }
+  }
+
   function buildTableDataFromDB(dbRows) {
     const bySeller = {};
     dbRows.forEach((row) => {
@@ -182,36 +205,14 @@ export default function DailyExpenses() {
       }
     }
     setExpenseSetsCount(Math.min(maxItems, MAX_EXPENSE_SETS));
-
     return finalTableData;
   }
 
   // ---------------------------------------------------------------------------
-  // Fetch Main Table Expenses
-  // ---------------------------------------------------------------------------
-  async function fetchExpenses(date) {
-    const dateStr = date.toISOString().split("T")[0];
-    try {
-      // Must use backticks for template strings
-      const resp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
-      if (!resp.ok) throw new Error("Failed to fetch daily expenses");
-      const data = await resp.json();
-      const updatedTableData = buildTableDataFromDB(data);
-      setTableData(updatedTableData);
-    } catch (error) {
-      toast({
-        title: "Error fetching expenses",
-        description: error.message,
-        status: "error",
-      });
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Fetch Custom Modified Rows
+  // 4) Fetch customRows (modified_expenses) for second table
   // ---------------------------------------------------------------------------
   async function fetchCustomRows(date) {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = formatLocalDate(date);
     try {
       const resp = await fetch(`${API_URL}/modified-expenses?date=${dateStr}`);
       if (!resp.ok) throw new Error("Failed to fetch custom rows");
@@ -226,6 +227,8 @@ export default function DailyExpenses() {
         transactionType: row.transaction_type,
         date: row.date,
         created_at: row.created_at,
+        // We'll store autoFillSuggestion for tooltips
+        autoFillSuggestion: null,
       }));
       setCustomRows(transformed);
     } catch (error) {
@@ -238,17 +241,13 @@ export default function DailyExpenses() {
   }
 
   // ---------------------------------------------------------------------------
-  // Fetch & Aggregate Sales Data (case-insensitive) from /sales/all-data
+  // 5) Fetch & Aggregate Sales Data
   // ---------------------------------------------------------------------------
   async function fetchSalesData(date) {
-    // Convert date to full ISO start/end of day
-    const dateStr = date.toISOString().split("T")[0]; // e.g. "2025-03-01"
-    const startOfDay = `${dateStr}T00:00:00.000Z`;
-    const endOfDay = `${dateStr}T23:59:59.999Z`;
-
-    // We'll query for all sellers within this single date
+    const dateStr = formatLocalDate(date);
+    const startOfDay = `${dateStr}T00:00:00`;
+    const endOfDay = `${dateStr}T23:59:59`;
     const sellersQuery = SELLERS.join(",");
-
     const url = `${API_URL}/sales/all-data?startDate=${startOfDay}&endDate=${endOfDay}&sellers=${sellersQuery}&limit=100000`;
 
     try {
@@ -258,10 +257,9 @@ export default function DailyExpenses() {
       }
       const data = await resp.json();
 
-      // Aggregate sums by seller (uppercased)
+      // Summation
       const sums = {};
       for (const row of data) {
-        // If row.Seller is "Kristi", toUpperCase -> "KRISTI"
         const seller = (row.Seller || "").toUpperCase();
         const totalPrice = parseFloat(row.Total_Article_Price) || 0;
         if (!sums[seller]) {
@@ -269,7 +267,6 @@ export default function DailyExpenses() {
         }
         sums[seller] += totalPrice;
       }
-
       setSalesSums(sums);
     } catch (error) {
       toast({
@@ -279,6 +276,35 @@ export default function DailyExpenses() {
       });
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // ------------- NEW: Fetch all unique supplier names from aggregated -----------
+  // ---------------------------------------------------------------------------
+  async function fetchSupplierOptions() {
+    try {
+      const resp = await fetch(`${API_URL}/aggregated-modified-expenses`);
+      if (!resp.ok) throw new Error("Failed to fetch aggregated data");
+      const data = await resp.json();
+      // data is an array of objects: { supplier, transaction_type, ... }
+      // Let's extract unique supplier names
+      const namesSet = new Set();
+      data.forEach((item) => {
+        if (item.supplier) {
+          namesSet.add(item.supplier.trim());
+        }
+      });
+      const uniqueNames = [...namesSet];
+      setSupplierOptions(uniqueNames);
+    } catch (err) {
+      console.error("Error fetching supplier options:", err);
+      // not critical, so we might not show a toast
+    }
+  }
+
+  // We'll fetch these supplier names once, on mount:
+  useEffect(() => {
+    fetchSupplierOptions();
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Main Table Input Handlers
@@ -300,35 +326,54 @@ export default function DailyExpenses() {
   }
 
   // ---------------------------------------------------------------------------
-  // Custom Rows Handlers
+  // Custom Row Handlers for second table
   // ---------------------------------------------------------------------------
   function handleCustomRowChange(index, field, value) {
     setCustomRows((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      const row = updated[index];
+      row[field] = value;
+
+      if (field === "supplier") {
+        // Attempt to find a best match from supplierOptions
+        const typedVal = value.trim().toLowerCase();
+        if (typedVal.length >= 2) {
+          // For simplicity, find first .startsWith() match
+          const suggestion = supplierOptions.find((opt) =>
+            opt.toLowerCase().startsWith(typedVal)
+          );
+          row.autoFillSuggestion = suggestion || null;
+        } else {
+          row.autoFillSuggestion = null;
+        }
+      }
+
       return updated;
     });
   }
 
+  // Add new custom row
   function handleAddCustomRow() {
     setCustomRows((prev) => [
       ...prev,
       {
+        id: null,
         supplier: "",
         totalAmount: "",
         amountPaid: "",
         description: "",
         transactionType: "",
-        date: selectedDate.toISOString().split("T")[0],
+        date: formatLocalDate(selectedDate),
+        autoFillSuggestion: null,
       },
     ]);
   }
 
+  // Save a single custom row
   async function handleSaveCustomRow(index) {
     const row = customRows[index];
-    const dateStr = selectedDate.toISOString().split("T")[0];
+    const dateStr = formatLocalDate(selectedDate);
 
-    // Basic validations
     if (!row.supplier) {
       toast({
         title: "Validation Error",
@@ -371,6 +416,7 @@ export default function DailyExpenses() {
           transactionType: data.row.transaction_type,
           date: data.row.date,
           created_at: data.row.created_at,
+          autoFillSuggestion: null,
         };
         toast({
           title: "Success",
@@ -408,6 +454,7 @@ export default function DailyExpenses() {
           transactionType: data.row.transaction_type,
           date: data.row.date,
           created_at: data.row.created_at,
+          autoFillSuggestion: null,
         };
         toast({
           title: "Success",
@@ -432,7 +479,7 @@ export default function DailyExpenses() {
   async function handleDeleteCustomRow(index) {
     const row = customRows[index];
     if (!row.id) {
-      // If row not saved in DB, just remove from array
+      // If row not saved in DB, remove from array
       setCustomRows((prev) => prev.filter((_, i) => i !== index));
       return;
     }
@@ -489,7 +536,6 @@ export default function DailyExpenses() {
       amountPaid: row.amountPaid.toString(),
     }));
 
-    // Merge with existing customRows without overwriting manual entries
     const mergedRows = [...customRows];
     aggregatedRows.forEach((aggRow) => {
       const index = mergedRows.findIndex(
@@ -522,11 +568,10 @@ export default function DailyExpenses() {
   // Save Handler for Main Daily Expenses Table
   // ---------------------------------------------------------------------------
   async function handleSave() {
-    const dateStr = selectedDate.toISOString().split("T")[0];
+    const dateStr = formatLocalDate(selectedDate);
     const entriesToSave = [];
 
     tableData.forEach((row) => {
-      // 1) Check if row has either dailyTotal or cashDailyTotal or some expense
       const rowHasData =
         row.dailyTotal.trim() ||
         row.cashDailyTotal.trim() ||
@@ -534,19 +579,13 @@ export default function DailyExpenses() {
           (exp) => exp.expense.trim() || exp.amount.trim() || exp.description.trim()
         );
       if (!rowHasData) {
-        // completely empty row, skip
-        return;
+        return; // skip empty
       }
 
-      // 2) Collect only the “used” expense columns
       const usedExpenses = row.expenses
         .slice(0, expenseSetsCount)
-        .filter(
-          (ex) => ex.expense.trim() || ex.amount.trim() || ex.description.trim()
-        );
+        .filter((ex) => ex.expense.trim() || ex.amount.trim() || ex.description.trim());
 
-      // 3) If we have no “used” expenses but the row has daily totals,
-      //    then push exactly one row with blank expense fields
       if (usedExpenses.length === 0) {
         entriesToSave.push({
           seller: row.seller,
@@ -557,7 +596,6 @@ export default function DailyExpenses() {
           description: "",
         });
       } else {
-        // 4) Otherwise, push one row per used expense
         usedExpenses.forEach((ex) => {
           entriesToSave.push({
             seller: row.seller,
@@ -606,7 +644,9 @@ export default function DailyExpenses() {
     }
   }
 
-  // Clears the local main table state (does not affect the DB)
+  // ---------------------------------------------------------------------------
+  // Clear local main table
+  // ---------------------------------------------------------------------------
   function handleClearExpenses() {
     setTableData(
       SELLERS.map((seller) => ({
@@ -617,7 +657,7 @@ export default function DailyExpenses() {
           expense: "",
           amount: "",
           description: "",
-        })),
+        }))
       }))
     );
     toast({
@@ -627,7 +667,6 @@ export default function DailyExpenses() {
     });
   }
 
-  // Add or remove dynamic columns for the main table
   function handleAddExpenseSet() {
     if (expenseSetsCount < MAX_EXPENSE_SETS) {
       setExpenseSetsCount(expenseSetsCount + 1);
@@ -639,18 +678,14 @@ export default function DailyExpenses() {
       });
     }
   }
-
   function handleRemoveExpenseSet() {
     if (expenseSetsCount > 1) {
       setExpenseSetsCount(expenseSetsCount - 1);
     }
   }
 
-  // Calculate total columns for the main table (used for colspan, etc.)
-  const totalCols = 5 + 2 * expenseSetsCount;
-
   // ---------------------------------------------------------------------------
-  // Lifecycle: Fetch data on selectedDate change
+  // useEffect: fetch data on selectedDate change
   // ---------------------------------------------------------------------------
   useEffect(() => {
     fetchExpenses(selectedDate);
@@ -787,7 +822,6 @@ export default function DailyExpenses() {
                   (parseFloat(row.dailyTotal) || 0) -
                   ((parseFloat(row.cashDailyTotal) || 0) + rowExpenseTotal);
 
-                // If salesSums[row.seller] is undefined, there's no data. If it's 0, that means total 0.
                 const existingSales = salesSums[row.seller];
                 const tooltipLabel =
                   existingSales === undefined
@@ -827,7 +861,6 @@ export default function DailyExpenses() {
                           }
                           placeholder="0"
                           size="sm"
-                          // Double-click to auto-fill
                           onDoubleClick={() => {
                             if (existingSales !== undefined) {
                               handleInputChange(
@@ -991,26 +1024,7 @@ export default function DailyExpenses() {
         </Flex>
 
         <TableContainer>
-          <Heading size="sm" color="gray.500">
-            Xhiro ditore duhet te tregoj si leviz cashi gjate dites qe hedhim faturat,
-            pastaj kjo eshte tabela kryesore ku do te mbahen gjithe shpenzimet
-          </Heading>
-          <Heading size="sm" color="gray.500">
-            Si fillim hidh blerjet gjate dites specifike te bere, me pas pasi te
-            plotesohet xhiro ditore shtyp butonin lejla "shto blerje nga xhiro ditore"
-            qe te hidhen shpenzimet xhiros ditore, pastaj mund te hedesh prap blerje
-            qe skane lidhje xhiron ditore
-          </Heading>
-          <Heading size="sm" color="gray.500">
-            Mos harro te zgjedhesh llojin e blerjes, po ishte borxh do te thote qe do
-            te marrim lek nga ajo fature ne te ardhmen dhe amount paid duhet te vihet 0
-          </Heading>
-          <Heading size="sm" color="gray.500">
-            Ideja e kesaj tabele eshte te permbaj te gjithe blerjet qe behen gjate
-            dites dhe nga xhiro ditore, bashke me borxhet qe mund te jene nga xhiro
-            ditore ose nga gjate dites
-          </Heading>
-          <Table variant="simple">
+          <Table variant="striped" colorScheme="gray">
             <Thead>
               <Tr bg="gray.200">
                 <Th>Supplier</Th>
@@ -1022,78 +1036,104 @@ export default function DailyExpenses() {
               </Tr>
             </Thead>
             <Tbody>
-              {customRows.map((row, index) => (
-                <Tr key={index}>
-                  <Td>
-                    <Input
-                      value={row.supplier}
-                      placeholder="Supplier"
-                      onChange={(e) =>
-                        handleCustomRowChange(index, "supplier", e.target.value)
-                      }
-                    />
-                  </Td>
-                  <Td>
-                    <Input
-                      value={row.totalAmount || ""}
-                      placeholder="Total Amount"
-                      onChange={(e) =>
-                        handleCustomRowChange(index, "totalAmount", e.target.value)
-                      }
-                    />
-                  </Td>
-                  <Td>
-                    <Input
-                      value={row.amountPaid || ""}
-                      placeholder="Amount Paid"
-                      onChange={(e) =>
-                        handleCustomRowChange(index, "amountPaid", e.target.value)
-                      }
-                    />
-                  </Td>
-                  <Td>
-                    <Input
-                      value={row.description || ""}
-                      placeholder="Description"
-                      onChange={(e) =>
-                        handleCustomRowChange(index, "description", e.target.value)
-                      }
-                    />
-                  </Td>
-                  <Td>
-                    <Select
-                      placeholder="Select Transaction Type"
-                      value={row.transactionType || ""}
-                      onChange={(e) =>
-                        handleCustomRowChange(index, "transactionType", e.target.value)
-                      }
-                    >
-                      <option value="BLERJE">BLERJE</option>
-                      <option value="BORXHE">BORXHE</option>
-                    </Select>
-                  </Td>
-                  <Td>
-                    <Flex justify="center" align="center" gap={2}>
-                      <Button
-                        colorScheme="blue"
-                        size="sm"
-                        onClick={() => handleSaveCustomRow(index)}
+              {customRows.map((row, index) => {
+                const suggestion = row.autoFillSuggestion; // e.g. "AADF" or null
+                const tooltipLabel = suggestion
+                  ? `Double-click to autofill: ${suggestion}`
+                  : undefined;
+
+                return (
+                  <Tr key={index}>
+                    {/* Supplier with a Tooltip for auto-fill */}
+                    <Td>
+                      <Tooltip
+                        hasArrow
+                        isDisabled={!suggestion}
+                        label={tooltipLabel}
+                        placement="top"
+                        isOpen={!!suggestion} // always show if we have a suggestion
                       >
-                        {row.id ? "Update" : "Save"}
-                      </Button>
-                      {row.id && (
+                        <Input
+                          value={row.supplier}
+                          placeholder="Supplier"
+                          onChange={(e) =>
+                            handleCustomRowChange(index, "supplier", e.target.value)
+                          }
+                          onDoubleClick={() => {
+                            if (row.autoFillSuggestion) {
+                              // fill in the suggestion
+                              handleCustomRowChange(
+                                index,
+                                "supplier",
+                                row.autoFillSuggestion
+                              );
+                            }
+                          }}
+                        />
+                      </Tooltip>
+                    </Td>
+                    <Td>
+                      <Input
+                        value={row.totalAmount || ""}
+                        placeholder="Total Amount"
+                        onChange={(e) =>
+                          handleCustomRowChange(index, "totalAmount", e.target.value)
+                        }
+                      />
+                    </Td>
+                    <Td>
+                      <Input
+                        value={row.amountPaid || ""}
+                        placeholder="Amount Paid"
+                        onChange={(e) =>
+                          handleCustomRowChange(index, "amountPaid", e.target.value)
+                        }
+                      />
+                    </Td>
+                    <Td>
+                      <Input
+                        value={row.description || ""}
+                        placeholder="Description"
+                        onChange={(e) =>
+                          handleCustomRowChange(index, "description", e.target.value)
+                        }
+                      />
+                    </Td>
+                    <Td>
+                      <Select
+                        placeholder="Select Transaction Type"
+                        value={row.transactionType || ""}
+                        onChange={(e) =>
+                          handleCustomRowChange(index, "transactionType", e.target.value)
+                        }
+                      >
+                        <option value="BLERJE">BLERJE</option>
+                        <option value="BORXHE">BORXHE</option>
+                      </Select>
+                    </Td>
+                    <Td>
+                      <Flex justify="center" align="center" gap={2}>
                         <Button
-                          colorScheme="red"
+                          colorScheme="blue"
                           size="sm"
-                          onClick={() => handleDeleteCustomRow(index)}
+                          onClick={() => handleSaveCustomRow(index)}
                         >
-                          Delete
+                          {row.id ? "Update" : "Save"}
                         </Button>
-                      )}
-                    </Flex>
-                  </Td>
-                </Tr>
-              ))}
+                        {row.id && (
+                          <Button
+                            colorScheme="red"
+                            size="sm"
+                            onClick={() => handleDeleteCustomRow(index)}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </Flex>
+                    </Td>
+                  </Tr>
+                );
+              })}
             </Tbody>
           </Table>
         </TableContainer>

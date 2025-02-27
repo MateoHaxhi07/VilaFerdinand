@@ -1253,15 +1253,8 @@ app.get("/sales/order-count", async (req, res) => {
 
 
 
-
-
-
-
-
-
-
 // -----------------------------------------------------------------------------
-// 2) Create daily_expenses table if not exists
+// Create daily_expenses table if not exists
 // -----------------------------------------------------------------------------
 const createDailyExpensesTable = async () => {
   const query = `
@@ -1287,7 +1280,32 @@ const createDailyExpensesTable = async () => {
 createDailyExpensesTable();
 
 // -----------------------------------------------------------------------------
-// 3) API Endpoints
+// Create modified_expenses table if not exists
+// -----------------------------------------------------------------------------
+const createModifiedExpensesTable = async () => {
+  const query = `
+    CREATE TABLE IF NOT EXISTS modified_expenses (
+      id SERIAL PRIMARY KEY,
+      date DATE NOT NULL,
+      supplier TEXT NOT NULL,
+      total_amount TEXT,
+      amount_paid TEXT,
+      description TEXT,
+      transaction_type TEXT,  -- e.g. BLERJE or BORXHE
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+  try {
+    await pool.query(query);
+    console.log("modified_expenses table created or already exists.");
+  } catch (error) {
+    console.error("Error creating modified_expenses table:", error);
+  }
+};
+createModifiedExpensesTable();
+
+// -----------------------------------------------------------------------------
+// 3) API Endpoints for Daily Expenses (daily_expenses table)
 // -----------------------------------------------------------------------------
 
 /**
@@ -1330,7 +1348,9 @@ app.post("/expenses/bulk", async (req, res) => {
 app.get("/expenses/bulk", async (req, res) => {
   const { date } = req.query;
   if (!date) {
-    return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
+    return res
+      .status(400)
+      .json({ error: "Please provide a date in YYYY-MM-DD format" });
   }
   try {
     // Use moment.utc to avoid local timezone shifts
@@ -1360,9 +1380,7 @@ app.delete("/expenses/bulk", async (req, res) => {
   if (!date) {
     return res.status(400).json({ error: "Missing date in query params" });
   }
-
   try {
-    // Start/end of the day in UTC
     const startOfDay = moment.utc(date).startOf("day").format("YYYY-MM-DD HH:mm:ss");
     const endOfDay = moment.utc(date).endOf("day").format("YYYY-MM-DD HH:mm:ss");
 
@@ -1388,7 +1406,10 @@ app.delete("/expenses/bulk", async (req, res) => {
 app.delete("/expenses/bulk/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("DELETE FROM daily_expenses WHERE id = $1 RETURNING *", [id]);
+    const result = await pool.query(
+      "DELETE FROM daily_expenses WHERE id = $1 RETURNING *",
+      [id]
+    );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Expense not found" });
     }
@@ -1428,52 +1449,24 @@ app.put("/expenses/bulk/:id", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const createModifiedExpensesTable = async () => {
-  const query = `
-    CREATE TABLE IF NOT EXISTS modified_expenses (
-      id SERIAL PRIMARY KEY,
-      date DATE NOT NULL,
-      supplier TEXT NOT NULL,
-      total_amount TEXT,
-      amount_paid TEXT,
-      description TEXT,
-      transaction_type TEXT,  -- new column for transaction type
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  try {
-    await pool.query(query);
-    console.log("modified_expenses table created or already exists.");
-  } catch (error) {
-    console.error("Error creating modified_expenses table:", error);
-  }
-};
-createModifiedExpensesTable();
-
 // -----------------------------------------------------------------------------
-// POST Endpoint to Save a Custom Modified Row (now accepts transactionType)
+// 4) API Endpoints for Modified Expenses (modified_expenses table)
 // -----------------------------------------------------------------------------
+
+/**
+ * POST /modified-expenses
+ * Insert a single "modified expense" row (with transactionType).
+ */
 app.post("/modified-expenses", async (req, res) => {
-  const { selectedDate, supplier, totalAmount, amountPaid, description, transactionType } = req.body;
-  
+  const { selectedDate, supplier, totalAmount, amountPaid, description, transactionType } =
+    req.body;
+
   if (!selectedDate || !supplier) {
-    return res.status(400).json({ error: "Missing required fields: selectedDate and supplier are required" });
+    return res
+      .status(400)
+      .json({ error: "Missing required fields: selectedDate and supplier" });
   }
-  
+
   try {
     const result = await pool.query(
       `INSERT INTO modified_expenses
@@ -1482,26 +1475,32 @@ app.post("/modified-expenses", async (req, res) => {
        RETURNING *`,
       [selectedDate, supplier, totalAmount, amountPaid, description, transactionType]
     );
-    res.status(201).json({ message: "Modified expense saved successfully", row: result.rows[0] });
+    res
+      .status(201)
+      .json({ message: "Modified expense saved successfully", row: result.rows[0] });
   } catch (error) {
     console.error("Error saving modified expense:", error);
     res.status(500).json({ error: "Failed to save modified expense" });
   }
 });
 
-// -----------------------------------------------------------------------------
-// GET Endpoint to Retrieve All Custom Rows for a Specific Date
-// -----------------------------------------------------------------------------
+/**
+ * GET /modified-expenses?date=YYYY-MM-DD
+ * Fetch all modified_expenses for a specific date
+ */
 app.get("/modified-expenses", async (req, res) => {
   const { date } = req.query;
   if (!date) {
-    return res.status(400).json({ error: "Missing date query parameter" });
+    return res
+      .status(400)
+      .json({ error: "Missing date query parameter" });
   }
-  
+
   try {
     const formattedDate = moment(date).format("YYYY-MM-DD");
     const result = await pool.query(
-      `SELECT * FROM modified_expenses
+      `SELECT *
+       FROM modified_expenses
        WHERE date = $1
        ORDER BY created_at ASC`,
       [formattedDate]
@@ -1509,17 +1508,20 @@ app.get("/modified-expenses", async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching modified expenses:", error);
-    res.status(500).json({ error: "Failed to fetch modified expenses" });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch modified expenses" });
   }
 });
 
-// -----------------------------------------------------------------------------
-// PUT Endpoint to Update a Custom Modified Row (now accepts transactionType)
-// -----------------------------------------------------------------------------
+/**
+ * PUT /modified-expenses/:id
+ * Update a single modified_expense by ID
+ */
 app.put("/modified-expenses/:id", async (req, res) => {
   const { id } = req.params;
   const { supplier, totalAmount, amountPaid, description, transactionType } = req.body;
-  
+
   try {
     const result = await pool.query(
       `UPDATE modified_expenses
@@ -1536,20 +1538,27 @@ app.put("/modified-expenses/:id", async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Modified expense not found" });
     }
-    res.json({ message: "Modified expense updated successfully", row: result.rows[0] });
+    res.json({
+      message: "Modified expense updated successfully",
+      row: result.rows[0],
+    });
   } catch (error) {
     console.error("Error updating modified expense:", error);
     res.status(500).json({ error: "Failed to update modified expense" });
   }
 });
 
-// -----------------------------------------------------------------------------
-// DELETE Endpoint to Remove a Custom Modified Row
-// -----------------------------------------------------------------------------
+/**
+ * DELETE /modified-expenses/:id
+ * Delete a single modified_expense by ID
+ */
 app.delete("/modified-expenses/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("DELETE FROM modified_expenses WHERE id = $1 RETURNING *", [id]);
+    const result = await pool.query(
+      "DELETE FROM modified_expenses WHERE id = $1 RETURNING *",
+      [id]
+    );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Modified expense not found" });
     }
@@ -1560,71 +1569,29 @@ app.delete("/modified-expenses/:id", async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// NEW Aggregated GET Endpoint: Group by Supplier Across ALL Dates
-// -----------------------------------------------------------------------------
+/**
+ * GET /aggregated-modified-expenses
+ * Summarize total_amount and amount_paid by (supplier, transaction_type)
+ */
 app.get("/aggregated-modified-expenses", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT supplier,
-             SUM(COALESCE(CAST(total_amount AS NUMERIC), 0)) AS aggregated_total_amount,
-             SUM(COALESCE(CAST(amount_paid AS NUMERIC), 0)) AS aggregated_amount_paid
+      SELECT
+        supplier,
+        transaction_type,
+        SUM(COALESCE(CAST(total_amount AS NUMERIC), 0)) AS aggregated_total_amount,
+        SUM(COALESCE(CAST(amount_paid AS NUMERIC), 0)) AS aggregated_amount_paid
       FROM modified_expenses
-      GROUP BY supplier
+      GROUP BY supplier, transaction_type
       ORDER BY supplier ASC
     `);
+
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching aggregated modified expenses:", error);
     res.status(500).json({ error: "Failed to fetch aggregated modified expenses" });
   }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
