@@ -41,5 +41,5 @@ def drop_all_tables(table_names):
             conn.close()
 
 if __name__ == "__main__":
-    tables_to_drop = ['inventory']
+    tables_to_drop = [' modified_expenses,daily_expenses']
     drop_all_tables(tables_to_drop)

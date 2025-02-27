@@ -1,63 +1,51 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
-  Heading,
-  FormLabel,
   Input,
   Button,
-  Grid,
   Table,
   Thead,
   Tbody,
+  Tfoot,
   Tr,
-  GridItem,
   Th,
   Td,
   TableContainer,
   Flex,
-  IconButton,
   useToast,
-  Divider,
-  Text,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Center,
-  VStack,
-  Stack,
-  useBreakpointValue,
-  Spinner,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogBody,
-  AlertDialogFooter,
+  Heading,
+  Select,
+  Fade,
+  Tooltip,
 } from "@chakra-ui/react";
-import {
-  DeleteIcon,
-  AddIcon,
-  CalendarIcon,
-  RepeatIcon,
-} from "@chakra-ui/icons";
-import { motion } from "framer-motion";
+import { AddIcon, CalendarIcon, RepeatIcon } from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// Adjust if you have a .env
+// -----------------------------------------------------------------------------
+// 1) Configuration & Constants
+// -----------------------------------------------------------------------------
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-// Define sellers and other constants
 const SELLERS = ["KRISTI", "VERA", "JONI", "FLORI", "DEA", "ENISA"];
 const MAX_EXPENSE_SETS = 15;
-const ROW_COLOR = "#e8f5e9";
+const COL_WIDTH = 150;
 
+// -----------------------------------------------------------------------------
+// 2) Main Component
+// -----------------------------------------------------------------------------
 export default function DailyExpenses() {
   const toast = useToast();
-  const cancelRef = useRef();
 
-  // Inject custom DatePicker styles for dark theme
+  // The selected date for the daily expenses (and custom rows)
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Number of expense columns currently displayed in the main table
+  const [expenseSetsCount, setExpenseSetsCount] = useState(1);
+
+  // State for aggregated sales per seller
+  const [salesSums, setSalesSums] = useState({}); // e.g. { KRISTI: 500, VERA: 150, ... }
+
+  // --- Dark theme styling for DatePicker ---
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -85,14 +73,13 @@ export default function DailyExpenses() {
     };
   }, []);
 
-  // Entry date for new daily expenses and view date for history
-  const [entryDate, setEntryDate] = useState(new Date());
-  const [viewDate, setViewDate] = useState(new Date());
-
-  // How many dynamic expense columns we show
-  const [expenseSetsCount, setExpenseSetsCount] = useState(1);
-
-  // Table data for input: one row per seller
+  /**
+   * tableData: array of objects, one per seller, with:
+   *   - seller: string,
+   *   - dailyTotal: string,
+   *   - cashDailyTotal: string,
+   *   - expenses: array of objects { expense, amount, description }
+   */
   const [tableData, setTableData] = useState(
     SELLERS.map((seller) => ({
       seller,
@@ -106,44 +93,16 @@ export default function DailyExpenses() {
     }))
   );
 
-  // Fetched data from the server for the selected "view date"
-  const [rawExpenses, setRawExpenses] = useState([]);
+  // customRows: array of custom rows for the selected date
+  const [customRows, setCustomRows] = useState([]);
 
-  // Group raw expenses by seller and date (only one declaration)
-  const groupedExpensesMemo = useMemo(() => {
-    const byKey = {};
-    rawExpenses.forEach((row) => {
-      const key = `${row.seller}||${row.date}`;
-      if (!byKey[key]) {
-        byKey[key] = {
-          seller: row.seller,
-          date: row.date,
-          dailyTotal: row.daily_total || "",
-          cashDailyTotal: row.cash_daily_total || "",
-          items: [],
-        };
-      }
-      byKey[key].items.push({
-        id: row.id,
-        expense: row.expense,
-        amount: row.amount,
-        description: row.description,
-      });
-    });
-    const groupedArr = Object.values(byKey);
-    let maxCols = 0;
-    groupedArr.forEach((g) => {
-      if (g.items.length > maxCols) maxCols = g.items.length;
-    });
-    return { data: groupedArr, maxCols };
-  }, [rawExpenses]);
-
-  /* Total calculation for daily expenses from input table */
+  // ---------------------------------------------------------------------------
+  // Compute Totals for Main Table
+  // ---------------------------------------------------------------------------
   const totals = useMemo(() => {
     let totalDaily = 0;
     let totalCashDaily = 0;
     let totalExpenseCombined = 0;
-
     tableData.forEach((row) => {
       totalDaily += parseFloat(row.dailyTotal) || 0;
       totalCashDaily += parseFloat(row.cashDailyTotal) || 0;
@@ -151,119 +110,308 @@ export default function DailyExpenses() {
         totalExpenseCombined += parseFloat(row.expenses[i].amount) || 0;
       }
     });
-
     return { totalDaily, totalCashDaily, totalExpenseCombined };
   }, [tableData, expenseSetsCount]);
 
-  // Add or remove expense columns
-  const handleAddExpenseSet = () => {
-    if (expenseSetsCount < MAX_EXPENSE_SETS) {
-      setExpenseSetsCount(expenseSetsCount + 1);
-    } else {
+  // ---------------------------------------------------------------------------
+  // Helper: Build Table Data from DB Rows
+  // ---------------------------------------------------------------------------
+  function buildTableDataFromDB(dbRows) {
+    const bySeller = {};
+    dbRows.forEach((row) => {
+      const s = row.seller.toUpperCase();
+      if (!bySeller[s]) {
+        bySeller[s] = {
+          seller: s,
+          dailyTotal: row.daily_total || "",
+          cashDailyTotal: row.cash_daily_total || "",
+          items: [],
+        };
+      }
+      bySeller[s].items.push({
+        expense: row.expense || "",
+        amount: row.amount || "",
+        description: row.description || "",
+      });
+    });
+
+    const finalTableData = SELLERS.map((sellerName) => {
+      const upperName = sellerName.toUpperCase();
+      if (bySeller[upperName]) {
+        const itemArr = bySeller[upperName].items || [];
+        return {
+          seller: upperName,
+          dailyTotal: bySeller[upperName].dailyTotal,
+          cashDailyTotal: bySeller[upperName].cashDailyTotal,
+          expenses: Array.from({ length: MAX_EXPENSE_SETS }, (_, i) => ({
+            expense: itemArr[i]?.expense || "",
+            amount: itemArr[i]?.amount || "",
+            description: itemArr[i]?.description || "",
+          })),
+        };
+      } else {
+        return {
+          seller: upperName,
+          dailyTotal: "",
+          cashDailyTotal: "",
+          expenses: Array.from({ length: MAX_EXPENSE_SETS }, () => ({
+            expense: "",
+            amount: "",
+            description: "",
+          })),
+        };
+      }
+    });
+
+    // Determine how many expense columns are actually used
+    let maxItems = 1;
+    for (const sellerRow of finalTableData) {
+      const usedCols = sellerRow.expenses.filter(
+        (it) => it.expense.trim() || it.amount.trim() || it.description.trim()
+      ).length;
+      if (usedCols > maxItems) {
+        maxItems = usedCols;
+      }
+    }
+    setExpenseSetsCount(Math.min(maxItems, MAX_EXPENSE_SETS));
+
+    return finalTableData;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fetch Main Table Expenses
+  // ---------------------------------------------------------------------------
+  async function fetchExpenses(date) {
+    const dateStr = date.toISOString().split("T")[0];
+    try {
+      const resp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
+      if (!resp.ok) throw new Error("Failed to fetch daily expenses");
+      const data = await resp.json();
+      const updatedTableData = buildTableDataFromDB(data);
+      setTableData(updatedTableData);
+    } catch (error) {
       toast({
-        title: "Limit Reached",
-        description: `Max columns = ${MAX_EXPENSE_SETS}`,
-        status: "warning",
+        title: "Error fetching expenses",
+        description: error.message,
+        status: "error",
       });
     }
-  };
-  const handleRemoveExpenseSet = () => {
-    if (expenseSetsCount > 1) setExpenseSetsCount(expenseSetsCount - 1);
-  };
+  }
 
-  // Handle changes in dailyTotal and cashDailyTotal
-  const handleInputChange = (rowIndex, field, value) => {
+  // ---------------------------------------------------------------------------
+  // Fetch Custom Modified Rows
+  // ---------------------------------------------------------------------------
+  async function fetchCustomRows(date) {
+    const dateStr = date.toISOString().split("T")[0];
+    try {
+      const resp = await fetch(`${API_URL}/modified-expenses?date=${dateStr}`);
+      if (!resp.ok) throw new Error("Failed to fetch custom rows");
+      const data = await resp.json();
+      // Transform keys from snake_case to camelCase:
+      const transformed = data.map((row) => ({
+        id: row.id,
+        supplier: row.supplier,
+        totalAmount: row.total_amount,
+        amountPaid: row.amount_paid,
+        description: row.description,
+        transactionType: row.transaction_type,
+        date: row.date,
+        created_at: row.created_at,
+      }));
+      setCustomRows(transformed);
+    } catch (error) {
+      toast({
+        title: "Error fetching custom rows",
+        description: error.message,
+        status: "error",
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fetch & Aggregate Sales Data (case-insensitive) from /sales/all-data
+  // ---------------------------------------------------------------------------
+  async function fetchSalesData(date) {
+    // Convert date to full ISO start/end of day
+    const dateStr = date.toISOString().split("T")[0]; // e.g. "2025-03-01"
+    const startOfDay = `${dateStr}T00:00:00.000Z`;
+    const endOfDay = `${dateStr}T23:59:59.999Z`;
+
+    // We'll query for all sellers within this single date
+    const sellersQuery = SELLERS.join(",");
+
+    const url = `${API_URL}/sales/all-data?startDate=${startOfDay}&endDate=${endOfDay}&sellers=${sellersQuery}&limit=100000`;
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        throw new Error("Failed to fetch sales data");
+      }
+      const data = await resp.json();
+
+      console.log("Sales data response:", data); // Debug
+
+      // Aggregate sums by seller (uppercased)
+      const sums = {};
+      for (const row of data) {
+        // If row.Seller is "Kristi", toUpperCase -> "KRISTI"
+        const seller = (row.Seller || "").toUpperCase();
+        const totalPrice = parseFloat(row.Total_Article_Price) || 0;
+        if (!sums[seller]) {
+          sums[seller] = 0;
+        }
+        sums[seller] += totalPrice;
+      }
+
+      setSalesSums(sums);
+    } catch (error) {
+      toast({
+        title: "Error fetching sales data",
+        description: error.message,
+        status: "error",
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Main Table Input Handlers
+  // ---------------------------------------------------------------------------
+  function handleInputChange(rowIndex, field, value) {
     setTableData((prev) => {
       const updated = [...prev];
       updated[rowIndex][field] = value;
       return updated;
     });
-  };
+  }
 
-  // Handle changes in dynamic expense sets
-  const handleExpenseChange = (rowIndex, expenseIndex, field, value) => {
+  function handleExpenseChange(rowIndex, expenseIndex, field, value) {
     setTableData((prev) => {
       const updated = [...prev];
       updated[rowIndex].expenses[expenseIndex][field] = value;
       return updated;
     });
-  };
+  }
 
-  // Fetch existing daily expenses for a date
-  const fetchExpenses = async (date) => {
-    const dateStr = date.toISOString().split("T")[0];
-    try {
-      const resp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`);
-      if (!resp.ok) {
-        throw new Error("Failed to fetch daily expenses");
-      }
-      const data = await resp.json();
-      setRawExpenses(data);
-    } catch (error) {
-      toast({
-        title: "Error fetching",
-        description: error.message,
-        status: "error",
-      });
-    }
-  };
-
-  useEffect(() => {
-    fetchExpenses(viewDate);
-  }, [viewDate]);
-
-  // Save new daily expenses
-  const handleSave = async () => {
-    const entriesToSave = [];
-    tableData.forEach((row) => {
-      const rowHasData =
-        row.dailyTotal.trim() ||
-        row.cashDailyTotal.trim() ||
-        row.expenses.some(
-          (exp) =>
-            exp.expense.trim() || exp.amount.trim() || exp.description.trim()
-        );
-      if (!rowHasData) return;
-      for (let i = 0; i < expenseSetsCount; i++) {
-        const { expense, amount, description } = row.expenses[i];
-        if (expense.trim() || amount.trim() || description.trim()) {
-          entriesToSave.push({
-            seller: row.seller,
-            dailyTotal: row.dailyTotal,
-            cashDailyTotal: row.cashDailyTotal,
-            expense,
-            amount,
-            description,
-          });
-        }
-      }
+  // ---------------------------------------------------------------------------
+  // Custom Rows Handlers
+  // ---------------------------------------------------------------------------
+  function handleCustomRowChange(index, field, value) {
+    setCustomRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
     });
-    if (entriesToSave.length === 0) {
+  }
+
+  function handleAddCustomRow() {
+    setCustomRows((prev) => [
+      ...prev,
+      {
+        supplier: "",
+        totalAmount: "",
+        amountPaid: "",
+        description: "",
+        transactionType: "",
+        date: selectedDate.toISOString().split("T")[0],
+      },
+    ]);
+  }
+
+  async function handleSaveCustomRow(index) {
+    const row = customRows[index];
+    const dateStr = selectedDate.toISOString().split("T")[0];
+
+    // Basic validations
+    if (!row.supplier) {
       toast({
-        title: "No Data",
-        description: "No valid entries to save",
-        status: "error",
+        title: "Validation Error",
+        description: "Supplier is required",
+        status: "warning",
       });
       return;
     }
-    const dateStr = entryDate.toISOString().split("T")[0];
-    try {
-      const resp = await fetch(`${API_URL}/expenses/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selectedDate: dateStr, entries: entriesToSave }),
-      });
-      if (!resp.ok) {
-        throw new Error("Failed to save daily expenses");
-      }
+    if (!row.transactionType) {
       toast({
-        title: "Success",
-        description: "Daily expenses saved",
-        status: "success",
+        title: "Validation Error",
+        description: "Transaction type is required",
+        status: "warning",
       });
-      // Refresh if the same date
-      if (dateStr === viewDate.toISOString().split("T")[0]) {
-        fetchExpenses(viewDate);
+      return;
+    }
+
+    try {
+      if (row.id) {
+        // Update existing row
+        const resp = await fetch(`${API_URL}/modified-expenses/${row.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            supplier: row.supplier,
+            totalAmount: row.totalAmount,
+            amountPaid: row.amountPaid,
+            description: row.description,
+            transactionType: row.transactionType,
+          }),
+        });
+        if (!resp.ok) throw new Error("Failed to update custom row");
+        const data = await resp.json();
+        const transformedRow = {
+          id: data.row.id,
+          supplier: data.row.supplier,
+          totalAmount: data.row.total_amount,
+          amountPaid: data.row.amount_paid,
+          description: data.row.description,
+          transactionType: data.row.transaction_type,
+          date: data.row.date,
+          created_at: data.row.created_at,
+        };
+        toast({
+          title: "Success",
+          description: "Custom row updated",
+          status: "success",
+        });
+        setCustomRows((prev) => {
+          const updated = [...prev];
+          updated[index] = transformedRow;
+          return updated;
+        });
+      } else {
+        // Create new row
+        const payload = {
+          selectedDate: dateStr,
+          supplier: row.supplier,
+          totalAmount: row.totalAmount,
+          amountPaid: row.amountPaid,
+          description: row.description,
+          transactionType: row.transactionType,
+        };
+        const resp = await fetch(`${API_URL}/modified-expenses`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error("Failed to save custom row");
+        const data = await resp.json();
+        const transformedRow = {
+          id: data.row.id,
+          supplier: data.row.supplier,
+          totalAmount: data.row.total_amount,
+          amountPaid: data.row.amount_paid,
+          description: data.row.description,
+          transactionType: data.row.transaction_type,
+          date: data.row.date,
+          created_at: data.row.created_at,
+        };
+        toast({
+          title: "Success",
+          description: "Custom row saved",
+          status: "success",
+        });
+        setCustomRows((prev) => {
+          const updated = [...prev];
+          updated[index] = transformedRow;
+          return updated;
+        });
       }
     } catch (error) {
       toast({
@@ -272,10 +420,167 @@ export default function DailyExpenses() {
         status: "error",
       });
     }
-  };
+  }
 
-  // Clear the daily input table
-  const handleClearExpenses = () => {
+  async function handleDeleteCustomRow(index) {
+    const row = customRows[index];
+    if (!row.id) {
+      // If row not saved in DB, just remove from array
+      setCustomRows((prev) => prev.filter((_, i) => i !== index));
+      return;
+    }
+    try {
+      const resp = await fetch(`${API_URL}/modified-expenses/${row.id}`, {
+        method: "DELETE",
+      });
+      if (!resp.ok) throw new Error("Failed to delete custom row");
+      toast({
+        title: "Success",
+        description: "Custom row deleted",
+        status: "success",
+      });
+      setCustomRows((prev) => prev.filter((_, i) => i !== index));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        status: "error",
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Auto-Populate Custom Rows from Main Table Expenses
+  // ---------------------------------------------------------------------------
+  function handleAutoPopulateCustomRows() {
+    const aggregated = {};
+    tableData.forEach((sellerRow) => {
+      for (let i = 0; i < expenseSetsCount; i++) {
+        const expenseObj = sellerRow.expenses[i];
+        const expenseName = expenseObj.expense.trim();
+        const amountValue = parseFloat(expenseObj.amount) || 0;
+        if (expenseName) {
+          const key = expenseName.toLowerCase();
+          if (!aggregated[key]) {
+            aggregated[key] = {
+              supplier: expenseName,
+              totalAmount: 0,
+              amountPaid: 0,
+              description: "",
+              transactionType: "",
+            };
+          }
+          aggregated[key].totalAmount += amountValue;
+          aggregated[key].amountPaid += amountValue;
+        }
+      }
+    });
+
+    const aggregatedRows = Object.values(aggregated).map((row) => ({
+      ...row,
+      totalAmount: row.totalAmount.toString(),
+      amountPaid: row.amountPaid.toString(),
+    }));
+
+    // Merge with existing customRows without overwriting manual entries
+    const mergedRows = [...customRows];
+    aggregatedRows.forEach((aggRow) => {
+      const index = mergedRows.findIndex(
+        (r) => r.supplier.toLowerCase() === aggRow.supplier.toLowerCase()
+      );
+      if (index !== -1) {
+        mergedRows[index].totalAmount = (
+          (parseFloat(mergedRows[index].totalAmount) || 0) +
+          (parseFloat(aggRow.totalAmount) || 0)
+        ).toString();
+        mergedRows[index].amountPaid = (
+          (parseFloat(mergedRows[index].amountPaid) || 0) +
+          (parseFloat(aggRow.amountPaid) || 0)
+        ).toString();
+      } else {
+        mergedRows.push(aggRow);
+      }
+    });
+
+    setCustomRows(mergedRows);
+    toast({
+      title: "Auto Populate",
+      description: "Aggregated custom rows have been merged with existing custom rows.",
+      status: "success",
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Save Handler for Main Daily Expenses Table
+  // ---------------------------------------------------------------------------
+  async function handleSave() {
+    const dateStr = selectedDate.toISOString().split("T")[0];
+    const entriesToSave = [];
+
+    tableData.forEach((row) => {
+      // Check if the row has any data
+      const rowHasData =
+        row.dailyTotal.trim() ||
+        row.cashDailyTotal.trim() ||
+        row.expenses.some(
+          (exp) => exp.expense.trim() || exp.amount.trim() || exp.description.trim()
+        );
+      if (!rowHasData) return;
+
+      // For each used expense column, push it to entriesToSave
+      for (let i = 0; i < expenseSetsCount; i++) {
+        const ex = row.expenses[i];
+        if (ex.expense.trim() || ex.amount.trim() || ex.description.trim()) {
+          entriesToSave.push({
+            seller: row.seller,
+            dailyTotal: row.dailyTotal,
+            cashDailyTotal: row.cashDailyTotal,
+            expense: ex.expense,
+            amount: ex.amount,
+            description: ex.description,
+          });
+        }
+      }
+    });
+
+    try {
+      // First delete existing entries for that date
+      const deleteResp = await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`, {
+        method: "DELETE",
+      });
+      if (!deleteResp.ok) {
+        throw new Error("Failed to delete old daily expenses for this date");
+      }
+      // Then insert the new ones
+      if (entriesToSave.length > 0) {
+        const insertResp = await fetch(`${API_URL}/expenses/bulk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selectedDate: dateStr, entries: entriesToSave }),
+        });
+        if (!insertResp.ok) {
+          throw new Error("Failed to save daily expenses");
+        }
+      }
+      toast({
+        title: "Success",
+        description: "Daily expenses saved",
+        status: "success",
+      });
+      // Refresh data
+      fetchExpenses(selectedDate);
+      fetchCustomRows(selectedDate);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        status: "error",
+      });
+    }
+  }
+
+  // Clears the local main table state (does not affect the DB)
+  function handleClearExpenses() {
     setTableData(
       SELLERS.map((seller) => ({
         seller,
@@ -290,490 +595,476 @@ export default function DailyExpenses() {
     );
     toast({
       title: "Cleared",
-      description: "All daily expenses cleared",
+      description: "All daily expenses cleared (locally)",
       status: "info",
     });
-  };
+  }
 
-  // Delete a single daily expense
-  const handleDeleteExpense = async (id) => {
-    try {
-      const resp = await fetch(`${API_URL}/expenses/bulk/${id}`, {
-        method: "DELETE",
-      });
-      if (!resp.ok) {
-        throw new Error("Failed to delete expense");
-      }
+  // Add or remove dynamic columns for the main table
+  function handleAddExpenseSet() {
+    if (expenseSetsCount < MAX_EXPENSE_SETS) {
+      setExpenseSetsCount(expenseSetsCount + 1);
+    } else {
       toast({
-        title: "Deleted",
-        description: "Expense deleted successfully",
-        status: "success",
-      });
-      fetchExpenses(viewDate);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        status: "error",
+        title: "Limit Reached",
+        description: `Max columns = ${MAX_EXPENSE_SETS}`,
+        status: "warning",
       });
     }
-  };
+  }
 
-  // Calculate totals for the view table (grouped by seller)
-  const viewTotals = useMemo(() => {
-    const totalsBySeller = groupedExpensesMemo.data.map((group) => {
-      let totalExpenseCombined = 0;
-      group.items.forEach((item) => {
-        totalExpenseCombined += parseFloat(item.amount) || 0;
-      });
-      return { seller: group.seller, totalExpenseCombined };
-    });
-    return totalsBySeller;
-  }, [groupedExpensesMemo]);
+  function handleRemoveExpenseSet() {
+    if (expenseSetsCount > 1) {
+      setExpenseSetsCount(expenseSetsCount - 1);
+    }
+  }
 
-  // Determine if we are in mobile view
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  // Calculate total columns for the main table (used for colspan, etc.)
+  const totalCols = 5 + 2 * expenseSetsCount;
 
-  // Responsive rendering for the "Entry Table" section
-  const renderEntrySection = () => {
-    if (isMobile) {
-      return (
-        <VStack spacing={4} align="stretch">
-          {tableData.map((row, rowIndex) => (
-            <Box
-              key={rowIndex}
-              borderWidth="1px"
-              borderRadius="md"
-              p={4}
-              bg="white"
-              boxShadow="md"
-            >
-              <Text>
-                <strong>Seller:</strong> {row.seller}
-              </Text>
-              <Text>
-                <strong>TOTAL:</strong>{" "}
-                <Input
-                  value={row.dailyTotal}
-                  onChange={(e) =>
-                    handleInputChange(rowIndex, "dailyTotal", e.target.value)
-                  }
-                  placeholder="0"
-                  size="sm"
-                  mt={1}
-                />
-              </Text>
-              <Text>
-                <strong>Cash Total:</strong>{" "}
-                <Input
-                  value={row.cashDailyTotal}
-                  onChange={(e) =>
-                    handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
-                  }
-                  placeholder="0"
-                  size="sm"
-                  mt={1}
-                />
-              </Text>
-              {Array.from({ length: expenseSetsCount }).map((_, expIndex) => (
-                <Box key={expIndex} mt={2} p={2} border="1px dashed gray">
-                  <Text>
-                    <strong>Expense {expIndex + 1}:</strong>{" "}
-                    <Input
-                      value={row.expenses[expIndex].expense}
-                      onChange={(e) =>
-                        handleExpenseChange(
-                          rowIndex,
-                          expIndex,
-                          "expense",
-                          e.target.value
-                        )
-                      }
-                      placeholder={`Expense ${expIndex + 1}`}
-                      size="sm"
-                      mt={1}
-                    />
-                  </Text>
-                  <Text>
-                    <strong>Amount {expIndex + 1}:</strong>{" "}
-                    <Input
-                      value={row.expenses[expIndex].amount}
-                      onChange={(e) =>
-                        handleExpenseChange(
-                          rowIndex,
-                          expIndex,
-                          "amount",
-                          e.target.value
-                        )
-                      }
-                      placeholder="0"
-                      size="sm"
-                      mt={1}
-                    />
-                  </Text>
-                  <Text>
-                    <strong>Description {expIndex + 1}:</strong>{" "}
-                    <Input
-                      value={row.expenses[expIndex].description}
-                      onChange={(e) =>
-                        handleExpenseChange(
-                          rowIndex,
-                          expIndex,
-                          "description",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Description"
-                      size="sm"
-                      mt={1}
-                    />
-                  </Text>
-                </Box>
-              ))}
-            </Box>
-          ))}
-          {/* Totals Row */}
-          <Box borderTop="1px solid #ccc" pt={2} mt={4}>
-            <Flex justifyContent="space-between">
-              <Text fontWeight="bold">TOTAL DAILY:</Text>
-              <Text fontWeight="bold">{totals.totalDaily}</Text>
-            </Flex>
-            <Flex justifyContent="space-between">
-              <Text fontWeight="bold">TOTAL CASH DAILY:</Text>
-              <Text fontWeight="bold">{totals.totalCashDaily}</Text>
-            </Flex>
-            <Flex justifyContent="space-between">
-              <Text fontWeight="bold">TOTAL EXPENSES:</Text>
-              <Text fontWeight="bold">{totals.totalExpenseCombined}</Text>
-            </Flex>
-          </Box>
-        </VStack>
-      );
-    } else {
-      return (
-        <TableContainer mt={4} p={4} bg="white" borderRadius="md" boxShadow="md">
+  // ---------------------------------------------------------------------------
+  // Lifecycle: Fetch data on selectedDate change
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    fetchExpenses(selectedDate);
+    fetchCustomRows(selectedDate);
+    fetchSalesData(selectedDate);
+    // eslint-disable-next-line
+  }, [selectedDate]);
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+  return (
+    <Box p={4}>
+      {/* Fade-in box for "ZGJIDH DATEN" heading & DatePicker */}
+      <Fade in={true}>
+        <Box
+          p={6}
+          bgGradient="linear(to-r, green.600, teal.400)"
+          borderRadius="md"
+          boxShadow="lg"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          textAlign="center"
+        >
+          <Heading
+            size="md"
+            mb={4}
+            color="white"
+            fontWeight="bold"
+            textTransform="uppercase"
+          >
+            ZGJIDH DATEN PER XHIRON DITORE DHE BLERJET
+          </Heading>
+          <Flex justify="center" align="center" gap={4}>
+            <CalendarIcon boxSize={10} color="white" />
+            <DatePicker
+              selected={selectedDate}
+              onChange={setSelectedDate}
+              dateFormat="dd/MM/yyyy"
+              className="custom-datepicker"
+              portalId="datepicker-portal"
+            />
+          </Flex>
+        </Box>
+      </Fade>
+
+      <Box height="10rem" />
+
+      {/* Main Daily Expenses Table */}
+      <Box p={4} bg="white" borderRadius="md" boxShadow="md" bgColor="#f7fafc">
+        <Heading
+          size="md"
+          mb={4}
+          align="center"
+          padding={3}
+          marginBottom={10}
+          marginTop={10}
+        >
+          DATA: {selectedDate.toLocaleDateString("en-CA")}
+        </Heading>
+        <TableContainer>
           <Table variant="simple">
             <Thead>
               <Tr bg="gray.200">
-                <Th>Seller</Th>
-                <Th>TOTAL</Th>
-                <Th>Cash Total</Th>
-                {[...Array(expenseSetsCount)].map((_, i) => (
+                <Th
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    background: "#fff",
+                    zIndex: 2,
+                    minWidth: COL_WIDTH,
+                  }}
+                >
+                  Seller
+                </Th>
+                <Th
+                  style={{
+                    position: "sticky",
+                    left: `${COL_WIDTH}px`,
+                    background: "#fff",
+                    zIndex: 2,
+                    minWidth: COL_WIDTH,
+                  }}
+                >
+                  TOTAL
+                </Th>
+                <Th
+                  style={{
+                    position: "sticky",
+                    left: `${COL_WIDTH * 2}px`,
+                    background: "#fff",
+                    zIndex: 2,
+                    minWidth: COL_WIDTH,
+                  }}
+                >
+                  Cash Total
+                </Th>
+                <Th
+                  style={{
+                    position: "sticky",
+                    left: `${COL_WIDTH * 3}px`,
+                    background: "#fff",
+                    zIndex: 2,
+                    minWidth: COL_WIDTH,
+                  }}
+                >
+                  Total Expenses
+                </Th>
+                <Th
+                  style={{
+                    position: "sticky",
+                    left: `${COL_WIDTH * 4}px`,
+                    background: "#fff",
+                    zIndex: 2,
+                    minWidth: COL_WIDTH,
+                  }}
+                >
+                  Difference
+                </Th>
+                {Array.from({ length: expenseSetsCount }).map((_, i) => (
                   <React.Fragment key={i}>
-                    <Th>Expense {i + 1}</Th>
-                    <Th>Amount {i + 1}</Th>
-                    <Th>Description {i + 1}</Th>
+                    <Th style={{ minWidth: COL_WIDTH }}>Expense {i + 1}</Th>
+                    <Th style={{ minWidth: COL_WIDTH }}>Amount {i + 1}</Th>
                   </React.Fragment>
                 ))}
               </Tr>
             </Thead>
             <Tbody>
-              {tableData.map((row, rowIndex) => (
-                <Tr key={rowIndex} bg={ROW_COLOR}>
-                  <Td>{row.seller}</Td>
-                  <Td>
-                    <Input
-                      value={row.dailyTotal}
-                      onChange={(e) =>
-                        handleInputChange(rowIndex, "dailyTotal", e.target.value)
-                      }
-                      placeholder="0"
-                      size="sm"
-                    />
-                  </Td>
-                  <Td>
-                    <Input
-                      value={row.cashDailyTotal}
-                      onChange={(e) =>
-                        handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
-                      }
-                      placeholder="0"
-                      size="sm"
-                    />
-                  </Td>
-                  {[...Array(expenseSetsCount)].map((_, expIndex) => (
-                    <React.Fragment key={expIndex}>
-                      <Td>
+              {tableData.map((row, rowIndex) => {
+                const rowExpenseTotal = row.expenses
+                  .slice(0, expenseSetsCount)
+                  .reduce((acc, cur) => acc + (parseFloat(cur.amount) || 0), 0);
+                const diff =
+                  (parseFloat(row.dailyTotal) || 0) -
+                  ((parseFloat(row.cashDailyTotal) || 0) + rowExpenseTotal);
+
+                // If salesSums[row.seller] is undefined, there's no data. If it's 0, that means total 0.
+                const existingSales = salesSums[row.seller];
+                const tooltipLabel =
+                  existingSales === undefined
+                    ? "No sales data found"
+                    : `Sales found: ${existingSales.toFixed(2)} (double-click to auto-fill)`;
+
+                return (
+                  <Tr key={rowIndex} bg="#e8f5e9">
+                    {/* Seller cell (sticky) */}
+                    <Td
+                      style={{
+                        position: "sticky",
+                        left: 0,
+                        background: "#fff",
+                        zIndex: 1,
+                        minWidth: COL_WIDTH,
+                      }}
+                    >
+                      {row.seller}
+                    </Td>
+                    {/* Daily Total (sticky) with Tooltip */}
+                    <Td
+                      style={{
+                        position: "sticky",
+                        left: `${COL_WIDTH}px`,
+                        background: "#fff",
+                        zIndex: 1,
+                        minWidth: COL_WIDTH,
+                      }}
+                    >
+                      <Tooltip hasArrow placement="top" label={tooltipLabel}>
                         <Input
-                          value={row.expenses[expIndex].expense}
+                          w={`${COL_WIDTH}px`}
+                          value={row.dailyTotal}
                           onChange={(e) =>
-                            handleExpenseChange(
-                              rowIndex,
-                              expIndex,
-                              "expense",
-                              e.target.value
-                            )
-                          }
-                          placeholder={`Expense ${expIndex + 1}`}
-                          size="sm"
-                        />
-                      </Td>
-                      <Td>
-                        <Input
-                          value={row.expenses[expIndex].amount}
-                          onChange={(e) =>
-                            handleExpenseChange(
-                              rowIndex,
-                              expIndex,
-                              "amount",
-                              e.target.value
-                            )
+                            handleInputChange(rowIndex, "dailyTotal", e.target.value)
                           }
                           placeholder="0"
                           size="sm"
+                          // Double-click to auto-fill
+                          onDoubleClick={() => {
+                            if (existingSales !== undefined) {
+                              handleInputChange(
+                                rowIndex,
+                                "dailyTotal",
+                                existingSales.toString()
+                              );
+                            }
+                          }}
                         />
-                      </Td>
-                      <Td>
-                        <Input
-                          value={row.expenses[expIndex].description}
-                          onChange={(e) =>
-                            handleExpenseChange(
-                              rowIndex,
-                              expIndex,
-                              "description",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Description"
+                      </Tooltip>
+                    </Td>
+                    {/* Cash Daily Total (sticky) */}
+                    <Td
+                      style={{
+                        position: "sticky",
+                        left: `${COL_WIDTH * 2}px`,
+                        background: "#fff",
+                        zIndex: 1,
+                        minWidth: COL_WIDTH,
+                      }}
+                    >
+                      <Input
+                        w={`${COL_WIDTH}px`}
+                        value={row.cashDailyTotal}
+                        onChange={(e) =>
+                          handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
+                        }
+                        placeholder="0"
+                        size="sm"
+                      />
+                    </Td>
+                    {/* rowExpenseTotal */}
+                    <Td
+                      style={{
+                        position: "sticky",
+                        left: `${COL_WIDTH * 3}px`,
+                        background: "#fff",
+                        zIndex: 1,
+                        minWidth: COL_WIDTH,
+                      }}
+                    >
+                      {rowExpenseTotal}
+                    </Td>
+                    {/* Difference */}
+                    <Td
+                      style={{
+                        position: "sticky",
+                        left: `${COL_WIDTH * 4}px`,
+                        background: "#fff",
+                        zIndex: 1,
+                        minWidth: COL_WIDTH,
+                      }}
+                    >
+                      {diff}
+                    </Td>
+                    {/* Dynamic expense columns */}
+                    {Array.from({ length: expenseSetsCount }).map((_, expIndex) => (
+                      <React.Fragment key={expIndex}>
+                        <Td style={{ minWidth: COL_WIDTH }}>
+                          <Input
+                            w={`${COL_WIDTH}px`}
+                            value={row.expenses[expIndex].expense}
+                            onChange={(e) =>
+                              handleExpenseChange(
+                                rowIndex,
+                                expIndex,
+                                "expense",
+                                e.target.value
+                              )
+                            }
+                            placeholder={`Expense ${expIndex + 1}`}
+                            size="sm"
+                          />
+                        </Td>
+                        <Td style={{ minWidth: COL_WIDTH }}>
+                          <Input
+                            w={`${COL_WIDTH}px`}
+                            value={row.expenses[expIndex].amount}
+                            onChange={(e) =>
+                              handleExpenseChange(
+                                rowIndex,
+                                expIndex,
+                                "amount",
+                                e.target.value
+                              )
+                            }
+                            placeholder="0"
+                            size="sm"
+                          />
+                        </Td>
+                      </React.Fragment>
+                    ))}
+                  </Tr>
+                );
+              })}
+            </Tbody>
+            <Tfoot>
+              <Tr bg="gray.200">
+                <Td>Total:</Td>
+                <Td>{totals.totalDaily}</Td>
+                <Td>{totals.totalCashDaily}</Td>
+                <Td>{totals.totalExpenseCombined}</Td>
+                <Td>
+                  {(totals.totalDaily || 0) -
+                    ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)}
+                </Td>
+                {Array.from({ length: expenseSetsCount }).map((_, i) => (
+                  <React.Fragment key={i}>
+                    <Td />
+                    <Td />
+                  </React.Fragment>
+                ))}
+              </Tr>
+            </Tfoot>
+          </Table>
+        </TableContainer>
+
+        {/* Actions row for main table */}
+        <Flex mt={4} gap={3} justify="center" wrap="wrap">
+          <Button leftIcon={<AddIcon />} onClick={handleAddExpenseSet}>
+            Add Columns
+          </Button>
+          <Button onClick={handleRemoveExpenseSet} isDisabled={expenseSetsCount <= 1}>
+            Remove Columns
+          </Button>
+          <Button colorScheme="blue" onClick={handleSave}>
+            Save Expenses
+          </Button>
+          <Button colorScheme="orange" leftIcon={<RepeatIcon />} onClick={handleClearExpenses}>
+            Clear
+          </Button>
+        </Flex>
+      </Box>
+
+      {/* Custom Modified Rows Table */}
+      <Box mt={8} p={4} bg="white" borderRadius="md" boxShadow="md">
+        <Heading
+          size="md"
+          mb={4}
+          align="center"
+          padding={3}
+          marginBottom={10}
+          marginTop={10}
+        >
+          DATA PER BLERJET GJATE DITES : {selectedDate.toLocaleDateString("en-CA")}
+        </Heading>
+
+        {/* Centered buttons for second table */}
+        <Flex mb={4} gap={4} justify="center" align="center">
+          <Button colorScheme="green" onClick={handleAddCustomRow}>
+            SHTO BLERJE GJATE DITES
+          </Button>
+          <Button colorScheme="purple" onClick={handleAutoPopulateCustomRows}>
+            SHTO BLERJET NGA XHIRO DITORE
+          </Button>
+        </Flex>
+
+        <TableContainer>
+          <Heading size="sm" color="gray.500">
+            Xhiro ditore duhet te tregoj si leviz cashi gjate dites qe hedhim faturat, pastaj kjo
+            eshte tablea kryesore ku do te mbahen gjithe shpenzimet
+          </Heading>
+          <Heading size="sm" color="gray.500">
+            Si fillim hidh blerjet gjate dites specifike te bere, me pas pasi te plotesohet xhiro
+            ditore shtyp butonin lejla shto blerje nga xhiro ditore qe te hidhen shpenzimet xhiros
+            ditore, pastaj mund te hedesh prap blerje qe skane lidhje xhiron ditore
+          </Heading>
+          <Heading size="sm" color="gray.500">
+            Mos harro te zgjedhesh llojin e blerjes, po ishte borxh do te thote qe do te marrim lek
+            nga ajo fature ne te ardhmen dhe amount paid duhet te vihet 0
+          </Heading>
+          <Heading size="sm" color="gray.500">
+            Ideja e kesaj tabele eshte te permbaj te gjithe blerjet qe behen gjate dites dhe nga
+            xhiro ditore, bashke me borxhet qe mund te jene nga xhiro ditore ose nga gjate dites
+          </Heading>
+          <Table variant="simple">
+            <Thead>
+              <Tr bg="gray.200">
+                <Th>Supplier</Th>
+                <Th>Total Amount</Th>
+                <Th>Amount Paid</Th>
+                <Th>Description</Th>
+                <Th>Transaction Type</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {customRows.map((row, index) => (
+                <Tr key={index}>
+                  <Td>
+                    <Input
+                      value={row.supplier}
+                      placeholder="Supplier"
+                      onChange={(e) =>
+                        handleCustomRowChange(index, "supplier", e.target.value)
+                      }
+                    />
+                  </Td>
+                  <Td>
+                    <Input
+                      value={row.totalAmount || ""}
+                      placeholder="Total Amount"
+                      onChange={(e) =>
+                        handleCustomRowChange(index, "totalAmount", e.target.value)
+                      }
+                    />
+                  </Td>
+                  <Td>
+                    <Input
+                      value={row.amountPaid || ""}
+                      placeholder="Amount Paid"
+                      onChange={(e) =>
+                        handleCustomRowChange(index, "amountPaid", e.target.value)
+                      }
+                    />
+                  </Td>
+                  <Td>
+                    <Input
+                      value={row.description || ""}
+                      placeholder="Description"
+                      onChange={(e) =>
+                        handleCustomRowChange(index, "description", e.target.value)
+                      }
+                    />
+                  </Td>
+                  <Td>
+                    <Select
+                      placeholder="Select Transaction Type"
+                      value={row.transactionType || ""}
+                      onChange={(e) =>
+                        handleCustomRowChange(index, "transactionType", e.target.value)
+                      }
+                    >
+                      <option value="BLERJE">BLERJE</option>
+                      <option value="BORXHE">BORXHE</option>
+                    </Select>
+                  </Td>
+                  <Td>
+                    <Flex justify="center" align="center" gap={2}>
+                      <Button
+                        colorScheme="blue"
+                        size="sm"
+                        onClick={() => handleSaveCustomRow(index)}
+                      >
+                        {row.id ? "Update" : "Save"}
+                      </Button>
+                      {row.id && (
+                        <Button
+                          colorScheme="red"
                           size="sm"
-                        />
-                      </Td>
-                    </React.Fragment>
-                  ))}
+                          onClick={() => handleDeleteCustomRow(index)}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </Flex>
+                  </Td>
                 </Tr>
               ))}
             </Tbody>
           </Table>
         </TableContainer>
-      );
-    }
-  };
-
-  // Responsive rendering for the "View Existing" section
-  const renderViewSection = () => {
-    return (
-      <Box mt={8}>
-        <Heading fontSize="md" mb={5} textColor="black.100">
-          ZGJIDH DATEN PER TE SHIKUAR HISTORIKUN
-        </Heading>
-        <Flex
-          align="center"
-          direction={isMobile ? "column" : "row"}
-          gap={isMobile ? 3 : 7}
-        >
-          <CalendarIcon boxSize={10} />
-          <DatePicker
-            selected={viewDate}
-            onChange={setViewDate}
-            dateFormat="dd/MM/yyyy"
-            className="custom-datepicker"
-          />
-        </Flex>
-        {isMobile ? (
-          <VStack spacing={4} align="stretch" mt={4}>
-            {groupedExpensesMemo.data.map((group, idx) => {
-              const sellerTotal =
-                viewTotals.find((total) => total.seller === group.seller)
-                  ?.totalExpenseCombined || 0;
-              return (
-                <Card
-                  key={idx}
-                  mt={4}
-                  p={3}
-                  bg="white"
-                  borderRadius="md"
-                  boxShadow="md"
-                >
-                  <CardHeader>
-                    <Heading size="sm" mb={2}>
-                      {group.seller}
-                    </Heading>
-                  </CardHeader>
-                  <CardBody>
-                    <Text>
-                      <strong>Daily Total:</strong> {group.dailyTotal}
-                    </Text>
-                    <Text>
-                      <strong>Cash Daily Total:</strong> {group.cashDailyTotal}
-                    </Text>
-                    {group.items.map((item, ci) => (
-                      <Box
-                        key={ci}
-                        borderWidth="1px"
-                        borderRadius="md"
-                        p={2}
-                        my={1}
-                      >
-                        <Text>
-                          <strong>Expense:</strong> {item.expense}
-                        </Text>
-                        <Text>
-                          <strong>Amount:</strong> {item.amount}
-                        </Text>
-                        <Text>
-                          <strong>Description:</strong> {item.description}
-                        </Text>
-                        <IconButton
-                          aria-label="Delete"
-                          icon={<DeleteIcon />}
-                          colorScheme="red"
-                          size="sm"
-                          onClick={() => handleDeleteExpense(item.id)}
-                          mt={1}
-                        />
-                      </Box>
-                    ))}
-                  </CardBody>
-                  <CardFooter>
-                    <Text fontWeight="bold">
-                      Total Expense Combined: {sellerTotal}
-                    </Text>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </VStack>
-        ) : (
-          <Box mt={4}>
-            {groupedExpensesMemo.data.length > 0 ? (
-              groupedExpensesMemo.data.map((group, idx) => {
-                const sellerTotal =
-                  viewTotals.find((total) => total.seller === group.seller)
-                    ?.totalExpenseCombined || 0;
-                return (
-                  <Card
-                    key={idx}
-                    mt={4}
-                    p={3}
-                    bg="white"
-                    borderRadius="md"
-                    boxShadow="md"
-                  >
-                    <CardHeader>
-                      <Heading size="sm" mb={2}>
-                        {group.seller}
-                      </Heading>
-                    </CardHeader>
-                    <CardBody>
-                      <TableContainer>
-                        <Table variant="simple">
-                          <Thead>
-                            <Tr bg="gray.200">
-                              <Th>Daily Total</Th>
-                              <Th>Cash Daily Total</Th>
-                              {[...Array(groupedExpensesMemo.maxCols)].map(
-                                (_, colIndex) => (
-                                  <React.Fragment key={colIndex}>
-                                    <Th>Expense {colIndex + 1}</Th>
-                                    <Th>Amount {colIndex + 1}</Th>
-                                    <Th>Description {colIndex + 1}</Th>
-                                    <Th>Action</Th>
-                                  </React.Fragment>
-                                )
-                              )}
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            <Tr bg={ROW_COLOR}>
-                              <Td>{group.dailyTotal}</Td>
-                              <Td>{group.cashDailyTotal}</Td>
-                              {[...Array(groupedExpensesMemo.maxCols)].map(
-                                (_, ci) => {
-                                  const item = group.items[ci];
-                                  if (!item)
-                                    return (
-                                      <React.Fragment key={ci}>
-                                        <Td />
-                                        <Td />
-                                        <Td />
-                                        <Td />
-                                      </React.Fragment>
-                                    );
-                                  return (
-                                    <React.Fragment key={ci}>
-                                      <Td>{item.expense}</Td>
-                                      <Td>{item.amount}</Td>
-                                      <Td>{item.description}</Td>
-                                      <Td>
-                                        <IconButton
-                                          aria-label="Delete"
-                                          colorScheme="red"
-                                          icon={<DeleteIcon />}
-                                          onClick={() => handleDeleteExpense(item.id)}
-                                          size="sm"
-                                        />
-                                      </Td>
-                                    </React.Fragment>
-                                  );
-                                }
-                              )}
-                            </Tr>
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                    </CardBody>
-                    <CardFooter>
-                      <Text fontWeight="bold">
-                        Total Expense Combined: {sellerTotal}
-                      </Text>
-                    </CardFooter>
-                  </Card>
-                );
-              })
-            ) : (
-              <Box mt={4}>No daily expenses for this date.</Box>
-            )}
-          </Box>
-        )}
       </Box>
-    );
-  };
-
-  return (
-    <Box p={1}>
-      {/* Entry Section */}
-      <FormLabel fontWeight="bold" fontSize="md" mb={5} textColor="black.100">
-        ZGJIDH DATEN
-      </FormLabel>
-      <Flex align="center">
-        <CalendarIcon boxSize={10} mr={7} />
-        <DatePicker
-          selected={entryDate}
-          onChange={setEntryDate}
-          dateFormat="dd/MM/yyyy"
-          className="custom-datepicker"
-        />
-      </Flex>
-      {renderEntrySection()}
-      <Flex
-        mt={4}
-        gap={3}
-        justify="center"
-        direction={isMobile ? "column" : "row"}
-      >
-        <Button leftIcon={<AddIcon />} onClick={handleAddExpenseSet}>
-          Add Columns
-        </Button>
-        <Button
-          onClick={handleRemoveExpenseSet}
-          isDisabled={expenseSetsCount <= 1}
-        >
-          Remove Columns
-        </Button>
-        <Button colorScheme="blue" onClick={handleSave}>
-          Save Expenses
-        </Button>
-        <Button
-          colorScheme="orange"
-          leftIcon={<RepeatIcon />}
-          onClick={handleClearExpenses}
-        >
-          Clear
-        </Button>
-      </Flex>
-
-      {/* View Existing Section */}
-      <Box mt={8}>{renderViewSection()}</Box>
     </Box>
   );
 }

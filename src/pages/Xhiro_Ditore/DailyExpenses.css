@@ -7,6 +7,7 @@
     background-color: #f9f9f9;
     color: #333;
     font-weight: bolder;
+    z-index: 9999 !important;
   }
   .custom-input {
     font-size: 30px;

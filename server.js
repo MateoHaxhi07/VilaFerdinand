@@ -22,8 +22,14 @@ const pool = new Pool({
   },
 });
 
+
+
+
+
+
+
 /* ===============================
-   LOGIN & AUTHENTICATION  (Existing)
+   LOGIN & AUTHENTICATION   - SQL TABLE USERS 
    =============================== */
 
 // Middleware to authenticate token
@@ -98,8 +104,79 @@ app.get("/protected", authenticateToken, (req, res) => {
   res.json({ message: "This is a protected route", user: req.user });
 });
 
+
+
+
+
 /* ===============================
-   SALES ENDPOINTS (Existing)
+   LOGIN & AUTHENTICATION   - END
+   =============================== */
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===============================
+   SALES ENDPOINTS - SQL TABLE SALES
+
+   CONTAINS ENDPOINTS FOR HOME_PAGE, SHITJET ANALITIKE, SHITJET RENDITURA
    =============================== */
 
 // Create table for 'sales' if it does not exist
@@ -139,7 +216,12 @@ const addHourFilter = (req, queryFragment = 'EXTRACT(HOUR FROM "Datetime")') => 
   return null;
 };
 
-// Endpoint: Seller Categories Total (for pie chart)
+
+
+
+// Endpoint: Seller Categories Total ( TO CONSTRUCT PIE CHART) 
+
+
 app.get("/sales/seller-categories-total", async (req, res) => {
   try {
     const {
@@ -213,7 +295,11 @@ app.get("/sales/seller-categories-total", async (req, res) => {
   }
 });
 
-// Endpoint: Hourly Sales (uses a slightly different hour extraction)
+
+
+
+
+// Endpoint: Hourly Sales (TO CONSTRUCT HOURLY SALES CHART)
 app.get("/sales/hourly-sales", async (req, res) => {
   try {
     const {
@@ -288,7 +374,11 @@ app.get("/sales/hourly-sales", async (req, res) => {
   }
 });
 
-// Endpoint: All Data
+
+
+// Endpoint: All Data FOR SALES GOTTEN FROM THE PYTHON SCRIPTS FROM DEVPOS WEBSITE OF RESTAURANT SALES
+
+
 app.get("/sales/all-data", async (req, res) => {
   try {
     const {
@@ -322,8 +412,8 @@ app.get("/sales/all-data", async (req, res) => {
     const params = [adjustedStartDate, adjustedEndDate];
     let paramIndex = 3;
     if (sellerArray.length) {
-      query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
-      params.push(sellerArray);
+      query += ` AND UPPER("Seller") = ANY($${paramIndex}::text[])`;
+      params.push(sellerArray.map(s => s.toUpperCase()));
       paramIndex++;
     }
     if (sellerCategoryArray.length) {
@@ -357,6 +447,8 @@ app.get("/sales/all-data", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 // ENDPOINT FOR AVERAGE ORDER VALUE VS TIME
 
@@ -430,7 +522,11 @@ app.get("/sales/avg-order-value", async (req, res) => {
 });
 
 
-// Endpoint: Distinct Sellers
+
+
+
+
+// Endpoint: Distinct Sellers FOR FILTER BUTTON
 app.get("/sales/sellers", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -444,7 +540,8 @@ app.get("/sales/sellers", async (req, res) => {
   }
 });
 
-// Endpoint: Distinct Seller Categories
+// Endpoint: Distinct Seller Categories FOR FILTER BUTTON
+
 app.get("/sales/seller-categories", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -510,12 +607,9 @@ app.get("/sales/categories", async (req, res) => {
 
 
 
-
 //********************************//
-//  */ CATEGORY ENDPOINT  = USED FOR TREEMAP
+//  */ CATEGORY ENDPOINT  = USED FOR TREEMAP GRAPH
 //********************************//
-
-
 
 
 
@@ -596,20 +690,6 @@ app.get("/sales/category-total-price", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
-
-
-
-//********************************//
-//  */ END OF CATEGORY ENDPOINT
-//********************************//
-
-
-
-
-
 
 
 
@@ -1105,10 +1185,87 @@ app.get("/sales/order-count", async (req, res) => {
   }
 });
 
-/******************************************************
- * DAILY_EXPENSES TABLE & ENDPOINTS
- ******************************************************/
 
+
+
+
+
+
+
+
+/* ===============================
+   SALES ENDPOINTS - SQL TABLE SALES
+
+  END OF SALES ENDPOINTS
+   =============================== */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// -----------------------------------------------------------------------------
+// 2) Create daily_expenses table if not exists
+// -----------------------------------------------------------------------------
 const createDailyExpensesTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS daily_expenses (
@@ -1125,18 +1282,27 @@ const createDailyExpensesTable = async () => {
   `;
   try {
     await pool.query(query);
-    console.log("daily_expenses table created or exists.");
+    console.log("daily_expenses table created or already exists.");
   } catch (error) {
     console.error("Error creating daily_expenses table:", error);
   }
 };
 createDailyExpensesTable();
 
+// -----------------------------------------------------------------------------
+// 3) API Endpoints
+// -----------------------------------------------------------------------------
+
+/**
+ * POST /expenses/bulk
+ * Insert multiple entries for the same date in one transaction.
+ */
 app.post("/expenses/bulk", async (req, res) => {
   const { selectedDate, entries } = req.body;
   if (!selectedDate || !entries || !Array.isArray(entries)) {
     return res.status(400).json({ error: "Invalid request payload" });
   }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -1160,6 +1326,10 @@ app.post("/expenses/bulk", async (req, res) => {
   }
 });
 
+/**
+ * GET /expenses/bulk?date=YYYY-MM-DD
+ * Fetch all expenses for a specific date
+ */
 app.get("/expenses/bulk", async (req, res) => {
   const { date } = req.query;
   if (!date) {
@@ -1184,13 +1354,44 @@ app.get("/expenses/bulk", async (req, res) => {
   }
 });
 
+/**
+ * DELETE /expenses/bulk?date=YYYY-MM-DD
+ * Deletes all daily_expenses for the specified date (bulk delete).
+ */
+app.delete("/expenses/bulk", async (req, res) => {
+  const { date } = req.query;
+  if (!date) {
+    return res.status(400).json({ error: "Missing date in query params" });
+  }
+
+  try {
+    // Start/end of the day in UTC
+    const startOfDay = moment.utc(date).startOf("day").format("YYYY-MM-DD HH:mm:ss");
+    const endOfDay = moment.utc(date).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+
+    const result = await pool.query(
+      `DELETE FROM daily_expenses
+       WHERE date >= $1 AND date <= $2`,
+      [startOfDay, endOfDay]
+    );
+
+    res.json({
+      message: `Deleted ${result.rowCount} entries for date ${date}`,
+    });
+  } catch (error) {
+    console.error("Error deleting daily expenses by date:", error);
+    res.status(500).json({ error: "Failed to delete daily expenses by date" });
+  }
+});
+
+/**
+ * DELETE /expenses/bulk/:id
+ * Delete a single expense by ID
+ */
 app.delete("/expenses/bulk/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(
-      "DELETE FROM daily_expenses WHERE id = $1 RETURNING *",
-      [id]
-    );
+    const result = await pool.query("DELETE FROM daily_expenses WHERE id = $1 RETURNING *", [id]);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Expense not found" });
     }
@@ -1201,148 +1402,289 @@ app.delete("/expenses/bulk/:id", async (req, res) => {
   }
 });
 
-/****************************************************
- *   SUPPLIER EXPENSES TABLE (ORDER YOU REQUESTED)
- ****************************************************/
+/**
+ * PUT /expenses/bulk/:id
+ * Update a single expense by ID
+ */
+app.put("/expenses/bulk/:id", async (req, res) => {
+  const { id } = req.params;
+  const { expense, amount, dailyTotal, cashDailyTotal } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE daily_expenses
+       SET expense = $2,
+           amount = $3,
+           daily_total = $4,
+           cash_daily_total = $5
+       WHERE id = $1
+       RETURNING *`,
+      [id, expense, amount, dailyTotal, cashDailyTotal]
+    );
 
-const createSupplierExpensesTable = async () => {
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Expense not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating expense:", error);
+    res.status(500).json({ error: "Failed to update expense" });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const createModifiedExpensesTable = async () => {
   const query = `
-    CREATE TABLE IF NOT EXISTS supplier_expenses (
+    CREATE TABLE IF NOT EXISTS modified_expenses (
       id SERIAL PRIMARY KEY,
       date DATE NOT NULL,
       supplier TEXT NOT NULL,
-      transaction_type TEXT NOT NULL,
       total_amount TEXT,
-      amount_unpaid TEXT,
-      item_name TEXT,
-      quantity TEXT,
+      amount_paid TEXT,
+      description TEXT,
+      transaction_type TEXT,  -- new column for transaction type
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
   try {
     await pool.query(query);
-    console.log("supplier_expenses table created successfully.");
+    console.log("modified_expenses table created or already exists.");
   } catch (error) {
-    console.error("Error creating supplier_expenses table:", error);
+    console.error("Error creating modified_expenses table:", error);
   }
 };
-createSupplierExpensesTable();
+createModifiedExpensesTable();
 
-
-app.get("/suppliers/all", async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT id, supplier, transaction_type, total_amount, amount_unpaid, item_name, quantity, date
-       FROM supplier_expenses
-       ORDER BY date ASC`
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching all supplier expenses:", err);
-    res.status(500).json({ error: "Failed to fetch all supplier expenses" });
-  }
-});
-
-
-
-app.post("/suppliers/bulk", async (req, res) => {
-  const { selectedDate, entries } = req.body;
-  if (!selectedDate || !entries || !Array.isArray(entries)) {
-    return res.status(400).json({ error: "Invalid request payload" });
+// -----------------------------------------------------------------------------
+// POST Endpoint to Save a Custom Modified Row (now accepts transactionType)
+// -----------------------------------------------------------------------------
+app.post("/modified-expenses", async (req, res) => {
+  const { selectedDate, supplier, totalAmount, amountPaid, description, transactionType } = req.body;
+  
+  if (!selectedDate || !supplier) {
+    return res.status(400).json({ error: "Missing required fields: selectedDate and supplier are required" });
   }
   
-  const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-
-    for (const entry of entries) {
-      const {
-        supplier,
-        transactionType,
-        totalAmount,
-        amountUnpaid,
-        itemName,
-        itemQuantity,
-      } = entry;
-
-      await client.query(
-        `INSERT INTO supplier_expenses
-         (date, supplier, transaction_type, total_amount, amount_unpaid, item_name, quantity, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
-        [
-          selectedDate,
-          supplier,
-          transactionType,
-          totalAmount,
-          amountUnpaid,
-          itemName,
-          itemQuantity,
-        ]
-      );
-    }
-
-    await client.query("COMMIT");
-    res.status(201).json({ message: "Supplier expenses saved successfully" });
+    const result = await pool.query(
+      `INSERT INTO modified_expenses
+       (date, supplier, total_amount, amount_paid, description, transaction_type, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+       RETURNING *`,
+      [selectedDate, supplier, totalAmount, amountPaid, description, transactionType]
+    );
+    res.status(201).json({ message: "Modified expense saved successfully", row: result.rows[0] });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error inserting supplier expenses:", error);
-    res.status(500).json({ error: "Failed to save supplier expenses" });
-  } finally {
-    client.release();
+    console.error("Error saving modified expense:", error);
+    res.status(500).json({ error: "Failed to save modified expense" });
   }
 });
 
-/**
- * GET /suppliers/bulk?date=YYYY-MM-DD
- * Retrieves all supplier_expenses rows for the given date
- */
-app.get("/suppliers/bulk", async (req, res) => {
+// -----------------------------------------------------------------------------
+// GET Endpoint to Retrieve All Custom Rows for a Specific Date
+// -----------------------------------------------------------------------------
+app.get("/modified-expenses", async (req, res) => {
   const { date } = req.query;
   if (!date) {
-    return res.status(400).json({ error: "Please provide a date in YYYY-MM-DD format" });
+    return res.status(400).json({ error: "Missing date query parameter" });
   }
+  
   try {
-    const adjustedStartDate = moment.utc(date).startOf("day").toISOString();
-    const adjustedEndDate = moment.utc(date).endOf("day").toISOString();
-
+    const formattedDate = moment(date).format("YYYY-MM-DD");
     const result = await pool.query(
-      `SELECT id, supplier, transaction_type, total_amount, amount_unpaid, item_name, quantity, date
-       FROM supplier_expenses
-       WHERE date BETWEEN $1 AND $2
-       ORDER BY date ASC`,
-       [adjustedStartDate, adjustedEndDate]
+      `SELECT * FROM modified_expenses
+       WHERE date = $1
+       ORDER BY created_at ASC`,
+      [formattedDate]
     );
     res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching supplier expenses:", err);
-    res.status(500).json({ error: "Failed to fetch supplier expenses" });
+  } catch (error) {
+    console.error("Error fetching modified expenses:", error);
+    res.status(500).json({ error: "Failed to fetch modified expenses" });
   }
 });
 
-/**
- * DELETE /suppliers/bulk/:id
- * Deletes a single row from supplier_expenses by ID
- */
-app.delete("/suppliers/bulk/:id", async (req, res) => {
+// -----------------------------------------------------------------------------
+// PUT Endpoint to Update a Custom Modified Row (now accepts transactionType)
+// -----------------------------------------------------------------------------
+app.put("/modified-expenses/:id", async (req, res) => {
   const { id } = req.params;
+  const { supplier, totalAmount, amountPaid, description, transactionType } = req.body;
+  
   try {
     const result = await pool.query(
-      "DELETE FROM supplier_expenses WHERE id = $1 RETURNING *",
-      [id]
+      `UPDATE modified_expenses
+       SET supplier = $1,
+           total_amount = $2,
+           amount_paid = $3,
+           description = $4,
+           transaction_type = $5,
+           created_at = CURRENT_TIMESTAMP
+       WHERE id = $6
+       RETURNING *`,
+      [supplier, totalAmount, amountPaid, description, transactionType, id]
     );
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Supplier expense not found" });
+      return res.status(404).json({ error: "Modified expense not found" });
     }
-    res.status(200).json({ message: "Supplier expense deleted successfully" });
+    res.json({ message: "Modified expense updated successfully", row: result.rows[0] });
   } catch (error) {
-    console.error("Error deleting supplier expense:", error);
-    res.status(500).json({ error: "Failed to delete supplier expense" });
+    console.error("Error updating modified expense:", error);
+    res.status(500).json({ error: "Failed to update modified expense" });
   }
 });
+
+// -----------------------------------------------------------------------------
+// DELETE Endpoint to Remove a Custom Modified Row
+// -----------------------------------------------------------------------------
+app.delete("/modified-expenses/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query("DELETE FROM modified_expenses WHERE id = $1 RETURNING *", [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Modified expense not found" });
+    }
+    res.json({ message: "Modified expense deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting modified expense:", error);
+    res.status(500).json({ error: "Failed to delete modified expense" });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// NEW Aggregated GET Endpoint: Group by Supplier Across ALL Dates
+// -----------------------------------------------------------------------------
+app.get("/aggregated-modified-expenses", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT supplier,
+             SUM(COALESCE(CAST(total_amount AS NUMERIC), 0)) AS aggregated_total_amount,
+             SUM(COALESCE(CAST(amount_paid AS NUMERIC), 0)) AS aggregated_amount_paid
+      FROM modified_expenses
+      GROUP BY supplier
+      ORDER BY supplier ASC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching aggregated modified expenses:", error);
+    res.status(500).json({ error: "Failed to fetch aggregated modified expenses" });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /******************************************************
  * ARTICLE_INGREDIENTS TABLE & ENDPOINTS (Manual Entry)
  ******************************************************/
+
+
 
 app.post("/article-ingredients/bulk", async (req, res) => {
   const { entries } = req.body;
@@ -1571,9 +1913,84 @@ app.delete("/article-ingredients/:article_name", async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /******************************************************
  * report endpoint total ingredient usage for article names
  ******************************************************/
+
+
+
+
+
+
+
+
+
+
 
 // GET /report/ingredient-usage - Report total ingredient usage based on sales
 app.get("/report/ingredient-usage", async (req, res) => {
@@ -1589,7 +2006,11 @@ app.get("/report/ingredient-usage", async (req, res) => {
     
     // Base query: aggregate total quantity sold per article within the date range,
     // and join with article_ingredients table to get per-article ingredient mapping.
+
+
+    
     let query = `
+  
       SELECT 
         s."Article_Name" AS article_name,
         SUM(s."Quantity"::numeric) AS total_sold,
@@ -1652,11 +2073,90 @@ app.get("/report/ingredient-usage", async (req, res) => {
   } catch (err) {
     console.error("Error generating ingredient usage report:", err);
     res.status(500).json({ error: err.message });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   }
 });
 /******************************************************
  * MISSING ARTICLES PAGE
  ******************************************************/
+
+
+
+
+
+
+
+
 
 // GET /report/missing-articles - Find articles from sales not in article_ingredients
 app.get("/report/missing-articles", async (req, res) => {
@@ -1698,6 +2198,68 @@ app.get("/report/missing-articles", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
