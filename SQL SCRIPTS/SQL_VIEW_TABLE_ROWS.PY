@@ -19,7 +19,7 @@ def fetch_article_ingredients():
         # Connect to the PostgreSQL database
         conn = psycopg2.connect(**connection_params)
         cur = conn.cursor()
-        print("✅ Connected to the online database successfully.")
+        print(" Connected to the online database successfully.")
 
         # SQL query to select the first 100 rows
         select_query = "SELECT * FROM supplier_expenses LIMIT 100;"
@@ -37,10 +37,10 @@ def fetch_article_ingredients():
                 print("\t".join(map(str, row)))  # Print row data
 
         else:
-            print("⚠️ No data found in 'sales'.")
+            print("No data found in 'sales'.")
 
     except Exception as e:
-        print(f"❌ An error occurred: {e}")
+        print(f" An error occurred: {e}")
 
     finally:
         if 'cur' in locals():

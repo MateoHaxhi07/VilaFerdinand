@@ -606,29 +606,27 @@ app.get("/sales/categories", async (req, res) => {
 });
 
 
-
-//********************************//
-//  */ CATEGORY ENDPOINT  = USED FOR TREEMAP GRAPH
-//********************************//
-
-
-
 app.get("/sales/category-total-price", async (req, res) => {
   try {
-    const { startDate, endDate, categories, sellers, sellerCategories } = req.query;
+    const {
+      startDate,
+      endDate,
+      categories,
+      sellers,
+      sellerCategories,
+      // OPTIONAL: If you want to filter by article names as well:
+      
+    } = req.query;
+
     if (!startDate || !endDate) {
       return res
         .status(400)
         .json({ error: "Please provide startDate and endDate" });
     }
 
-    // Adjust datetime to start/end of day
+    // Adjust datetime to cover the entire start/end day
     const adjustedStartDate = moment(startDate).startOf("day").toISOString();
     const adjustedEndDate = moment(endDate).endOf("day").toISOString();
-
-    const conditions = [];
-    const params = [];
-    let paramIndex = 1;
 
     // Base query
     let query = `
@@ -636,12 +634,17 @@ app.get("/sales/category-total-price", async (req, res) => {
       FROM "sales"
     `;
 
-    // Date filter using adjusted dates
+    // We'll build an array of WHERE conditions and a parallel array of params
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // 1) Required date range
     conditions.push(`"Datetime" BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
     params.push(adjustedStartDate, adjustedEndDate);
     paramIndex += 2;
 
-    // Filter by categories if provided
+    // 2) Optional: filter by categories
     if (categories) {
       const categoryArray = categories.split(",");
       conditions.push(`"Category" = ANY($${paramIndex}::text[])`);
@@ -649,7 +652,7 @@ app.get("/sales/category-total-price", async (req, res) => {
       paramIndex++;
     }
 
-    // Filter by sellers if provided
+    // 3) Optional: filter by sellers
     if (sellers) {
       const sellerArray = sellers.split(",");
       conditions.push(`"Seller" = ANY($${paramIndex}::text[])`);
@@ -657,7 +660,7 @@ app.get("/sales/category-total-price", async (req, res) => {
       paramIndex++;
     }
 
-    // Filter by seller categories if provided
+    // 4) Optional: filter by seller categories
     if (sellerCategories) {
       const sellerCategoryArray = sellerCategories.split(",");
       conditions.push(`"Seller Category" = ANY($${paramIndex}::text[])`);
@@ -665,31 +668,44 @@ app.get("/sales/category-total-price", async (req, res) => {
       paramIndex++;
     }
 
-    // Hour filter if exists
+    // 5) Optional: filter by article names
+    if (articleNames) {
+      const articleNameArray = articleNames.split(",");
+      conditions.push(`"Article_Name" = ANY($${paramIndex}::text[])`);
+      params.push(articleNameArray);
+      paramIndex++;
+    }
+
+    // 6) Hour filter
     const hourFilter = addHourFilter(req);
     if (hourFilter) {
+      // Replaces the "PARAM" placeholder with paramIndex
       conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
       params.push(hourFilter.hoursArray);
       paramIndex++;
     }
 
-    // Append conditions to query
+    // Append any WHERE conditions
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    // Group by category and order by total_price descending
+    // Group by category and order by total_price
     query += `
       GROUP BY "Category"
       ORDER BY total_price DESC
     `;
 
+    // Execute the query
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
+    console.error("Error in /sales/category-total-price:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 
 

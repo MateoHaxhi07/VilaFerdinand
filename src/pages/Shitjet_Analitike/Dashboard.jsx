@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   Table,
@@ -20,11 +20,13 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import Select from "react-select";
+import Filters from "./FILTER/Filter.jsx";
+// optional: import "react-datepicker/dist/react-datepicker.css" if not already in your Filters
 
-// Use environment variable for API URL
+// Use environment variable for API URL, or default
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// ---------- CUSTOM SELECT STYLES ----------
+// Your custom Select styles
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -66,138 +68,188 @@ const customSelectStyles = {
 };
 
 const Dashboard = () => {
-  // Destructure filters from outlet context (including hour filter)
+  // 1) Destructure filter states from your outlet context
   const {
     startDate,
+    setStartDate,
     endDate,
+    setEndDate,
     selectedSellers,
+    setSelectedSellers,
     selectedSellerCategories,
+    setSelectedSellerCategories,
     selectedArticleNames,
+    setSelectedArticleNames,
     selectedCategories,
-    selectedHours,
+    setSelectedCategories,
   } = useOutletContext();
 
-  // Local state for table data, pagination and loading indicator
+  // 2) Local states for the table data/pagination
   const [data, setData] = useState([]);
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // (Optional) Local state for filter options
+  // 3) Local states for the dropdown arrays
   const [sellers, setSellers] = useState([]);
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // Create hours options (0-23)
-  const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
-    value: i,
-    label: i.toString().padStart(2, "0"),
-  }));
-
-  // Calculate totals using API field names
+  // Summaries
   const totalQuantity = data.reduce(
     (sum, item) => sum + Number(item.Quantity ?? item.quantity ?? 0),
     0
   );
   const totalSales = data.reduce(
-    (sum, item) =>
-      sum + Number(item.Total_Article_Price ?? item.total_price ?? 0),
+    (sum, item) => sum + Number(item.Total_Article_Price ?? item.total_price ?? 0),
     0
   );
 
-  // Build URL dynamically with filters (including hours if selected)
+  // ----------------------------------------------------------------------------
+  // Custom Datepicker Dark Theme (just like in Home.jsx)
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+      /* Dark theme for react-datepicker in Dashboard */
+      .react-datepicker__input-container input {
+        background-color: #2D3748 !important;
+        color: #FFF !important;
+        border: 1px solid #4A5568 !important;
+        padding: 8px;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .react-datepicker {
+        background-color: #2D3748 !important;
+        color: #FFF !important;
+      }
+      .react-datepicker__day-name,
+      .react-datepicker__day,
+      .react-datepicker__time-name {
+        color: #FFF !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // ----------------------------------------------------------------------------
+  // Fetch table data
+  // ----------------------------------------------------------------------------
   const fetchData = async (limit, offset) => {
     try {
-      console.log("Filters:", {
+      if (!startDate || !endDate) {
+        console.log("No valid date range set. Skipping table data fetch.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Filters for Dashboard:", {
         startDate,
         endDate,
         selectedSellers,
         selectedSellerCategories,
         selectedArticleNames,
         selectedCategories,
-        selectedHours,
       });
+
       let url = `${API_URL}/sales/all-data?limit=${limit}&offset=${offset}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-      url += `&sellers=${selectedSellers.map((s) => s.value).join(",")}`;
-      url += `&sellerCategories=${selectedSellerCategories
-        .map((cat) => cat.value)
-        .join(",")}`;
-      url += `&articleNames=${selectedArticleNames
-        .map((article) => article.value)
-        .join(",")}`;
-      url += `&categories=${selectedCategories.map((cat) => cat.value).join(",")}`;
-      // Append hours parameter only if selectedHours is nonempty
-      if (selectedHours && selectedHours.length > 0) {
-        url += `&hours=${selectedHours.map((h) => h.value).join(",")}`;
+
+      if (selectedSellers?.length) {
+        url += `&sellers=${selectedSellers.map(s => s.value).join(",")}`;
       }
-      console.log("Fetching URL:", url);
+      if (selectedSellerCategories?.length) {
+        url += `&sellerCategories=${selectedSellerCategories
+          .map(cat => cat.value)
+          .join(",")}`;
+      }
+      if (selectedArticleNames?.length) {
+        url += `&articleNames=${selectedArticleNames
+          .map(a => a.value)
+          .join(",")}`;
+      }
+      if (selectedCategories?.length) {
+        url += `&categories=${selectedCategories.map(c => c.value).join(",")}`;
+      }
+
+      console.log("Dashboard fetching URL:", url);
       const response = await fetch(url);
       const result = await response.json();
       console.log("API response:", result);
+
       let fetchedData = Array.isArray(result) ? result : result.data;
-      // If hour filter is applied, filter data client-side using UTC hour
-      if (selectedHours && selectedHours.length > 0) {
-        const selectedHourValues = selectedHours.map((h) => Number(h.value));
-        fetchedData = fetchedData.filter((row) => {
-          const rowHour = new Date(row.Datetime).toLocaleString("en-US", { timeZone: "Europe/Tirane" })
-          console.log("Row Datetime:", row.Datetime, "UTC Hour:", rowHour);
-          return selectedHourValues.includes(rowHour);
-        });
-      }
       setData(fetchedData);
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching table data:", error);
       setLoading(false);
     }
   };
 
-  // Reset offset when any filter changes
+  // Reset offset when filters change
   useEffect(() => {
     setOffset(0);
-  }, [
-    startDate,
-    endDate,
-    selectedSellers,
-    selectedSellerCategories,
-    selectedArticleNames,
-    selectedCategories,
-    selectedHours,
-  ]);
+  }, [startDate, endDate, selectedSellers, selectedSellerCategories, selectedArticleNames, selectedCategories]);
 
-  // Fetch table data when filters or pagination change
+  // Fetch table data whenever offset/limit or filters change
   useEffect(() => {
     setLoading(true);
     fetchData(limit, offset);
-  }, [
-    limit,
-    offset,
-    startDate,
-    endDate,
-    selectedSellers,
-    selectedSellerCategories,
-    selectedArticleNames,
-    selectedCategories,
-    selectedHours,
-  ]);
+  }, [limit, offset, startDate, endDate, selectedSellers, selectedSellerCategories, selectedArticleNames, selectedCategories]);
 
+  // ----------------------------------------------------------------------------
+  // Fetch dropdown options on mount
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    const fetchDropdowns = async () => {
+      try {
+        // Sellers
+        const sellersResp = await fetch(`${API_URL}/sales/sellers`);
+        const sellersData = await sellersResp.json();
+        setSellers(sellersData.map(s => ({ value: s, label: s })));
+
+        // Categories
+        const catResp = await fetch(`${API_URL}/sales/categories?`);
+        const catData = await catResp.json();
+        setCategories(catData.map(c => ({ value: c, label: c })));
+
+        // Seller Categories
+        const scResp = await fetch(`${API_URL}/sales/seller-categories`);
+        const scData = await scResp.json();
+        setSellerCategories(scData.map(sc => ({ value: sc, label: sc })));
+
+        // Article Names
+        const anResp = await fetch(`${API_URL}/sales/article-names?`);
+        const anData = await anResp.json();
+        setArticleNames(anData.map(a => ({ value: a, label: a })));
+
+      } catch (err) {
+        console.error("Error fetching dropdowns:", err);
+      }
+    };
+
+    fetchDropdowns();
+  }, []);
+
+  // Pagination Handlers
   const handleLoadMore = () => {
-    setOffset(offset + limit);
+    setOffset(prev => prev + limit);
   };
-
   const handleLoadLess = () => {
-    setOffset(Math.max(0, offset - limit));
+    setOffset(prev => Math.max(0, prev - limit));
   };
-
-  const handleLimitChange = (event) => {
-    setLimit(parseInt(event.target.value, 10));
+  const handleLimitChange = (e) => {
+    setLimit(parseInt(e.target.value, 10));
     setOffset(0);
   };
 
-  // Determine if we are in mobile view (iPhone, etc.)
   const isMobile = useBreakpointValue({ base: true, md: false });
 
+  // Loading
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="200px">
@@ -206,7 +258,7 @@ const Dashboard = () => {
     );
   }
 
-  // If no data is returned, show a message
+  // No data
   if (!data || data.length === 0) {
     return (
       <Box p={4}>
@@ -216,13 +268,44 @@ const Dashboard = () => {
     );
   }
 
+  // ----------------------------------------------------------------------------
+  // Render
+  // ----------------------------------------------------------------------------
   return (
-    <Box p={4} align="center"marginBottom={4}>
+    <Box p={4} align="center" marginBottom={4}>
+      {/* Render the Filters at the top */}
+      <Filters
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
+
+        // Pass the local dropdown arrays to Filters
+        sellers={sellers}
+        selectedSellers={selectedSellers}
+        setSelectedSellers={setSelectedSellers}
+
+        sellerCategoriesOptions={sellerCategories}
+        selectedSellerCategories={selectedSellerCategories}
+        setSelectedSellerCategories={setSelectedSellerCategories}
+
+        categories={categories}
+        selectedCategories={selectedCategories}
+        setSelectedCategories={setSelectedCategories}
+
+        articleNamesOptions={articleNames}
+        selectedArticleNames={selectedArticleNames}
+        setSelectedArticleNames={setSelectedArticleNames}
+
+        selectStyles={customSelectStyles}
+      />
+
       <Heading mb={4}>SHITJET ANALITIKE</Heading>
+
       {isMobile ? (
-        // Mobile view: Render each data row as a card in a vertical stack
+        // MOBILE VIEW
         <VStack spacing={4} align="stretch">
-          {data.map((row) => (
+          {data.map(row => (
             <Box
               key={row.id}
               borderWidth="1px"
@@ -231,13 +314,12 @@ const Dashboard = () => {
               bg="gray.50"
               boxShadow="sm"
             >
-                        <Text>
+              <Text>
                 <strong>Seller:</strong> {row.Seller}
               </Text>
               <Text>
                 <strong>Article:</strong> {row.Article_Name || row.item}
               </Text>
-        
               <Text>
                 <strong>Quantity:</strong> {row.Quantity ?? row.quantity ?? 0}
               </Text>
@@ -251,6 +333,7 @@ const Dashboard = () => {
               </Text>
             </Box>
           ))}
+
           {/* Totals */}
           <Box borderTop="1px solid #ccc" pt={2} mt={4}>
             <Flex justifyContent="space-between">
@@ -264,12 +347,12 @@ const Dashboard = () => {
           </Box>
         </VStack>
       ) : (
-        // Desktop view: Render the data in a table with Datetime and Seller columns
+        // DESKTOP VIEW
         <TableContainer mt={6} overflowX="auto">
           <Table variant="striped" colorScheme="gray">
             <Thead>
               <Tr>
-              <Th>Seller</Th>
+                <Th>Seller</Th>
                 <Th>Article</Th>
                 <Th>Quantity</Th>
                 <Th>Sales</Th>
@@ -277,13 +360,17 @@ const Dashboard = () => {
               </Tr>
             </Thead>
             <Tbody>
-              {data.map((row) => (
+              {data.map(row => (
                 <Tr key={row.id}>
                   <Td>{row.Seller}</Td>
                   <Td>{row.Article_Name || row.item}</Td>
                   <Td>{row.Quantity ?? row.quantity ?? 0}</Td>
                   <Td>{row.Total_Article_Price ?? row.total_price ?? 0}</Td>
-                  <Td>{new Date(row.Datetime).toLocaleString("en-US", { timeZone: "Europe/Tirane" })}</Td>
+                  <Td>
+                    {new Date(row.Datetime).toLocaleString("en-US", {
+                      timeZone: "Europe/Tirane",
+                    })}
+                  </Td>
                 </Tr>
               ))}
             </Tbody>
@@ -299,6 +386,8 @@ const Dashboard = () => {
           </Table>
         </TableContainer>
       )}
+
+      {/* Pagination Controls */}
       <Flex mt={4} justifyContent="space-between" alignItems="center">
         <Button onClick={handleLoadLess} isDisabled={offset === 0}>
           Previous

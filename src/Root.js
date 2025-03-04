@@ -3,7 +3,7 @@ import { ChakraProvider } from '@chakra-ui/react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Header/Layout.js'; // Layout with header toggle & Outlet
 import Home from './pages/Home_Page/Home.js';
-import Dashboard from './pages/Shitjet_Analitike/Dashboard.js';
+import Dashboard from './pages/Shitjet_Analitike/Dashboard.jsx';
 import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice.js';
 import DailyExpenses from './pages/Xhiro_Ditore/DailyExpenses.js';
 import Supplier from './pages/Furnitor/Supplier.js';
