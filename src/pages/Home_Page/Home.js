@@ -11,13 +11,16 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { scaleOrdinal } from "d3-scale";
+import Papa from "papaparse";
+import { saveAs } from "file-saver";
+import { schemeSet3 } from "d3-scale-chromatic";
+import moment from "moment";
+
+// Internal components (replace with your own relative imports)
 import CategoryTreemap from "./TREE_MAP/CategoryTreemap.jsx";
 import MetricsCard from "./METRIC_CARD_AND_GRAPH/MetricCard.jsx";
 import Filters from "./FILTERS/Filters.jsx";
 import SellerCategoriesChart from "./PIE_CHART_CATEGORIES/SellerCategoriesChart.jsx";
-import Papa from "papaparse";
-import { saveAs } from "file-saver";
-import { schemeSet3 } from "d3-scale-chromatic";
 
 // -----------------------------------------------------------------------------
 // GLOBAL SETTINGS
@@ -29,6 +32,12 @@ const colorScale = scaleOrdinal(schemeSet3);
 // Define your API URL (adjust as needed)
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+// Simple helper: convert Date object to YYYY-MM-DD
+function toDateString(date) {
+  if (!date) return "";
+  return moment(date).format("YYYY-MM-DD");
+}
+
 // -----------------------------------------------------------------------------
 // COMPONENT: Home (Main Dashboard)
 // -----------------------------------------------------------------------------
@@ -37,7 +46,6 @@ const Home = () => {
   // Retrieve filter states from context
   // ----------------------------------------------------------
   const {
-    // Start/end date from context
     startDate,
     setStartDate,
     endDate,
@@ -104,59 +112,42 @@ const Home = () => {
   const buildAllDataQuery = () => {
     const queryParams = new URLSearchParams();
 
-    // If start/end date exist, create local day boundaries
-    if (startDate) {
-      const localStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-        0, 0, 0
-      );
-      queryParams.append("startDate", localStart.toISOString());
-    }
-    if (endDate) {
-      const localEnd = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate(),
-        23, 59, 59
-      );
-      queryParams.append("endDate", localEnd.toISOString());
-    }
+    // Pass "YYYY-MM-DD" strings only
+    const start = toDateString(startDate);
+    const end = toDateString(endDate);
 
-    // Pass sellers (comma-separated)
+    if (start) queryParams.append("startDate", start);
+    if (end) queryParams.append("endDate", end);
+
+    // If we have sellers
     if (selectedSellers?.length) {
       queryParams.append(
         "sellers",
         selectedSellers.map(s => s.value).join(",")
       );
     }
-    
-    // Seller Categories
+    // If we have sellerCategories
     if (selectedSellerCategories?.length) {
       queryParams.append(
         "sellerCategories",
         selectedSellerCategories.map(sc => sc.value).join(",")
       );
     }
-
-    // Article Names
+    // If we have articleNames
     if (selectedArticleNames?.length) {
       queryParams.append(
         "articleNames",
         selectedArticleNames.map(a => a.value).join(",")
       );
     }
-
-    // Categories
+    // If we have categories
     if (selectedCategories?.length) {
       queryParams.append(
         "categories",
         selectedCategories.map(cat => cat.value).join(",")
       );
     }
-
-    // Hours
+    // If we have hours
     if (selectedHours?.length) {
       queryParams.append(
         "hours",
@@ -164,9 +155,8 @@ const Home = () => {
       );
     }
 
-    // Optionally override limit to ensure we get everything
+    // Optionally override limit/offset
     queryParams.append("limit", 1000000);
-    // offset at 0 if you want from the beginning
     queryParams.append("offset", 0);
 
     return queryParams.toString();
@@ -201,7 +191,7 @@ const Home = () => {
   };
 
   // ----------------------------------------------------------
-  // Helper function for hours filter in other endpoints
+  // Helper function for hours filter
   // ----------------------------------------------------------
   const getHoursQuery = () =>
     selectedHours.length > 0
@@ -215,55 +205,43 @@ const Home = () => {
   // 1) Category Treemap
   const fetchCategoryTotals = async () => {
     try {
-      if (!startDate || !endDate) {
-        console.log("Skipping fetchCategoryTotals because no date range set.");
-        return;
-      }
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
 
-      const queryParams = new URLSearchParams({
-        // Local day boundaries for each date
-        startDate: new Date(
-          startDate.getFullYear(),
-          startDate.getMonth(),
-          startDate.getDate(),
-          0, 0, 0
-        ).toISOString(),
-        endDate: new Date(
-          endDate.getFullYear(),
-          endDate.getMonth(),
-          endDate.getDate(),
-          23, 59, 59
-        ).toISOString(),
+      let queryParams = new URLSearchParams({
+        startDate: start,
+        endDate: end,
       });
 
       if (selectedCategories?.length) {
         queryParams.append(
           "categories",
-          selectedCategories.map(cat => cat.value).join(","),
+          selectedCategories.map(cat => cat.value).join(",")
         );
       }
       if (selectedSellers?.length) {
         queryParams.append(
           "sellers",
-          selectedSellers.map(s => s.value).join(","),
+          selectedSellers.map(s => s.value).join(",")
         );
       }
       if (selectedSellerCategories?.length) {
         queryParams.append(
           "sellerCategories",
-          selectedSellerCategories.map(sc => sc.value).join(","),
+          selectedSellerCategories.map(sc => sc.value).join(",")
         );
       }
       if (selectedArticleNames?.length) {
         queryParams.append(
           "articleNames",
-          selectedArticleNames.map(a => a.value).join(","),
+          selectedArticleNames.map(a => a.value).join(",")
         );
       }
       if (selectedHours?.length) {
         queryParams.append(
           "hours",
-          selectedHours.map(h => h.value).join(","),
+          selectedHours.map(h => h.value).join(",")
         );
       }
 
@@ -280,24 +258,12 @@ const Home = () => {
   // 2) fetchTotalSales
   const fetchTotalSales = async () => {
     try {
-      if (!startDate || !endDate) return;
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+
       const hoursQuery = getHoursQuery();
-
-      // local boundaries
-      const localStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-        0, 0, 0
-      ).toISOString();
-      const localEnd = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate(),
-        23, 59, 59
-      ).toISOString();
-
-      const url = `${API_URL}/sales/total-sales?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/total-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -319,23 +285,12 @@ const Home = () => {
   // 3) fetchTotalQuantity
   const fetchTotalQuantity = async () => {
     try {
-      if (!startDate || !endDate) return;
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+
       const hoursQuery = getHoursQuery();
-
-      const localStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-        0, 0, 0
-      ).toISOString();
-      const localEnd = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate(),
-        23, 59, 59
-      ).toISOString();
-
-      const url = `${API_URL}/sales/total-quantity?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/total-quantity?startDate=${start}&endDate=${end}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -357,23 +312,12 @@ const Home = () => {
   // 4) fetchAvgArticlePrice
   const fetchAvgArticlePrice = async () => {
     try {
-      if (!startDate || !endDate) return;
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+
       const hoursQuery = getHoursQuery();
-
-      const localStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-        0, 0, 0
-      ).toISOString();
-      const localEnd = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate(),
-        23, 59, 59
-      ).toISOString();
-
-      const url = `${API_URL}/sales/avg-article-price?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/avg-article-price?startDate=${start}&endDate=${end}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -395,23 +339,12 @@ const Home = () => {
   // 5) fetchOrderCount
   const fetchOrderCount = async () => {
     try {
-      if (!startDate || !endDate) return;
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+
       const hoursQuery = getHoursQuery();
-
-      const localStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-        0, 0, 0
-      ).toISOString();
-      const localEnd = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate(),
-        23, 59, 59
-      ).toISOString();
-
-      const url = `${API_URL}/sales/order-count?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/order-count?startDate=${start}&endDate=${end}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -433,23 +366,12 @@ const Home = () => {
   // 6) fetchDailySales
   const fetchDailySales = async () => {
     try {
-      if (!startDate || !endDate) return;
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+
       const hoursQuery = getHoursQuery();
-
-      const localStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-        0, 0, 0
-      ).toISOString();
-      const localEnd = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate(),
-        23, 59, 59
-      ).toISOString();
-
-      const url = `${API_URL}/sales/daily-sales?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/daily-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -471,23 +393,12 @@ const Home = () => {
   // 7) fetchSellerCategoriesTotal
   const fetchSellerCategoriesTotal = async () => {
     try {
-      if (!startDate || !endDate) return;
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+
       const hoursQuery = getHoursQuery();
-
-      const localStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-        0, 0, 0
-      ).toISOString();
-      const localEnd = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate(),
-        23, 59, 59
-      ).toISOString();
-
-      const url = `${API_URL}/sales/seller-categories-total?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
+      const url = `${API_URL}/sales/seller-categories-total?startDate=${start}&endDate=${end}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -526,7 +437,9 @@ const Home = () => {
     try {
       const response = await fetch(`${API_URL}/sales/seller-categories`);
       const data = await response.json();
-      setSellerCategoriesOptions(data.map(cat => ({ value: cat, label: cat })));
+      setSellerCategoriesOptions(
+        data.map(cat => ({ value: cat, label: cat }))
+      );
     } catch (error) {
       console.error("Error fetching seller categories:", error);
     }
@@ -534,51 +447,41 @@ const Home = () => {
 
   const fetchCategories = async () => {
     try {
-      let url = `${API_URL}/sales/categories?`;
-      const queryParams = [];
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
 
-      if (startDate && endDate) {
-        // local boundaries
-        const localStart = new Date(
-          startDate.getFullYear(),
-          startDate.getMonth(),
-          startDate.getDate(),
-          0, 0, 0
-        ).toISOString();
-        const localEnd = new Date(
-          endDate.getFullYear(),
-          endDate.getMonth(),
-          endDate.getDate(),
-          23, 59, 59
-        ).toISOString();
-
-        queryParams.push(`startDate=${localStart}`);
-        queryParams.push(`endDate=${localEnd}`);
+      const query = new URLSearchParams();
+      if (start && end) {
+        query.append("startDate", start);
+        query.append("endDate", end);
       }
       if (selectedSellers?.length) {
-        queryParams.push(
-          `sellers=${selectedSellers.map(s => s.value).join(",")}`
+        query.append(
+          "sellers",
+          selectedSellers.map(s => s.value).join(",")
         );
       }
       if (selectedSellerCategories?.length) {
-        queryParams.push(
-          `sellerCategories=${selectedSellerCategories
-            .map(sc => sc.value)
-            .join(",")}`
+        query.append(
+          "sellerCategories",
+          selectedSellerCategories.map(sc => sc.value).join(",")
         );
       }
       if (selectedArticleNames?.length) {
-        queryParams.push(
-          `articleNames=${selectedArticleNames.map(a => a.value).join(",")}`
+        query.append(
+          "articleNames",
+          selectedArticleNames.map(a => a.value).join(",")
         );
       }
       if (selectedHours?.length) {
-        queryParams.push(`hours=${selectedHours.map(h => h.value).join(",")}`);
+        query.append(
+          "hours",
+          selectedHours.map(h => h.value).join(",")
+        );
       }
 
-      url += queryParams.join("&");
+      const url = `${API_URL}/sales/categories?${query.toString()}`;
       console.log("fetchCategories ->", url);
-
       const response = await fetch(url);
       const data = await response.json();
       setCategories(data.map(cat => ({ value: cat, label: cat })));
@@ -589,50 +492,41 @@ const Home = () => {
 
   const fetchArticleNamesOptions = async () => {
     try {
-      let url = `${API_URL}/sales/article-names?`;
-      const queryParams = [];
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
 
-      if (startDate && endDate) {
-        const localStart = new Date(
-          startDate.getFullYear(),
-          startDate.getMonth(),
-          startDate.getDate(),
-          0, 0, 0
-        ).toISOString();
-        const localEnd = new Date(
-          endDate.getFullYear(),
-          endDate.getMonth(),
-          endDate.getDate(),
-          23, 59, 59
-        ).toISOString();
-
-        queryParams.push(`startDate=${localStart}`);
-        queryParams.push(`endDate=${localEnd}`);
+      const query = new URLSearchParams();
+      if (start && end) {
+        query.append("startDate", start);
+        query.append("endDate", end);
       }
       if (selectedCategories?.length) {
-        queryParams.push(
-          `categories=${selectedCategories.map(cat => cat.value).join(",")}`
+        query.append(
+          "categories",
+          selectedCategories.map(c => c.value).join(",")
         );
       }
       if (selectedSellers?.length) {
-        queryParams.push(
-          `sellers=${selectedSellers.map(s => s.value).join(",")}`
+        query.append(
+          "sellers",
+          selectedSellers.map(s => s.value).join(",")
         );
       }
       if (selectedSellerCategories?.length) {
-        queryParams.push(
-          `sellerCategories=${selectedSellerCategories
-            .map(sc => sc.value)
-            .join(",")}`
+        query.append(
+          "sellerCategories",
+          selectedSellerCategories.map(sc => sc.value).join(",")
         );
       }
       if (selectedHours?.length) {
-        queryParams.push(`hours=${selectedHours.map(h => h.value).join(",")}`);
+        query.append(
+          "hours",
+          selectedHours.map(h => h.value).join(",")
+        );
       }
 
-      url += queryParams.join("&");
+      const url = `${API_URL}/sales/article-names?${query.toString()}`;
       console.log("fetchArticleNamesOptions ->", url);
-
       const response = await fetch(url);
       const data = await response.json();
       setArticleNamesOptions(
@@ -647,7 +541,7 @@ const Home = () => {
   // useEffects
   // ----------------------------------------------------------
 
-  // 1) On mount
+  // On mount, load base dropdown data (sellers, categories, etc.)
   useEffect(() => {
     fetchSellers();
     fetchSellerCategoriesOptions();
@@ -655,7 +549,7 @@ const Home = () => {
     fetchArticleNamesOptions();
   }, []);
 
-  // 2) When filters change
+  // When filters change, refresh data
   useEffect(() => {
     if (!startDate || !endDate) return;
 
@@ -667,7 +561,7 @@ const Home = () => {
     fetchSellerCategoriesTotal();
     fetchCategoryTotals();
 
-    // Update categories & article names so they reflect new filters
+    // Also refresh categories & article names (dynamic)
     fetchCategories();
     fetchArticleNamesOptions();
   }, [
@@ -680,7 +574,7 @@ const Home = () => {
     selectedHours,
   ]);
 
-  // 3) DatePicker Dark Theme (for reference)
+  // Styling for the datepicker (optional)
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
