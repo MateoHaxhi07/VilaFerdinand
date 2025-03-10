@@ -76,7 +76,7 @@ export default function AggregatedCustomRows() {
       {/* Table for BORXHE */}
       <Box p={4} backgroundColor={"#f5f5f5"}>
         <Heading mb={4} size="md" align="center">
-          BORXHE
+          BORXHE QE TE KANE TY
         </Heading>
       </Box>
       <TableContainer>

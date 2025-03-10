@@ -19,14 +19,14 @@ import {
   useBreakpointValue,
   Spinner,
 } from "@chakra-ui/react";
-import Select from "react-select";
-import Filters from "./FILTER/Filter.jsx";
-// optional: import "react-datepicker/dist/react-datepicker.css" if not already in your Filters
+import Filters from "./FILTER/Filter.jsx"; // Adjust path as needed
 
 // Use environment variable for API URL, or default
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// Your custom Select styles
+// -----------------------------------------------------------------------------
+// Custom react-select styles (same as in Home.js, if you want them consistent)
+// -----------------------------------------------------------------------------
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -68,7 +68,10 @@ const customSelectStyles = {
 };
 
 const Dashboard = () => {
+  // ---------------------------------------------------------------------------
   // 1) Destructure filter states from your outlet context
+  //    Make sure your parent has selectedHours + setSelectedHours in context
+  // ---------------------------------------------------------------------------
   const {
     startDate,
     setStartDate,
@@ -82,33 +85,41 @@ const Dashboard = () => {
     setSelectedArticleNames,
     selectedCategories,
     setSelectedCategories,
+    selectedHours,         // Must exist in context
+    setSelectedHours,      // Must exist in context
   } = useOutletContext();
 
-  // 2) Local states for the table data/pagination
+  // ---------------------------------------------------------------------------
+  // 2) Local states for the table data + pagination
+  // ---------------------------------------------------------------------------
   const [data, setData] = useState([]);
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // 3) Local states for the dropdown arrays
+  // ---------------------------------------------------------------------------
+  // 3) Local states for the "master" dropdown arrays
+  //    If you want them dynamic based on filters, replicate the logic from Home.js
+  // ---------------------------------------------------------------------------
   const [sellers, setSellers] = useState([]);
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // Summaries
+  // Summaries (optional)
   const totalQuantity = data.reduce(
     (sum, item) => sum + Number(item.Quantity ?? item.quantity ?? 0),
     0
   );
   const totalSales = data.reduce(
-    (sum, item) => sum + Number(item.Total_Article_Price ?? item.total_price ?? 0),
+    (sum, item) =>
+      sum + Number(item.Total_Article_Price ?? item.total_price ?? 0),
     0
   );
 
-  // ----------------------------------------------------------------------------
-  // Custom Datepicker Dark Theme (just like in Home.jsx)
-  // ----------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // 4) Insert a style tag for react-datepicker dark theme
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -137,9 +148,18 @@ const Dashboard = () => {
     };
   }, []);
 
-  // ----------------------------------------------------------------------------
-  // Fetch table data
-  // ----------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // 5) Helper to build Hours query
+  // ---------------------------------------------------------------------------
+  const buildHoursQuery = () => {
+    if (!selectedHours || selectedHours.length === 0) return "";
+    return `&hours=${selectedHours.map((h) => h.value).join(",")}`;
+  };
+
+  // ---------------------------------------------------------------------------
+  // 6) Fetch table data from the backend
+  //    We create local day boundaries for startDate/endDate to fix single-day issue
+  // ---------------------------------------------------------------------------
   const fetchData = async (limit, offset) => {
     try {
       if (!startDate || !endDate) {
@@ -148,33 +168,50 @@ const Dashboard = () => {
         return;
       }
 
-      console.log("Filters for Dashboard:", {
-        startDate,
-        endDate,
-        selectedSellers,
-        selectedSellerCategories,
-        selectedArticleNames,
-        selectedCategories,
-      });
+      setLoading(true);
 
-      let url = `${API_URL}/sales/all-data?limit=${limit}&offset=${offset}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      // Create local day boundaries (midnight to 23:59:59)
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0,
+        0,
+        0
+      ).toISOString();
 
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23,
+        59,
+        59
+      ).toISOString();
+
+      // Build base URL
+      let url = `${API_URL}/sales/all-data?limit=${limit}&offset=${offset}&startDate=${localStart}&endDate=${localEnd}`;
+
+      // Add filters
       if (selectedSellers?.length) {
-        url += `&sellers=${selectedSellers.map(s => s.value).join(",")}`;
+        url += `&sellers=${selectedSellers.map((s) => s.value).join(",")}`;
       }
       if (selectedSellerCategories?.length) {
         url += `&sellerCategories=${selectedSellerCategories
-          .map(cat => cat.value)
+          .map((cat) => cat.value)
           .join(",")}`;
       }
       if (selectedArticleNames?.length) {
         url += `&articleNames=${selectedArticleNames
-          .map(a => a.value)
+          .map((a) => a.value)
           .join(",")}`;
       }
       if (selectedCategories?.length) {
-        url += `&categories=${selectedCategories.map(c => c.value).join(",")}`;
+        url += `&categories=${selectedCategories.map((c) => c.value).join(",")}`;
       }
+
+      // Add hours
+      url += buildHoursQuery();
 
       console.log("Dashboard fetching URL:", url);
       const response = await fetch(url);
@@ -190,66 +227,96 @@ const Dashboard = () => {
     }
   };
 
-  // Reset offset when filters change
+  // ---------------------------------------------------------------------------
+  // 7) Reset offset when any filter changes
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     setOffset(0);
-  }, [startDate, endDate, selectedSellers, selectedSellerCategories, selectedArticleNames, selectedCategories]);
+  }, [
+    startDate,
+    endDate,
+    selectedSellers,
+    selectedSellerCategories,
+    selectedArticleNames,
+    selectedCategories,
+    selectedHours,
+  ]);
 
-  // Fetch table data whenever offset/limit or filters change
+  // ---------------------------------------------------------------------------
+  // 8) Whenever offset/limit or filters change, fetch the table data
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    setLoading(true);
     fetchData(limit, offset);
-  }, [limit, offset, startDate, endDate, selectedSellers, selectedSellerCategories, selectedArticleNames, selectedCategories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    limit,
+    offset,
+    startDate,
+    endDate,
+    selectedSellers,
+    selectedSellerCategories,
+    selectedArticleNames,
+    selectedCategories,
+    selectedHours,
+  ]);
 
-  // ----------------------------------------------------------------------------
-  // Fetch dropdown options on mount
-  // ----------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // 9) Fetch "master" dropdown options (sellers, categories, etc.)
+  //    If you want them unfiltered, do it once on mount
+  //    If you want them *filtered*, replicate your logic from Home.js
+  // ---------------------------------------------------------------------------
+  const fetchDropdowns = async () => {
+    try {
+      // Sellers
+      const sellersResp = await fetch(`${API_URL}/sales/sellers`);
+      const sellersData = await sellersResp.json();
+      setSellers(sellersData.map((s) => ({ value: s, label: s })));
+
+      // Seller Categories
+      const scResp = await fetch(`${API_URL}/sales/seller-categories`);
+      const scData = await scResp.json();
+      setSellerCategories(scData.map((sc) => ({ value: sc, label: sc })));
+
+      // Categories (unfiltered)
+      const catResp = await fetch(`${API_URL}/sales/categories`);
+      const catData = await catResp.json();
+      setCategories(catData.map((c) => ({ value: c, label: c })));
+
+      // Article Names (unfiltered)
+      const anResp = await fetch(`${API_URL}/sales/article-names`);
+      const anData = await anResp.json();
+      setArticleNames(anData.map((a) => ({ value: a, label: a })));
+    } catch (err) {
+      console.error("Error fetching dropdowns:", err);
+    }
+  };
+
+  // Only once on mount in this example (unfiltered).
   useEffect(() => {
-    const fetchDropdowns = async () => {
-      try {
-        // Sellers
-        const sellersResp = await fetch(`${API_URL}/sales/sellers`);
-        const sellersData = await sellersResp.json();
-        setSellers(sellersData.map(s => ({ value: s, label: s })));
-
-        // Categories
-        const catResp = await fetch(`${API_URL}/sales/categories?`);
-        const catData = await catResp.json();
-        setCategories(catData.map(c => ({ value: c, label: c })));
-
-        // Seller Categories
-        const scResp = await fetch(`${API_URL}/sales/seller-categories`);
-        const scData = await scResp.json();
-        setSellerCategories(scData.map(sc => ({ value: sc, label: sc })));
-
-        // Article Names
-        const anResp = await fetch(`${API_URL}/sales/article-names?`);
-        const anData = await anResp.json();
-        setArticleNames(anData.map(a => ({ value: a, label: a })));
-
-      } catch (err) {
-        console.error("Error fetching dropdowns:", err);
-      }
-    };
-
     fetchDropdowns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pagination Handlers
+  // ---------------------------------------------------------------------------
+  // 10) Pagination Handlers
+  // ---------------------------------------------------------------------------
   const handleLoadMore = () => {
-    setOffset(prev => prev + limit);
+    setOffset((prev) => prev + limit);
   };
   const handleLoadLess = () => {
-    setOffset(prev => Math.max(0, prev - limit));
+    setOffset((prev) => Math.max(0, prev - limit));
   };
   const handleLimitChange = (e) => {
     setLimit(parseInt(e.target.value, 10));
     setOffset(0);
   };
 
+  // For responsive layout
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  // Loading
+  // ---------------------------------------------------------------------------
+  // Loading state
+  // ---------------------------------------------------------------------------
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="200px">
@@ -258,7 +325,9 @@ const Dashboard = () => {
     );
   }
 
+  // ---------------------------------------------------------------------------
   // No data
+  // ---------------------------------------------------------------------------
   if (!data || data.length === 0) {
     return (
       <Box p={4}>
@@ -268,44 +337,40 @@ const Dashboard = () => {
     );
   }
 
-  // ----------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Render
-  // ----------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   return (
     <Box p={4} align="center" marginBottom={4}>
-      {/* Render the Filters at the top */}
+      {/* 11) Render the Filters at the top */}
       <Filters
         startDate={startDate}
         setStartDate={setStartDate}
         endDate={endDate}
         setEndDate={setEndDate}
-
-        // Pass the local dropdown arrays to Filters
         sellers={sellers}
         selectedSellers={selectedSellers}
         setSelectedSellers={setSelectedSellers}
-
         sellerCategoriesOptions={sellerCategories}
         selectedSellerCategories={selectedSellerCategories}
         setSelectedSellerCategories={setSelectedSellerCategories}
-
         categories={categories}
         selectedCategories={selectedCategories}
         setSelectedCategories={setSelectedCategories}
-
         articleNamesOptions={articleNames}
         selectedArticleNames={selectedArticleNames}
         setSelectedArticleNames={setSelectedArticleNames}
-
+        selectedHours={selectedHours}
+        setSelectedHours={setSelectedHours}
         selectStyles={customSelectStyles}
       />
 
       <Heading mb={4}>SHITJET ANALITIKE</Heading>
 
       {isMobile ? (
-        // MOBILE VIEW
+        // MOBILE VIEW as "cards"
         <VStack spacing={4} align="stretch">
-          {data.map(row => (
+          {data.map((row) => (
             <Box
               key={row.id}
               borderWidth="1px"
@@ -321,7 +386,8 @@ const Dashboard = () => {
                 <strong>Article:</strong> {row.Article_Name || row.item}
               </Text>
               <Text>
-                <strong>Quantity:</strong> {row.Quantity ?? row.quantity ?? 0}
+                <strong>Quantity:</strong>{" "}
+                {row.Quantity ?? row.quantity ?? 0}
               </Text>
               <Text>
                 <strong>Sales:</strong>{" "}
@@ -333,8 +399,7 @@ const Dashboard = () => {
               </Text>
             </Box>
           ))}
-
-          {/* Totals */}
+          {/* Totals at bottom (mobile) */}
           <Box borderTop="1px solid #ccc" pt={2} mt={4}>
             <Flex justifyContent="space-between">
               <Text fontWeight="bold">Total Quantity:</Text>
@@ -347,7 +412,7 @@ const Dashboard = () => {
           </Box>
         </VStack>
       ) : (
-        // DESKTOP VIEW
+        // DESKTOP VIEW as a table
         <TableContainer mt={6} overflowX="auto">
           <Table variant="striped" colorScheme="gray">
             <Thead>
@@ -360,7 +425,7 @@ const Dashboard = () => {
               </Tr>
             </Thead>
             <Tbody>
-              {data.map(row => (
+              {data.map((row) => (
                 <Tr key={row.id}>
                   <Td>{row.Seller}</Td>
                   <Td>{row.Article_Name || row.item}</Td>
@@ -368,7 +433,7 @@ const Dashboard = () => {
                   <Td>{row.Total_Article_Price ?? row.total_price ?? 0}</Td>
                   <Td>
                     {new Date(row.Datetime).toLocaleString("en-US", {
-                      timeZone: "Europe/Tirane",
+                      timeZone: "Europe/Tirane", 
                     })}
                   </Td>
                 </Tr>

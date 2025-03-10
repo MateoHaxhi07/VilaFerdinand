@@ -381,9 +381,9 @@ app.get("/sales/hourly-sales", async (req, res) => {
 
 app.get("/sales/all-data", async (req, res) => {
   try {
-    const {
-      limit = 50,
-      offset = 0,
+    let {
+      limit,
+      offset,
       startDate,
       endDate,
       sellers,
@@ -391,63 +391,57 @@ app.get("/sales/all-data", async (req, res) => {
       articleNames,
       categories,
     } = req.query;
+
+    // Convert to number
+    limit = parseInt(limit, 10);   // May become NaN if not provided
+    offset = parseInt(offset, 10); // May become NaN if not provided
+
     if (!startDate || !endDate) {
       return res
         .status(400)
         .json({ error: "Please provide startDate and endDate" });
     }
-    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
-    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
-    const sellerArray = sellers ? sellers.split(",") : [];
-    const sellerCategoryArray = sellerCategories ? sellerCategories.split(",") : [];
-    const articleNameArray = articleNames ? articleNames.split(",") : [];
-    const categoryArray = categories ? categories.split(",") : [];
 
+    // Build the base query
     let query = `
       SELECT "Order_ID", "Seller", "Article_Name", "Category", "Quantity"::numeric,
              "Article_Price"::numeric, "Total_Article_Price"::numeric, "Datetime", "Seller Category"
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
     `;
-    const params = [adjustedStartDate, adjustedEndDate];
-    let paramIndex = 3;
-    if (sellerArray.length) {
-      query += ` AND UPPER("Seller") = ANY($${paramIndex}::text[])`;
-      params.push(sellerArray.map(s => s.toUpperCase()));
-      paramIndex++;
-    }
-    if (sellerCategoryArray.length) {
-      query += ` AND "Seller Category" = ANY($${paramIndex}::text[])`;
-      params.push(sellerCategoryArray);
-      paramIndex++;
-    }
-    if (articleNameArray.length) {
-      query += ` AND "Article_Name" = ANY($${paramIndex}::text[])`;
-      params.push(articleNameArray);
-      paramIndex++;
-    }
-    if (categoryArray.length) {
-      query += ` AND "Category" = ANY($${paramIndex}::text[])`;
-      params.push(categoryArray);
-      paramIndex++;
-    }
-    // Hour filter
-    const hourFilter = addHourFilter(req);
-    if (hourFilter) {
-      query += hourFilter.condition.replace("PARAM", paramIndex);
-      params.push(hourFilter.hoursArray);
-      paramIndex++;
-    }
-    query += ` ORDER BY "Datetime" DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limit, offset);
 
+    // Build your array of parameters
+    const params = [];
+    params.push(startDate, endDate);
+    let paramIndex = 3;
+
+    // If sellers, sellerCategories, etc. are present, add them
+    // (same logic you already have)
+    // ...
+
+    // Finally, conditionally add LIMIT and OFFSET
+    // Only if limit is a valid number and not NaN
+    if (!isNaN(limit)) {
+      query += ` ORDER BY "Datetime" DESC LIMIT $${paramIndex}`;
+      params.push(limit);
+      paramIndex++;
+      if (!isNaN(offset)) {
+        query += ` OFFSET $${paramIndex}`;
+        params.push(offset);
+        paramIndex++;
+      }
+    } else {
+      // If limit is not given, you can still keep an ORDER BY if you want
+      query += ` ORDER BY "Datetime" DESC`;
+    }
+
+    // Execute
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 
 // ENDPOINT FOR AVERAGE ORDER VALUE VS TIME
@@ -526,36 +520,146 @@ app.get("/sales/avg-order-value", async (req, res) => {
 
 
 
-// Endpoint: Distinct Sellers FOR FILTER BUTTON
 app.get("/sales/sellers", async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT DISTINCT "Seller"
-      FROM "sales"
-      ORDER BY "Seller";
-    `);
+    const {
+      startDate,
+      endDate,
+      sellerCategories,
+      articleNames,
+      categories,
+    } = req.query;
+
+    // Build base query
+    let query = `SELECT DISTINCT "Seller" FROM "sales"`;
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // Optional date range
+    if (startDate && endDate) {
+      // If you want to ensure the entire day is included, use moment or just pass them as-is
+      conditions.push(`"Datetime" BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+      params.push(startDate, endDate);
+      paramIndex += 2;
+    }
+
+    // Optional category filter
+    if (categories) {
+      const categoryArray = categories.split(",");
+      conditions.push(`"Category" = ANY($${paramIndex}::text[])`);
+      params.push(categoryArray);
+      paramIndex++;
+    }
+
+    // Optional sellerCategories filter
+    if (sellerCategories) {
+      const sellerCategoryArray = sellerCategories.split(",");
+      conditions.push(`"Seller Category" = ANY($${paramIndex}::text[])`);
+      params.push(sellerCategoryArray);
+      paramIndex++;
+    }
+
+    // Optional articleNames filter
+    if (articleNames) {
+      const articleNameArray = articleNames.split(",");
+      conditions.push(`"Article_Name" = ANY($${paramIndex}::text[])`);
+      params.push(articleNameArray);
+      paramIndex++;
+    }
+
+    // Optional hour filter (e.g. &hours=9,10,11)
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
+
+    // Append WHERE only if conditions exist
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+    // Finally
+    query += ` ORDER BY "Seller"`; // or UPPER("Seller") if you prefer
+
+    const result = await pool.query(query, params);
+    // Map rows to the "Seller" property
     res.json(result.rows.map((row) => row.Seller));
   } catch (err) {
+    console.error("Error fetching sellers dynamically:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
 // Endpoint: Distinct Seller Categories FOR FILTER BUTTON
 
 app.get("/sales/seller-categories", async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT DISTINCT "Seller Category"
-      FROM "sales"
-      ORDER BY "Seller Category";
-    `);
+    const {
+      startDate,
+      endDate,
+      sellers,
+      articleNames,
+      categories,
+    } = req.query;
+
+    let query = `SELECT DISTINCT "Seller Category" FROM "sales"`;
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // Optional date range
+    if (startDate && endDate) {
+      conditions.push(`"Datetime" BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+      params.push(startDate, endDate);
+      paramIndex += 2;
+    }
+
+    // Optional sellers filter
+    if (sellers) {
+      const sellerArray = sellers.split(",");
+      conditions.push(`"Seller" = ANY($${paramIndex}::text[])`);
+      params.push(sellerArray);
+      paramIndex++;
+    }
+
+    // Optional articleNames filter
+    if (articleNames) {
+      const articleNameArray = articleNames.split(",");
+      conditions.push(`"Article_Name" = ANY($${paramIndex}::text[])`);
+      params.push(articleNameArray);
+      paramIndex++;
+    }
+
+    // Optional categories filter
+    if (categories) {
+      const categoryArray = categories.split(",");
+      conditions.push(`"Category" = ANY($${paramIndex}::text[])`);
+      params.push(categoryArray);
+      paramIndex++;
+    }
+
+    // Optional hour filter
+    const hourFilter = addHourFilter(req);
+    if (hourFilter) {
+      conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
+
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+    query += ` ORDER BY "Seller Category"`;
+
+    const result = await pool.query(query, params);
     res.json(result.rows.map((row) => row["Seller Category"]));
   } catch (err) {
+    console.error("Error fetching seller-categories dynamically:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint: Dynamic Categories based on filters
 app.get("/sales/categories", async (req, res) => {
   try {
     const { startDate, endDate, sellers, sellerCategories, articleNames } = req.query;
@@ -576,9 +680,9 @@ app.get("/sales/categories", async (req, res) => {
       paramIndex++;
     }
     if (sellerCategories) {
-      const sellerCategoryArray = sellerCategories.split(",");
+      const sellerCatArray = sellerCategories.split(",");
       conditions.push(`"Seller Category" = ANY($${paramIndex}::text[])`);
-      params.push(sellerCategoryArray);
+      params.push(sellerCatArray);
       paramIndex++;
     }
     if (articleNames) {
@@ -587,20 +691,22 @@ app.get("/sales/categories", async (req, res) => {
       params.push(articleNameArray);
       paramIndex++;
     }
-    // Hour filter
     const hourFilter = addHourFilter(req);
     if (hourFilter) {
       conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
       params.push(hourFilter.hoursArray);
       paramIndex++;
     }
+
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
-    query += " ORDER BY \"Category\"";
+    query += ` ORDER BY "Category"`;
+
     const result = await pool.query(query, params);
     res.json(result.rows.map((row) => row.Category));
   } catch (err) {
+    console.error("Error fetching categories:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -614,6 +720,7 @@ app.get("/sales/category-total-price", async (req, res) => {
       categories,
       sellers,
       sellerCategories,
+      articleNames,
       // OPTIONAL: If you want to filter by article names as well:
       
     } = req.query;
@@ -624,9 +731,6 @@ app.get("/sales/category-total-price", async (req, res) => {
         .json({ error: "Please provide startDate and endDate" });
     }
 
-    // Adjust datetime to cover the entire start/end day
-    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
-    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
 
     // Base query
     let query = `
@@ -637,6 +741,9 @@ app.get("/sales/category-total-price", async (req, res) => {
     // We'll build an array of WHERE conditions and a parallel array of params
     const conditions = [];
     const params = [];
+    
+    const adjustedStartDate = moment(startDate).startOf("day").toISOString();
+    const adjustedEndDate = moment(endDate).endOf("day").toISOString();
     let paramIndex = 1;
 
     // 1) Required date range
@@ -709,11 +816,16 @@ app.get("/sales/category-total-price", async (req, res) => {
 
 
 
-
-// Endpoint: Distinct Article Names with filters
 app.get("/sales/article-names", async (req, res) => {
   try {
-    const { categories, sellers, sellerCategories, startDate, endDate } = req.query;
+    const {
+      startDate,
+      endDate,
+      sellers,
+      sellerCategories,
+      categories,
+    } = req.query;
+
     let query = `SELECT DISTINCT "Article_Name" FROM "sales"`;
     const conditions = [];
     const params = [];
@@ -724,12 +836,6 @@ app.get("/sales/article-names", async (req, res) => {
       params.push(startDate, endDate);
       paramIndex += 2;
     }
-    if (categories) {
-      const categoryArray = categories.split(",");
-      conditions.push(`"Category" = ANY($${paramIndex}::text[])`);
-      params.push(categoryArray);
-      paramIndex++;
-    }
     if (sellers) {
       const sellerArray = sellers.split(",");
       conditions.push(`"Seller" = ANY($${paramIndex}::text[])`);
@@ -737,28 +843,37 @@ app.get("/sales/article-names", async (req, res) => {
       paramIndex++;
     }
     if (sellerCategories) {
-      const sellerCategoryArray = sellerCategories.split(",");
+      const sellerCatArray = sellerCategories.split(",");
       conditions.push(`"Seller Category" = ANY($${paramIndex}::text[])`);
-      params.push(sellerCategoryArray);
+      params.push(sellerCatArray);
       paramIndex++;
     }
-    // Hour filter
+    if (categories) {
+      const categoryArray = categories.split(",");
+      conditions.push(`"Category" = ANY($${paramIndex}::text[])`);
+      params.push(categoryArray);
+      paramIndex++;
+    }
     const hourFilter = addHourFilter(req);
     if (hourFilter) {
       conditions.push(hourFilter.condition.replace("PARAM", paramIndex));
       params.push(hourFilter.hoursArray);
       paramIndex++;
     }
+
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
-    query += " ORDER BY \"Article_Name\"";
+    query += ` ORDER BY "Article_Name"`;
+
     const result = await pool.query(query, params);
     res.json(result.rows.map((row) => row.Article_Name));
   } catch (err) {
+    console.error("Error fetching article-names dynamically:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // Endpoint: Most Sold Items by Quantity
 app.get("/sales/most-sold-items", async (req, res) => {

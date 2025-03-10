@@ -4,7 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Header/Layout.js'; // Layout with header toggle & Outlet
 import Home from './pages/Home_Page/Home.js';
 import Dashboard from './pages/Shitjet_Analitike/Dashboard.jsx';
-import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice.js';
+import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice';
 import DailyExpenses from './pages/Xhiro_Ditore/DailyExpenses.js';
 import Supplier from './pages/Furnitor/Supplier.js';
 import ArticleIngredients from './pages/Receta/ArticleIngredients.js';

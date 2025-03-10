@@ -2,18 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   Box,
-  Heading,
   Grid,
-  Text as ChakraText,
   GridItem,
   Card,
   CardBody,
-  Stat,
-  CardHeader,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  Flex,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -23,7 +15,8 @@ import CategoryTreemap from "./TREE_MAP/CategoryTreemap.jsx";
 import MetricsCard from "./METRIC_CARD_AND_GRAPH/MetricCard.jsx";
 import Filters from "./FILTERS/Filters.jsx";
 import SellerCategoriesChart from "./PIE_CHART_CATEGORIES/SellerCategoriesChart.jsx";
-
+import Papa from "papaparse";
+import { saveAs } from "file-saver";
 import { schemeSet3 } from "d3-scale-chromatic";
 
 // -----------------------------------------------------------------------------
@@ -44,18 +37,21 @@ const Home = () => {
   // Retrieve filter states from context
   // ----------------------------------------------------------
   const {
-    // Instead of using default null, we can set some initial date range
-    // in the context. If your context doesn't do that, we'll do it here for safety.
+    // Start/end date from context
     startDate,
     setStartDate,
     endDate,
     setEndDate,
+    // Seller filters
     selectedSellers,
     setSelectedSellers,
+    // Seller Category filters
     selectedSellerCategories,
     setSelectedSellerCategories,
+    // Article filters
     selectedArticleNames,
     setSelectedArticleNames,
+    // Category filters
     selectedCategories,
     setSelectedCategories,
   } = useOutletContext();
@@ -88,7 +84,7 @@ const Home = () => {
     {
       id: "Average Order Value",
       data: avgOrderValueData.map(item => ({
-        x: item.order_date,  // e.g. "2023-08-12"
+        x: item.order_date, // e.g. "2023-08-12"
         y: parseFloat(item.avg_order_value),
       })),
     },
@@ -103,7 +99,109 @@ const Home = () => {
   const [categories, setCategories] = useState([]);
 
   // ----------------------------------------------------------
-  // Use a function to build the &hours= param
+  // Build query for /sales/all-data (CSV download)
+  // ----------------------------------------------------------
+  const buildAllDataQuery = () => {
+    const queryParams = new URLSearchParams();
+
+    // If start/end date exist, create local day boundaries
+    if (startDate) {
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0, 0, 0
+      );
+      queryParams.append("startDate", localStart.toISOString());
+    }
+    if (endDate) {
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23, 59, 59
+      );
+      queryParams.append("endDate", localEnd.toISOString());
+    }
+
+    // Pass sellers (comma-separated)
+    if (selectedSellers?.length) {
+      queryParams.append(
+        "sellers",
+        selectedSellers.map(s => s.value).join(",")
+      );
+    }
+    
+    // Seller Categories
+    if (selectedSellerCategories?.length) {
+      queryParams.append(
+        "sellerCategories",
+        selectedSellerCategories.map(sc => sc.value).join(",")
+      );
+    }
+
+    // Article Names
+    if (selectedArticleNames?.length) {
+      queryParams.append(
+        "articleNames",
+        selectedArticleNames.map(a => a.value).join(",")
+      );
+    }
+
+    // Categories
+    if (selectedCategories?.length) {
+      queryParams.append(
+        "categories",
+        selectedCategories.map(cat => cat.value).join(",")
+      );
+    }
+
+    // Hours
+    if (selectedHours?.length) {
+      queryParams.append(
+        "hours",
+        selectedHours.map(h => h.value).join(",")
+      );
+    }
+
+    // Optionally override limit to ensure we get everything
+    queryParams.append("limit", 1000000);
+    // offset at 0 if you want from the beginning
+    queryParams.append("offset", 0);
+
+    return queryParams.toString();
+  };
+
+  // ----------------------------------------------------------
+  // Handle Download CSV
+  // ----------------------------------------------------------
+  const handleDownloadCsv = async () => {
+    try {
+      const query = buildAllDataQuery();
+      const url = `${API_URL}/sales/all-data?${query}`;
+      console.log("Downloading CSV from:", url);
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV data: ${response.statusText}`);
+      }
+      const data = await response.json();
+
+      // Convert JSON -> CSV using Papa
+      const csv = Papa.unparse(data);
+
+      // Create a Blob from the CSV
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+      // Use FileSaver to save
+      saveAs(blob, "all_sales_data.csv");
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+    }
+  };
+
+  // ----------------------------------------------------------
+  // Helper function for hours filter in other endpoints
   // ----------------------------------------------------------
   const getHoursQuery = () =>
     selectedHours.length > 0
@@ -117,15 +215,25 @@ const Home = () => {
   // 1) Category Treemap
   const fetchCategoryTotals = async () => {
     try {
-      // If your date states are sometimes null, ensure they have defaults:
       if (!startDate || !endDate) {
         console.log("Skipping fetchCategoryTotals because no date range set.");
         return;
       }
 
       const queryParams = new URLSearchParams({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        // Local day boundaries for each date
+        startDate: new Date(
+          startDate.getFullYear(),
+          startDate.getMonth(),
+          startDate.getDate(),
+          0, 0, 0
+        ).toISOString(),
+        endDate: new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          endDate.getDate(),
+          23, 59, 59
+        ).toISOString(),
       });
 
       if (selectedCategories?.length) {
@@ -160,7 +268,7 @@ const Home = () => {
       }
 
       const url = `${API_URL}/sales/category-total-price?${queryParams.toString()}`;
-      console.log("fetchCategoryTotals ->", url); // Debug
+      console.log("fetchCategoryTotals ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setCategoryTreemapData(data);
@@ -169,12 +277,27 @@ const Home = () => {
     }
   };
 
-  // 2) Build the rest similarly, e.g. fetchTotalSales, fetchTotalQuantity, etc.
+  // 2) fetchTotalSales
   const fetchTotalSales = async () => {
     try {
       if (!startDate || !endDate) return;
       const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/total-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+
+      // local boundaries
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0, 0, 0
+      ).toISOString();
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23, 59, 59
+      ).toISOString();
+
+      const url = `${API_URL}/sales/total-sales?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -182,9 +305,9 @@ const Home = () => {
         .map(a => a.value)
         .join(",")}&categories=${selectedCategories
         .map(cat => cat.value)
-        .join("")}${hoursQuery}`;
+        .join(",")}${hoursQuery}`;
 
-      console.log("fetchTotalSales ->", url); // Debug
+      console.log("fetchTotalSales ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setTotalSales(data.total_sales || 0);
@@ -193,11 +316,26 @@ const Home = () => {
     }
   };
 
+  // 3) fetchTotalQuantity
   const fetchTotalQuantity = async () => {
     try {
       if (!startDate || !endDate) return;
       const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/total-quantity?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0, 0, 0
+      ).toISOString();
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23, 59, 59
+      ).toISOString();
+
+      const url = `${API_URL}/sales/total-quantity?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -205,9 +343,9 @@ const Home = () => {
         .map(a => a.value)
         .join(",")}&categories=${selectedCategories
         .map(cat => cat.value)
-        .join("")}${hoursQuery}`;
-      console.log("fetchTotalQuantity ->", url); // Debug
+        .join(",")}${hoursQuery}`;
 
+      console.log("fetchTotalQuantity ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setTotalQuantity(data.total_quantity || 0);
@@ -216,11 +354,26 @@ const Home = () => {
     }
   };
 
+  // 4) fetchAvgArticlePrice
   const fetchAvgArticlePrice = async () => {
     try {
       if (!startDate || !endDate) return;
       const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/avg-article-price?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0, 0, 0
+      ).toISOString();
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23, 59, 59
+      ).toISOString();
+
+      const url = `${API_URL}/sales/avg-article-price?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -228,9 +381,9 @@ const Home = () => {
         .map(a => a.value)
         .join(",")}&categories=${selectedCategories
         .map(cat => cat.value)
-        .join("")}${hoursQuery}`;
-      console.log("fetchAvgArticlePrice ->", url); // Debug
+        .join(",")}${hoursQuery}`;
 
+      console.log("fetchAvgArticlePrice ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setAvgArticlePrice(data.avg_price || 0);
@@ -239,11 +392,26 @@ const Home = () => {
     }
   };
 
+  // 5) fetchOrderCount
   const fetchOrderCount = async () => {
     try {
       if (!startDate || !endDate) return;
       const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/order-count?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0, 0, 0
+      ).toISOString();
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23, 59, 59
+      ).toISOString();
+
+      const url = `${API_URL}/sales/order-count?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -251,9 +419,9 @@ const Home = () => {
         .map(a => a.value)
         .join(",")}&categories=${selectedCategories
         .map(cat => cat.value)
-        .join("")}${hoursQuery}`;
-      console.log("fetchOrderCount ->", url); // Debug
+        .join(",")}${hoursQuery}`;
 
+      console.log("fetchOrderCount ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setOrderCount(data.order_count || 0);
@@ -262,11 +430,26 @@ const Home = () => {
     }
   };
 
+  // 6) fetchDailySales
   const fetchDailySales = async () => {
     try {
       if (!startDate || !endDate) return;
       const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/daily-sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0, 0, 0
+      ).toISOString();
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23, 59, 59
+      ).toISOString();
+
+      const url = `${API_URL}/sales/daily-sales?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -274,9 +457,9 @@ const Home = () => {
         .map(a => a.value)
         .join(",")}&categories=${selectedCategories
         .map(cat => cat.value)
-        .join("")}${hoursQuery}`;
-      console.log("fetchDailySales ->", url); // Debug
+        .join(",")}${hoursQuery}`;
 
+      console.log("fetchDailySales ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setDailySales(data || []);
@@ -285,11 +468,26 @@ const Home = () => {
     }
   };
 
+  // 7) fetchSellerCategoriesTotal
   const fetchSellerCategoriesTotal = async () => {
     try {
       if (!startDate || !endDate) return;
       const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/seller-categories-total?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&sellers=${selectedSellers
+
+      const localStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+        0, 0, 0
+      ).toISOString();
+      const localEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+        23, 59, 59
+      ).toISOString();
+
+      const url = `${API_URL}/sales/seller-categories-total?startDate=${localStart}&endDate=${localEnd}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
         .map(cat => cat.value)
@@ -297,9 +495,9 @@ const Home = () => {
         .map(a => a.value)
         .join(",")}&categories=${selectedCategories
         .map(cat => cat.value)
-        .join("")}${hoursQuery}`;
-      console.log("fetchSellerCategoriesTotal ->", url); // Debug
+        .join(",")}${hoursQuery}`;
 
+      console.log("fetchSellerCategoriesTotal ->", url);
       const response = await fetch(url);
       const data = await response.json();
       const formattedData = data.map(item => ({
@@ -336,40 +534,51 @@ const Home = () => {
 
   const fetchCategories = async () => {
     try {
-      // Build a query that includes date range, sellers, etc.
       let url = `${API_URL}/sales/categories?`;
       const queryParams = [];
+
       if (startDate && endDate) {
-        queryParams.push(`startDate=${startDate.toISOString()}`);
-        queryParams.push(`endDate=${endDate.toISOString()}`);
+        // local boundaries
+        const localStart = new Date(
+          startDate.getFullYear(),
+          startDate.getMonth(),
+          startDate.getDate(),
+          0, 0, 0
+        ).toISOString();
+        const localEnd = new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          endDate.getDate(),
+          23, 59, 59
+        ).toISOString();
+
+        queryParams.push(`startDate=${localStart}`);
+        queryParams.push(`endDate=${localEnd}`);
       }
       if (selectedSellers?.length) {
         queryParams.push(
-          `sellers=${selectedSellers.map(s => s.value).join(",")}`,
+          `sellers=${selectedSellers.map(s => s.value).join(",")}`
         );
       }
       if (selectedSellerCategories?.length) {
         queryParams.push(
           `sellerCategories=${selectedSellerCategories
             .map(sc => sc.value)
-            .join(",")}`,
+            .join(",")}`
         );
       }
       if (selectedArticleNames?.length) {
         queryParams.push(
-          `articleNames=${selectedArticleNames.map(a => a.value).join(",")}`,
+          `articleNames=${selectedArticleNames.map(a => a.value).join(",")}`
         );
       }
-
-      // Add hour filter if needed
       if (selectedHours?.length) {
         queryParams.push(`hours=${selectedHours.map(h => h.value).join(",")}`);
       }
 
-      // Construct final
       url += queryParams.join("&");
+      console.log("fetchCategories ->", url);
 
-      console.log("fetchCategories ->", url); // Debug
       const response = await fetch(url);
       const data = await response.json();
       setCategories(data.map(cat => ({ value: cat, label: cat })));
@@ -383,43 +592,51 @@ const Home = () => {
       let url = `${API_URL}/sales/article-names?`;
       const queryParams = [];
 
-      // Include date
       if (startDate && endDate) {
-        queryParams.push(`startDate=${startDate.toISOString()}`);
-        queryParams.push(`endDate=${endDate.toISOString()}`);
+        const localStart = new Date(
+          startDate.getFullYear(),
+          startDate.getMonth(),
+          startDate.getDate(),
+          0, 0, 0
+        ).toISOString();
+        const localEnd = new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          endDate.getDate(),
+          23, 59, 59
+        ).toISOString();
+
+        queryParams.push(`startDate=${localStart}`);
+        queryParams.push(`endDate=${localEnd}`);
       }
-      // categories
       if (selectedCategories?.length) {
         queryParams.push(
-          `categories=${selectedCategories.map(cat => cat.value).join(",")}`,
+          `categories=${selectedCategories.map(cat => cat.value).join(",")}`
         );
       }
-      // sellers
       if (selectedSellers?.length) {
         queryParams.push(
-          `sellers=${selectedSellers.map(s => s.value).join(",")}`,
+          `sellers=${selectedSellers.map(s => s.value).join(",")}`
         );
       }
-      // seller categories
       if (selectedSellerCategories?.length) {
         queryParams.push(
           `sellerCategories=${selectedSellerCategories
             .map(sc => sc.value)
-            .join(",")}`,
+            .join(",")}`
         );
       }
-      // hours
       if (selectedHours?.length) {
         queryParams.push(`hours=${selectedHours.map(h => h.value).join(",")}`);
       }
 
       url += queryParams.join("&");
+      console.log("fetchArticleNamesOptions ->", url);
 
-      console.log("fetchArticleNamesOptions ->", url); // Debug
       const response = await fetch(url);
       const data = await response.json();
       setArticleNamesOptions(
-        data.map(article => ({ value: article, label: article })),
+        data.map(article => ({ value: article, label: article }))
       );
     } catch (error) {
       console.error("Error fetching article names:", error);
@@ -429,6 +646,7 @@ const Home = () => {
   // ----------------------------------------------------------
   // useEffects
   // ----------------------------------------------------------
+
   // 1) On mount
   useEffect(() => {
     fetchSellers();
@@ -439,7 +657,6 @@ const Home = () => {
 
   // 2) When filters change
   useEffect(() => {
-    // If you set default start/end in context, ensure they are not null
     if (!startDate || !endDate) return;
 
     fetchTotalSales();
@@ -450,8 +667,7 @@ const Home = () => {
     fetchSellerCategoriesTotal();
     fetchCategoryTotals();
 
-
-    // Also update categories & article name options so they reflect new filters
+    // Update categories & article names so they reflect new filters
     fetchCategories();
     fetchArticleNamesOptions();
   }, [
@@ -464,7 +680,7 @@ const Home = () => {
     selectedHours,
   ]);
 
-  // 3) DatePicker Dark Theme
+  // 3) DatePicker Dark Theme (for reference)
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -589,27 +805,35 @@ const Home = () => {
           <Grid
             templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
             gap={6}
-            height={{ base: "auto", md: "600px" }} // So they match in desktop
+            height={{ base: "auto", md: "600px" }}
           >
+            {/* LEFT SIDE: CSV Download + Pie Chart */}
             <GridItem
               bg="white"
               borderRadius="md"
               overflow="hidden"
               minH={{ base: "400px", md: "100%" }}
             >
+              {/* Download CSV Button */}
+              <Box mt={4} ml={4}>
+                <button onClick={handleDownloadCsv}>
+                  Download CSV
+                </button>
+              </Box>
+
               {/* Pie Chart */}
               <Box w="100%" h="100%" bg="white">
                 <SellerCategoriesChart pieData={pieData} />
               </Box>
             </GridItem>
 
+            {/* RIGHT SIDE: Treemap */}
             <GridItem
               bg="white"
               borderRadius="md"
               overflow="hidden"
               minH={{ base: "400px", md: "100%" }}
             >
-              {/* Treemap */}
               <Box w="100%" h="100%" bg="white">
                 <CategoryTreemap data={categoryTreemapData} />
               </Box>

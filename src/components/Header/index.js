@@ -1,8 +1,16 @@
 import React from 'react';
-import { Box, Button, Flex } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Flex,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+} from '@chakra-ui/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import vfLogo from './vf.jpeg'; // Import the image
+import vfLogo from './vf.jpeg'; // Your logo
 
 const MotionText = motion(Box);
 
@@ -30,14 +38,17 @@ const Header = () => {
         align="center"
         justify="space-between"
       >
-        {/* Left Section - Logo and Animated Title */}
+        {/* Left Section - Logo */}
         <Flex align="center" mb={{ base: 4, md: 0 }}>
           <img
             src={vfLogo}
             alt="Logo"
-            style={{ height: '50px', borderRadius: '50%', marginRight: '8px' }}
+            style={{
+              height: '50px',
+              borderRadius: '50%',
+              marginRight: '8px',
+            }}
           />
-         
         </Flex>
 
         {/* Middle Section - Navigation Links */}
@@ -49,6 +60,7 @@ const Header = () => {
           mb={{ base: 4, md: 0 }}
           w={{ base: '100%', md: 'auto' }}
         >
+          {/* HOME */}
           <Button
             as={Link}
             to="/home"
@@ -60,28 +72,30 @@ const Header = () => {
           >
             HOME
           </Button>
-          <Button
-            as={Link}
-            to="/dashboard"
-            variant="ghost"
-            color="white"
-            _hover={{ bg: 'teal.700' }}
-            w={{ base: '100%', md: 'auto' }}
-            m={1}
-          >
-            SHITJET ANALITKE
-          </Button>
-          <Button
-            as={Link}
-            to="/most-sold-items-by-price"
-            variant="ghost"
-            color="white"
-            _hover={{ bg: 'teal.700' }}
-            w={{ base: '100%', md: 'auto' }}
-            m={1}
-          >
-            SHITJET RENDITURA
-          </Button>
+
+          {/* NEW MENU for SHITJET */}
+          <Menu>
+            <MenuButton
+              as={Button}
+              variant="ghost"
+              color="white"
+              _hover={{ bg: 'teal.700' }}
+              w={{ base: '100%', md: 'auto' }}
+              m={1}
+            >
+              SHITJET
+            </MenuButton>
+            <MenuList>
+              <MenuItem as={Link} to="/dashboard">
+                SHITJET ANALITIKE
+              </MenuItem>
+              <MenuItem as={Link} to="/most-sold-items-by-price">
+                SHITJET RENDITURA
+              </MenuItem>
+            </MenuList>
+          </Menu>
+
+          {/* Other Buttons */}
           <Button
             as={Link}
             to="/daily-expenses"
@@ -104,7 +118,6 @@ const Header = () => {
           >
             FURNITOR
           </Button>
-
           <Button
             as={Link}
             to="/usage"
@@ -127,7 +140,6 @@ const Header = () => {
           >
             RECETA
           </Button>
-        
           <Button
             as={Link}
             to="/missing-articles"
@@ -139,7 +151,6 @@ const Header = () => {
           >
             RECETA MUNGOJN
           </Button>
-
           <Button
             as={Link}
             to="/inventory"
