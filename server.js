@@ -326,7 +326,7 @@ app.get("/sales/hourly-sales", async (req, res) => {
     const categoryArray = categories ? categories.split(",") : [];
 
     let query = `
-      SELECT EXTRACT(HOUR FROM ("Datetime" - interval '1 hour')) AS hour,
+      SELECT EXTRACT(HOUR FROM "Datetime") AS hour,
              SUM("Total_Article_Price"::numeric) AS total_sales
       FROM "sales"
       WHERE "Datetime" BETWEEN $1 AND $2
