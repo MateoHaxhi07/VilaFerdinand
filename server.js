@@ -1092,6 +1092,75 @@ app.get("/sales/order-count", async (req, res) => {
 });
 
 
+// Example: /sales/monthly-sales
+
+app.get("/sales/monthly-sales", async (req, res) => {
+  try {
+    // 1) Parse date range. We assume you have a helper like parseDateRange(req)
+    //    which does something like:
+    //    const { startDate, endDate } = req.query;
+    //    const adjustedStartDate = moment.utc(startDate, 'YYYY-MM-DD').startOf('day').toISOString();
+    //    const adjustedEndDate = moment.utc(endDate, 'YYYY-MM-DD').endOf('day').toISOString();
+    const { adjustedStartDate, adjustedEndDate } = parseDateRange(req);
+
+    // 2) Optional filters from query
+    const { sellers, sellerCategories, articleNames, categories } = req.query;
+
+    // 3) Start building the SQL
+    let query = `
+      SELECT to_char("Datetime", 'YYYY-MM') AS month,
+             SUM("Total_Article_Price") AS total
+      FROM sales
+      WHERE "Datetime" BETWEEN $1 AND $2
+    `;
+    const params = [adjustedStartDate, adjustedEndDate];
+    let paramIndex = 3;
+
+    // 4) Optional filtering if present
+    if (sellers) {
+      query += ` AND "Seller" = ANY($${paramIndex}::text[])`;
+      params.push(sellers.split(","));
+      paramIndex++;
+    }
+    if (sellerCategories) {
+      query += ` AND "Seller Category" = ANY($${paramIndex}::text[])`;
+      params.push(sellerCategories.split(","));
+      paramIndex++;
+    }
+    if (articleNames) {
+      query += ` AND "Article_Name" = ANY($${paramIndex}::text[])`;
+      params.push(articleNames.split(","));
+      paramIndex++;
+    }
+    if (categories) {
+      query += ` AND "Category" = ANY($${paramIndex}::text[])`;
+      params.push(categories.split(","));
+      paramIndex++;
+    }
+
+    // 5) If you want to handle hour filters as well:
+    //    Suppose you have a function addHourFilter(req) like in your code
+    const hourFilter = addHourFilter(req); // e.g. extracts &hours=9,10,11
+    if (hourFilter) {
+      query += hourFilter.condition.replace("PARAM", paramIndex);
+      params.push(hourFilter.hoursArray);
+      paramIndex++;
+    }
+
+    // 6) Group by month
+    query += `
+      GROUP BY month
+      ORDER BY month ASC
+    `;
+
+    // 7) Execute
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error in /sales/monthly-sales:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 

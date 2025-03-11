@@ -6,6 +6,7 @@ import {
   GridItem,
   Card,
   CardBody,
+  Button, // To toggle daily vs monthly
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -16,7 +17,7 @@ import { saveAs } from "file-saver";
 import { schemeSet3 } from "d3-scale-chromatic";
 import moment from "moment";
 
-// Internal components (replace with your own relative imports)
+// Internal components
 import CategoryTreemap from "./TREE_MAP/CategoryTreemap.jsx";
 import MetricsCard from "./METRIC_CARD_AND_GRAPH/MetricCard.jsx";
 import Filters from "./FILTERS/Filters.jsx";
@@ -26,13 +27,10 @@ import SellerCategoriesChart from "./PIE_CHART_CATEGORIES/SellerCategoriesChart.
 // GLOBAL SETTINGS
 // -----------------------------------------------------------------------------
 
-// Create a color scale for the pie chart and legend using D3
 const colorScale = scaleOrdinal(schemeSet3);
-
-// Define your API URL (adjust as needed)
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// Simple helper: convert Date object to YYYY-MM-DD
+// Helper to get YYYY-MM-DD from a Date
 function toDateString(date) {
   if (!date) return "";
   return moment(date).format("YYYY-MM-DD");
@@ -50,16 +48,12 @@ const Home = () => {
     setStartDate,
     endDate,
     setEndDate,
-    // Seller filters
     selectedSellers,
     setSelectedSellers,
-    // Seller Category filters
     selectedSellerCategories,
     setSelectedSellerCategories,
-    // Article filters
     selectedArticleNames,
     setSelectedArticleNames,
-    // Category filters
     selectedCategories,
     setSelectedCategories,
   } = useOutletContext();
@@ -80,23 +74,30 @@ const Home = () => {
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [avgArticlePrice, setAvgArticlePrice] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
+
+  // **Daily** aggregated data
   const [dailySales, setDailySales] = useState([]);
+  // **Monthly** aggregated data (new)
+  const [monthlySales, setMonthlySales] = useState([]);
 
   // Pie Chart & Treemap Data
   const [pieData, setPieData] = useState([]);
   const [categoryTreemapData, setCategoryTreemapData] = useState([]);
 
-  // Average Order Value
+  // We can also track average order value data if needed
   const [avgOrderValueData, setAvgOrderValueData] = useState([]);
   const lineChartData = [
     {
       id: "Average Order Value",
       data: avgOrderValueData.map(item => ({
-        x: item.order_date, // e.g. "2023-08-12"
+        x: item.order_date,
         y: parseFloat(item.avg_order_value),
       })),
     },
   ];
+
+  // **Toggle** for bar chart: "daily" or "monthly"
+  const [barViewMode, setBarViewMode] = useState("daily");
 
   // ----------------------------------------------------------
   // Dropdown Options
@@ -112,10 +113,9 @@ const Home = () => {
   const buildAllDataQuery = () => {
     const queryParams = new URLSearchParams();
 
-    // Pass "YYYY-MM-DD" strings only
+    // If we have start/end date
     const start = toDateString(startDate);
     const end = toDateString(endDate);
-
     if (start) queryParams.append("startDate", start);
     if (end) queryParams.append("endDate", end);
 
@@ -154,8 +154,7 @@ const Home = () => {
         selectedHours.map(h => h.value).join(",")
       );
     }
-
-    // Optionally override limit/offset
+    // override limit/offset
     queryParams.append("limit", 1000000);
     queryParams.append("offset", 0);
 
@@ -177,13 +176,9 @@ const Home = () => {
       }
       const data = await response.json();
 
-      // Convert JSON -> CSV using Papa
+      // Convert JSON -> CSV with Papa
       const csv = Papa.unparse(data);
-
-      // Create a Blob from the CSV
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-
-      // Use FileSaver to save
       saveAs(blob, "all_sales_data.csv");
     } catch (error) {
       console.error("Error downloading CSV:", error);
@@ -199,21 +194,199 @@ const Home = () => {
       : "";
 
   // ----------------------------------------------------------
-  // FETCH FUNCTIONS
+  // Fetch Functions
   // ----------------------------------------------------------
 
-  // 1) Category Treemap
+  // 1) fetchTotalSales
+  const fetchTotalSales = async () => {
+    try {
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+      const hoursQuery = getHoursQuery();
+      const url = `${API_URL}/sales/total-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}${hoursQuery}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      setTotalSales(data.total_sales || 0);
+    } catch (error) {
+      console.error("Error fetching total sales:", error);
+    }
+  };
+
+  // 2) fetchTotalQuantity
+  const fetchTotalQuantity = async () => {
+    try {
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+      const hoursQuery = getHoursQuery();
+      const url = `${API_URL}/sales/total-quantity?startDate=${start}&endDate=${end}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}${hoursQuery}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      setTotalQuantity(data.total_quantity || 0);
+    } catch (error) {
+      console.error("Error fetching total quantity:", error);
+    }
+  };
+
+  // 3) fetchAvgArticlePrice
+  const fetchAvgArticlePrice = async () => {
+    try {
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+      const hoursQuery = getHoursQuery();
+      const url = `${API_URL}/sales/avg-article-price?startDate=${start}&endDate=${end}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}${hoursQuery}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      setAvgArticlePrice(data.avg_price || 0);
+    } catch (error) {
+      console.error("Error fetching average article price:", error);
+    }
+  };
+
+  // 4) fetchOrderCount
+  const fetchOrderCount = async () => {
+    try {
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+      const hoursQuery = getHoursQuery();
+      const url = `${API_URL}/sales/order-count?startDate=${start}&endDate=${end}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}${hoursQuery}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      setOrderCount(data.order_count || 0);
+    } catch (error) {
+      console.error("Error fetching order count:", error);
+    }
+  };
+
+  // 5) fetchDailySales
+  const fetchDailySales = async () => {
+    try {
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+      const hoursQuery = getHoursQuery();
+      const url = `${API_URL}/sales/daily-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}${hoursQuery}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      setDailySales(data || []);
+    } catch (error) {
+      console.error("Error fetching daily sales:", error);
+    }
+  };
+
+  // 6) fetchMonthlySales (new)
+  const fetchMonthlySales = async () => {
+    try {
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+      const hoursQuery = getHoursQuery();
+      // We assume you created /sales/monthly-sales in your backend
+      const url = `${API_URL}/sales/monthly-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(cat => cat.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}${hoursQuery}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      // data shape might be: [ { month: "2023-01", total: "12345" }, ... ]
+      setMonthlySales(data || []);
+    } catch (error) {
+      console.error("Error fetching monthly sales:", error);
+    }
+  };
+
+  // 7) fetchSellerCategoriesTotal (Pie Chart)
+  const fetchSellerCategoriesTotal = async () => {
+    try {
+      const start = toDateString(startDate);
+      const end = toDateString(endDate);
+      if (!start || !end) return;
+      const hoursQuery = getHoursQuery();
+      const url = `${API_URL}/sales/seller-categories-total?startDate=${start}&endDate=${end}&sellers=${selectedSellers
+        .map(s => s.value)
+        .join(",")}&sellerCategories=${selectedSellerCategories
+        .map(sc => sc.value)
+        .join(",")}&articleNames=${selectedArticleNames
+        .map(a => a.value)
+        .join(",")}&categories=${selectedCategories
+        .map(cat => cat.value)
+        .join(",")}${hoursQuery}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      const formattedData = data.map(item => ({
+        id: item["Seller Category"] || "Unknown",
+        label: item["Seller Category"] || "Unknown",
+        value: parseFloat(item.total_sales),
+      }));
+      setPieData(formattedData);
+    } catch (error) {
+      console.error("Error fetching seller categories total:", error);
+    }
+  };
+
+  // 8) fetchCategoryTotals (Treemap)
   const fetchCategoryTotals = async () => {
     try {
       const start = toDateString(startDate);
       const end = toDateString(endDate);
       if (!start || !end) return;
 
-      let queryParams = new URLSearchParams({
-        startDate: start,
-        endDate: end,
-      });
-
+      const queryParams = new URLSearchParams({ startDate: start, endDate: end });
       if (selectedCategories?.length) {
         queryParams.append(
           "categories",
@@ -246,179 +419,11 @@ const Home = () => {
       }
 
       const url = `${API_URL}/sales/category-total-price?${queryParams.toString()}`;
-      console.log("fetchCategoryTotals ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setCategoryTreemapData(data);
     } catch (error) {
       console.error("Error fetching category totals:", error);
-    }
-  };
-
-  // 2) fetchTotalSales
-  const fetchTotalSales = async () => {
-    try {
-      const start = toDateString(startDate);
-      const end = toDateString(endDate);
-      if (!start || !end) return;
-
-      const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/total-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
-        .map(s => s.value)
-        .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
-        .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
-        .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
-        .join(",")}${hoursQuery}`;
-
-      console.log("fetchTotalSales ->", url);
-      const response = await fetch(url);
-      const data = await response.json();
-      setTotalSales(data.total_sales || 0);
-    } catch (error) {
-      console.error("Error fetching total sales:", error);
-    }
-  };
-
-  // 3) fetchTotalQuantity
-  const fetchTotalQuantity = async () => {
-    try {
-      const start = toDateString(startDate);
-      const end = toDateString(endDate);
-      if (!start || !end) return;
-
-      const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/total-quantity?startDate=${start}&endDate=${end}&sellers=${selectedSellers
-        .map(s => s.value)
-        .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
-        .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
-        .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
-        .join(",")}${hoursQuery}`;
-
-      console.log("fetchTotalQuantity ->", url);
-      const response = await fetch(url);
-      const data = await response.json();
-      setTotalQuantity(data.total_quantity || 0);
-    } catch (error) {
-      console.error("Error fetching total quantity:", error);
-    }
-  };
-
-  // 4) fetchAvgArticlePrice
-  const fetchAvgArticlePrice = async () => {
-    try {
-      const start = toDateString(startDate);
-      const end = toDateString(endDate);
-      if (!start || !end) return;
-
-      const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/avg-article-price?startDate=${start}&endDate=${end}&sellers=${selectedSellers
-        .map(s => s.value)
-        .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
-        .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
-        .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
-        .join(",")}${hoursQuery}`;
-
-      console.log("fetchAvgArticlePrice ->", url);
-      const response = await fetch(url);
-      const data = await response.json();
-      setAvgArticlePrice(data.avg_price || 0);
-    } catch (error) {
-      console.error("Error fetching average article price:", error);
-    }
-  };
-
-  // 5) fetchOrderCount
-  const fetchOrderCount = async () => {
-    try {
-      const start = toDateString(startDate);
-      const end = toDateString(endDate);
-      if (!start || !end) return;
-
-      const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/order-count?startDate=${start}&endDate=${end}&sellers=${selectedSellers
-        .map(s => s.value)
-        .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
-        .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
-        .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
-        .join(",")}${hoursQuery}`;
-
-      console.log("fetchOrderCount ->", url);
-      const response = await fetch(url);
-      const data = await response.json();
-      setOrderCount(data.order_count || 0);
-    } catch (error) {
-      console.error("Error fetching order count:", error);
-    }
-  };
-
-  // 6) fetchDailySales
-  const fetchDailySales = async () => {
-    try {
-      const start = toDateString(startDate);
-      const end = toDateString(endDate);
-      if (!start || !end) return;
-
-      const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/daily-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
-        .map(s => s.value)
-        .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
-        .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
-        .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
-        .join(",")}${hoursQuery}`;
-
-      console.log("fetchDailySales ->", url);
-      const response = await fetch(url);
-      const data = await response.json();
-      setDailySales(data || []);
-    } catch (error) {
-      console.error("Error fetching daily sales:", error);
-    }
-  };
-
-  // 7) fetchSellerCategoriesTotal
-  const fetchSellerCategoriesTotal = async () => {
-    try {
-      const start = toDateString(startDate);
-      const end = toDateString(endDate);
-      if (!start || !end) return;
-
-      const hoursQuery = getHoursQuery();
-      const url = `${API_URL}/sales/seller-categories-total?startDate=${start}&endDate=${end}&sellers=${selectedSellers
-        .map(s => s.value)
-        .join(",")}&sellerCategories=${selectedSellerCategories
-        .map(cat => cat.value)
-        .join(",")}&articleNames=${selectedArticleNames
-        .map(a => a.value)
-        .join(",")}&categories=${selectedCategories
-        .map(cat => cat.value)
-        .join(",")}${hoursQuery}`;
-
-      console.log("fetchSellerCategoriesTotal ->", url);
-      const response = await fetch(url);
-      const data = await response.json();
-      const formattedData = data.map(item => ({
-        id: item["Seller Category"] || "Unknown",
-        label: item["Seller Category"] || "Unknown",
-        value: parseFloat(item.total_sales),
-      }));
-      setPieData(formattedData);
-    } catch (error) {
-      console.error("Error fetching seller categories total:", error);
     }
   };
 
@@ -437,9 +442,7 @@ const Home = () => {
     try {
       const response = await fetch(`${API_URL}/sales/seller-categories`);
       const data = await response.json();
-      setSellerCategoriesOptions(
-        data.map(cat => ({ value: cat, label: cat }))
-      );
+      setSellerCategoriesOptions(data.map(cat => ({ value: cat, label: cat })));
     } catch (error) {
       console.error("Error fetching seller categories:", error);
     }
@@ -449,17 +452,14 @@ const Home = () => {
     try {
       const start = toDateString(startDate);
       const end = toDateString(endDate);
-
       const query = new URLSearchParams();
+
       if (start && end) {
         query.append("startDate", start);
         query.append("endDate", end);
       }
       if (selectedSellers?.length) {
-        query.append(
-          "sellers",
-          selectedSellers.map(s => s.value).join(",")
-        );
+        query.append("sellers", selectedSellers.map(s => s.value).join(","));
       }
       if (selectedSellerCategories?.length) {
         query.append(
@@ -481,7 +481,6 @@ const Home = () => {
       }
 
       const url = `${API_URL}/sales/categories?${query.toString()}`;
-      console.log("fetchCategories ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setCategories(data.map(cat => ({ value: cat, label: cat })));
@@ -494,8 +493,8 @@ const Home = () => {
     try {
       const start = toDateString(startDate);
       const end = toDateString(endDate);
-
       const query = new URLSearchParams();
+
       if (start && end) {
         query.append("startDate", start);
         query.append("endDate", end);
@@ -526,7 +525,6 @@ const Home = () => {
       }
 
       const url = `${API_URL}/sales/article-names?${query.toString()}`;
-      console.log("fetchArticleNamesOptions ->", url);
       const response = await fetch(url);
       const data = await response.json();
       setArticleNamesOptions(
@@ -552,12 +550,12 @@ const Home = () => {
   // When filters change, refresh data
   useEffect(() => {
     if (!startDate || !endDate) return;
-
     fetchTotalSales();
     fetchTotalQuantity();
     fetchAvgArticlePrice();
     fetchOrderCount();
     fetchDailySales();
+    fetchMonthlySales(); // also fetch monthly aggregated
     fetchSellerCategoriesTotal();
     fetchCategoryTotals();
 
@@ -603,14 +601,27 @@ const Home = () => {
   }, []);
 
   // ----------------------------------------------------------
-  // Data Transform for Bar Chart
+  // Build bar chart data
   // ----------------------------------------------------------
-  const barData = (dailySales || [])
+  // dailySales => [ { date: "DD/MM", total: 123 }, ... ]
+  const dailyBarData = (dailySales || [])
     .filter(item => item && item.date && item.total !== undefined)
     .map(item => ({
       date: item.date,
       total: Number(item.total),
     }));
+
+  // monthlySales => [ { month: "YYYY-MM", total: 9999 }, ... ]
+  const monthlyBarData = (monthlySales || [])
+    .filter(item => item && item.month && item.total !== undefined)
+    .map(item => ({
+      // We'll just store the month string in "date" for convenience
+      date: item.month,
+      total: Number(item.total),
+    }));
+
+  // Decide which dataset to show based on barViewMode
+  const barData = barViewMode === "daily" ? dailyBarData : monthlyBarData;
 
   // ----------------------------------------------------------
   // Custom Select Styles
@@ -693,6 +704,24 @@ const Home = () => {
         barData={barData}
       />
 
+      {/* Buttons to toggle daily vs monthly */}
+      <Box mt={4}>
+        <Button
+          onClick={() => setBarViewMode("daily")}
+          colorScheme={barViewMode === "daily" ? "blue" : "gray"}
+          mr={2}
+        >
+          Daily View
+        </Button>
+        <Button
+          onClick={() => setBarViewMode("monthly")}
+          colorScheme={barViewMode === "monthly" ? "blue" : "gray"}
+        >
+          Monthly View
+        </Button>
+      </Box>
+      
+
       {/* PIE + TREEMAP */}
       <Card boxShadow="md" borderRadius="md" mt={6}>
         <CardBody>
@@ -710,9 +739,7 @@ const Home = () => {
             >
               {/* Download CSV Button */}
               <Box mt={4} ml={4}>
-                <button onClick={handleDownloadCsv}>
-                  Download CSV
-                </button>
+                <button onClick={handleDownloadCsv}>Download CSV</button>
               </Box>
 
               {/* Pie Chart */}

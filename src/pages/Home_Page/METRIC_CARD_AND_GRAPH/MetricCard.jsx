@@ -113,7 +113,10 @@ const MetricsCard = ({
         </Grid>
 
         {/* Daily Sales Bar Chart */}
+
+        
         <Box height="400px">
+          
         <ResponsiveBar
   data={barData}
   keys={["total"]}
