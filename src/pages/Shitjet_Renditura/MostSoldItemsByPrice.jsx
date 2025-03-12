@@ -21,14 +21,15 @@ import {
   useBreakpointValue,
   Spinner,
 } from "@chakra-ui/react";
+import moment from "moment";
 
 import Filters from "./Filters03/Filters03.jsx"; // Adjust the path as needed
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// -------------------------------------------------------
-// Custom react-select styles (same as in Home.js)
-// -------------------------------------------------------
+// -----------------------------------------------------------------
+// 1) Custom react-select styles
+// -----------------------------------------------------------------
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -69,9 +70,15 @@ const customSelectStyles = {
   }),
 };
 
+// Helper: convert a JS Date to 'YYYY-MM-DD' for the server
+function toDateString(dateObj) {
+  if (!dateObj) return "";
+  return moment(dateObj).format("YYYY-MM-DD");
+}
+
 function MostSoldItemsByPrice() {
   // -----------------------------------------------------------------
-  // 1) Destructure from context (date range & filter states)
+  // 2) Destructure from context (date range & filter states)
   // -----------------------------------------------------------------
   const {
     startDate,
@@ -91,7 +98,7 @@ function MostSoldItemsByPrice() {
   } = useOutletContext();
 
   // -----------------------------------------------------------------
-  // 2) Local states for data & pagination
+  // 3) Local states for data & pagination
   // -----------------------------------------------------------------
   const [data, setData] = useState([]);
   const [limit, setLimit] = useState(50);
@@ -99,7 +106,7 @@ function MostSoldItemsByPrice() {
   const [loading, setLoading] = useState(false);
 
   // -----------------------------------------------------------------
-  // 3) Local states for the *master* dropdown options (fetched once)
+  // 4) Local states for the *master* dropdown options (fetched once)
   // -----------------------------------------------------------------
   const [sellers, setSellers] = useState([]);
   const [sellerCategories, setSellerCategories] = useState([]);
@@ -120,12 +127,11 @@ function MostSoldItemsByPrice() {
   );
 
   // -----------------------------------------------------------------
-  // 4) Insert custom date picker styles for dark theme
+  // 5) Insert custom date picker styles for dark theme
   // -----------------------------------------------------------------
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
-      /* Dark theme for react-datepicker in MostSoldItemsByPrice */
       .react-datepicker__input-container input {
         background-color: #2D3748 !important;
         color: #FFF !important;
@@ -151,41 +157,11 @@ function MostSoldItemsByPrice() {
   }, []);
 
   // -----------------------------------------------------------------
-  // 5) Helper to handle Hours Query
+  // 6) Helper to handle Hours Query
   // -----------------------------------------------------------------
   const buildHoursQuery = () => {
     if (!selectedHours || selectedHours.length === 0) return "";
     return `&hours=${selectedHours.map((h) => h.value).join(",")}`;
-  };
-
-  // -----------------------------------------------------------------
-  // 6) Build local-boundary start/end
-  // -----------------------------------------------------------------
-  const buildLocalBoundaries = () => {
-    if (!startDate || !endDate) {
-      return { localStart: null, localEnd: null };
-    }
-    // Start-of-day boundary for startDate
-    const localStart = new Date(
-      startDate.getFullYear(),
-      startDate.getMonth(),
-      startDate.getDate(),
-      0,
-      0,
-      0
-    ).toISOString();
-
-    // End-of-day boundary for endDate
-    const localEnd = new Date(
-      endDate.getFullYear(),
-      endDate.getMonth(),
-      endDate.getDate(),
-      23,
-      59,
-      59
-    ).toISOString();
-
-    return { localStart, localEnd };
   };
 
   // -----------------------------------------------------------------
@@ -200,23 +176,14 @@ function MostSoldItemsByPrice() {
       }
       setLoading(true);
 
-      // Construct local day boundaries
-      const { localStart, localEnd } = buildLocalBoundaries();
+      // 1) Convert start/end to 'YYYY-MM-DD'
+      const startStr = toDateString(startDate);
+      const endStr = toDateString(endDate);
 
-      console.log("Filters for MostSoldItemsByPrice:", {
-        localStart,
-        localEnd,
-        selectedSellers,
-        selectedSellerCategories,
-        selectedArticleNames,
-        selectedCategories,
-        selectedHours,
-      });
+      // 2) Construct base URL
+      let url = `${API_URL}/sales/most-sold-items-by-price?limit=${limit}&offset=${offset}&startDate=${startStr}&endDate=${endStr}`;
 
-      // Base query
-      let url = `${API_URL}/sales/most-sold-items-by-price?limit=${limit}&offset=${offset}&startDate=${localStart}&endDate=${localEnd}`;
-
-      // Build query for other filters
+      // 3) Add the other filters
       if (selectedSellers?.length) {
         url += `&sellers=${selectedSellers.map((s) => s.value).join(",")}`;
       }
@@ -233,13 +200,16 @@ function MostSoldItemsByPrice() {
       if (selectedCategories?.length) {
         url += `&categories=${selectedCategories.map((c) => c.value).join(",")}`;
       }
-      // Add hours if selected
+      // hours
       url += buildHoursQuery();
 
       console.log("MostSoldItemsByPrice fetch URL:", url);
 
-      // Fetch
+      // 4) Fetch
       const resp = await fetch(url);
+      if (!resp.ok) {
+        throw new Error(`Fetch error: ${resp.statusText}`);
+      }
       const result = await resp.json();
       const fetchedData = Array.isArray(result) ? result : result.data;
       setData(fetchedData);
@@ -273,42 +243,14 @@ function MostSoldItemsByPrice() {
     }
   };
 
-  const fetchArticleNamesFn = async () => {
-    try {
-      if (!startDate || !endDate) return; // need date range
-      const { localStart, localEnd } = buildLocalBoundaries();
-
-      let url = `${API_URL}/sales/article-names?startDate=${localStart}&endDate=${localEnd}`;
-
-      if (selectedSellers?.length) {
-        url += `&sellers=${selectedSellers.map((s) => s.value).join(",")}`;
-      }
-      if (selectedSellerCategories?.length) {
-        url += `&sellerCategories=${selectedSellerCategories
-          .map((sc) => sc.value)
-          .join(",")}`;
-      }
-      if (selectedCategories?.length) {
-        url += `&categories=${selectedCategories.map((c) => c.value).join(",")}`;
-      }
-      // hours
-      url += buildHoursQuery();
-
-      console.log("fetchArticleNamesFn ->", url);
-      const resp = await fetch(url);
-      const data = await resp.json();
-      setArticleNames(data.map((a) => ({ value: a, label: a })));
-    } catch (err) {
-      console.error("Error fetching article names:", err);
-    }
-  };
-
+  // For categories & article names, we can still pass the date as 'YYYY-MM-DD'
   const fetchCategoriesFn = async () => {
     try {
-      if (!startDate || !endDate) return; // need date range
-      const { localStart, localEnd } = buildLocalBoundaries();
+      if (!startDate || !endDate) return;
+      const startStr = toDateString(startDate);
+      const endStr = toDateString(endDate);
 
-      let url = `${API_URL}/sales/categories?startDate=${localStart}&endDate=${localEnd}`;
+      let url = `${API_URL}/sales/categories?startDate=${startStr}&endDate=${endStr}`;
 
       if (selectedSellers?.length) {
         url += `&sellers=${selectedSellers.map((s) => s.value).join(",")}`;
@@ -334,8 +276,38 @@ function MostSoldItemsByPrice() {
     }
   };
 
+  const fetchArticleNamesFn = async () => {
+    try {
+      if (!startDate || !endDate) return;
+      const startStr = toDateString(startDate);
+      const endStr = toDateString(endDate);
+
+      let url = `${API_URL}/sales/article-names?startDate=${startStr}&endDate=${endStr}`;
+
+      if (selectedSellers?.length) {
+        url += `&sellers=${selectedSellers.map((s) => s.value).join(",")}`;
+      }
+      if (selectedSellerCategories?.length) {
+        url += `&sellerCategories=${selectedSellerCategories
+          .map((sc) => sc.value)
+          .join(",")}`;
+      }
+      if (selectedCategories?.length) {
+        url += `&categories=${selectedCategories.map((c) => c.value).join(",")}`;
+      }
+      url += buildHoursQuery();
+
+      console.log("fetchArticleNamesFn ->", url);
+      const resp = await fetch(url);
+      const data = await resp.json();
+      setArticleNames(data.map((a) => ({ value: a, label: a })));
+    } catch (err) {
+      console.error("Error fetching article names:", err);
+    }
+  };
+
   // -----------------------------------------------------------------
-  // 9) On mount, fetch minimal data (sellers & sellerCategories).
+  // 9) On mount, fetch sellers & sellerCategories once
   // -----------------------------------------------------------------
   useEffect(() => {
     fetchSellersFn();
@@ -357,7 +329,7 @@ function MostSoldItemsByPrice() {
   ]);
 
   // -----------------------------------------------------------------
-  // 11) Reset pagination offset on filter changes
+  // 11) Reset offset on filter changes
   // -----------------------------------------------------------------
   useEffect(() => {
     setOffset(0);
@@ -389,9 +361,7 @@ function MostSoldItemsByPrice() {
     selectedHours,
   ]);
 
-  // -----------------------------------------------------------------
-  // Pagination helpers
-  // -----------------------------------------------------------------
+  // Pagination
   const handleLoadMore = () => setOffset((prev) => prev + limit);
   const handleLoadLess = () => setOffset((prev) => Math.max(0, prev - limit));
   const handleLimitChange = (e) => {
@@ -399,9 +369,7 @@ function MostSoldItemsByPrice() {
     setOffset(0);
   };
 
-  // -----------------------------------------------------------------
-  // Loading indicator
-  // -----------------------------------------------------------------
+  // Loading
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="200px">
@@ -410,9 +378,7 @@ function MostSoldItemsByPrice() {
     );
   }
 
-  // -----------------------------------------------------------------
-  // If no data
-  // -----------------------------------------------------------------
+  // No data
   if (!data || data.length === 0) {
     return (
       <Box p={4}>
@@ -422,16 +388,11 @@ function MostSoldItemsByPrice() {
     );
   }
 
-  // -----------------------------------------------------------------
   // Render
-  // -----------------------------------------------------------------
   return (
     <Card bg="white" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
       <CardBody>
-        {/* 
-          Our unified Filters component (Filters03.jsx).
-          Make sure it accepts the same props you pass in below.
-        */}
+        {/* Filters */}
         <Filters
           startDate={startDate}
           setStartDate={setStartDate}
@@ -459,7 +420,7 @@ function MostSoldItemsByPrice() {
         </Heading>
 
         {isMobile ? (
-          // Mobile "cards" layout
+          // MOBILE "cards"
           <VStack spacing={4} align="stretch">
             {data.map((item, idx) => (
               <Box
@@ -505,7 +466,7 @@ function MostSoldItemsByPrice() {
             </Box>
           </VStack>
         ) : (
-          // Desktop table layout
+          // DESKTOP table
           <TableContainer
             overflowY="auto"
             maxH="60vh"
