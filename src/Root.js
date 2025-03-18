@@ -1,7 +1,7 @@
-// Root.js - Main Routing Configuration with Layout
+// Root.js
 import { ChakraProvider } from '@chakra-ui/react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Header/Layout.js'; // Layout with header toggle & Outlet
+
 import Home from './pages/Home_Page/Home.js';
 import Dashboard from './pages/Shitjet_Analitike/Dashboard.jsx';
 import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice';
@@ -15,8 +15,11 @@ import NotAuthorized from './pages/Login_Page/NotAuthorized';
 import ProtectedRoute from './pages/Login_Page/ProtectedRoute.jsx';
 import Inventory from './pages/Inventory/Inventory.js';
 
+// Import the new Layout (with sidebar)
+import Layout from './components/Sidebar/Layout.js';
+
 const Root = () => {
-  // Check for a token in localStorage to determine if the user is authenticated
+  // Check for a token in localStorage
   const isAuthenticated = !!localStorage.getItem('token');
 
   return (
@@ -26,8 +29,9 @@ const Root = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/not-authorized" element={<NotAuthorized />} />
 
-        {/* Protected Routes wrapped with Layout */}
+        {/* Protected Routes - wrap them in <Layout> */}
         <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
+          {/* Example: /home route */}
           <Route
             path="/home"
             element={
@@ -36,6 +40,8 @@ const Root = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Shitjet Analitike => /dashboard */}
           <Route
             path="/dashboard"
             element={
@@ -44,6 +50,8 @@ const Root = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Shitjet Renditura => /most-sold-items-by-price */}
           <Route
             path="/most-sold-items-by-price"
             element={
@@ -52,6 +60,8 @@ const Root = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* More protected routes */}
           <Route
             path="/daily-expenses"
             element={
@@ -71,7 +81,7 @@ const Root = () => {
           <Route
             path="/article-ingredients"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin','economist']}>
                 <ArticleIngredients />
               </ProtectedRoute>
             }
@@ -79,7 +89,7 @@ const Root = () => {
           <Route
             path="/usage"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin','economist']}>
                 <Usage />
               </ProtectedRoute>
             }
@@ -87,12 +97,11 @@ const Root = () => {
           <Route
             path="/missing-articles"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin','economist']}>
                 <MissingArticles />
               </ProtectedRoute>
             }
           />
-          {/* Move Inventory route inside the Layout */}
           <Route
             path="/inventory"
             element={
@@ -103,7 +112,7 @@ const Root = () => {
           />
         </Route>
 
-        {/* Fallback Route */}
+        {/* Fallback redirect */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </ChakraProvider>

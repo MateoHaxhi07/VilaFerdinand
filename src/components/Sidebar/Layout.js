@@ -1,18 +1,21 @@
-import { useState } from 'react';
-import { useBreakpointValue, Box } from '@chakra-ui/react';
+// src/components/Sidebar/Layout.js
+import React, { useState } from 'react';
+import { Box, useBreakpointValue } from '@chakra-ui/react';
 import { Outlet } from 'react-router-dom';
-// Remove Header import
-import FooterNav from './components/Footer/index.js'; // <-- import your footer here
+
+import Sidebar from './Sidebar';
+import Header from './Header';
 
 const smVariant = { navigation: 'drawer', navigationButton: true };
 const mdVariant = { navigation: 'sidebar', navigationButton: false };
 
-export default function App() {
+export default function Layout() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const variants = useBreakpointValue({ base: smVariant, md: mdVariant });
+
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
-  // Global date/filter states ...
+  // Optional global state for child pages...
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [selectedSellers, setSelectedSellers] = useState([]);
@@ -22,7 +25,31 @@ export default function App() {
 
   return (
     <Box>
-      <Box p="5" overflowY="auto" height="100vh">
+      {/* Header with hamburger */}
+      <Header onToggleSidebar={toggleSidebar} />
+
+      {/* Sidebar: rendered as drawer on mobile */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={toggleSidebar}
+        variant={variants?.navigation}
+      />
+
+      {/* Main content area with onClick to close sidebar if clicking outside */}
+      <Box
+        pt="60px"
+        ml={variants?.navigation === 'sidebar' && isSidebarOpen ? '200px' : '0'}
+        transition="margin-left 0.3s ease"
+        p="5"
+        overflowY="auto"
+        height="100vh"
+        // If drawer (mobile) is open and the user clicks here, close the sidebar.
+        onClick={() => {
+          if (variants?.navigation === 'drawer' && isSidebarOpen) {
+            setSidebarOpen(false);
+          }
+        }}
+      >
         <Outlet
           context={{
             startDate,
@@ -40,8 +67,7 @@ export default function App() {
           }}
         />
       </Box>
-      {/* Now render the Footer at the bottom */}
-      <FooterNav />
     </Box>
   );
 }
+r
