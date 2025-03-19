@@ -32,19 +32,20 @@ const Filters = ({
   return (
     <Card
       bg="gray.800"
-      bgGradient="linear(to-r, green.600, teal.400)"
+
       mb={6}
+      mt={6}
       borderRadius="md"
       boxShadow="md"
     >
       <CardBody>
-        <Heading size="md" mb={4} color="white" fontWeight="bold">
+        <Heading size="lg" mb={4} color="white" align="center" fontWeight="bold">
           Filters
         </Heading>
 
         <Flex wrap="wrap" gap={4}>
           {/* Start Date */}
-          <Box>
+          <Box mb={4}>
             <Box mb={2} color="white" fontWeight="bold">
               Start Date
             </Box>
@@ -57,7 +58,7 @@ const Filters = ({
           </Box>
 
           {/* End Date */}
-          <Box>
+          <Box mb={4}>
             <Box mb={2} color="white" fontWeight="bold">
               End Date
             </Box>
@@ -70,7 +71,7 @@ const Filters = ({
           </Box>
 
           {/* Seller Filter */}
-          <Box minW="200px">
+          <Box minW="200px" mb={4}>
             <Box mb={2} color="white" fontWeight="bold">
               Seller
             </Box>
@@ -86,7 +87,7 @@ const Filters = ({
           </Box>
 
           {/* Seller Category Filter */}
-          <Box minW="200px">
+          <Box minW="200px" mb={4}>
             <Box mb={2} color="white" fontWeight="bold">
               Seller Category
             </Box>
@@ -102,7 +103,7 @@ const Filters = ({
           </Box>
 
           {/* NEW: Category Filter */}
-          <Box minW="200px">
+          <Box minW="200px" mb={4}>
             <Box mb={2} color="white" fontWeight="bold">
               Category
             </Box>
@@ -118,7 +119,7 @@ const Filters = ({
           </Box>
 
           {/* NEW: Article Name Filter */}
-          <Box minW="200px">
+          <Box minW="200px" mb={4}>
             <Box mb={2} color="white" fontWeight="bold">
               Article Name
             </Box>
@@ -132,8 +133,6 @@ const Filters = ({
               value={selectedArticleNames}
             />
           </Box>
-
-
         </Flex>
       </CardBody>
     </Card>

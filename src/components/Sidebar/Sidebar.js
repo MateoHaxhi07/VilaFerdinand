@@ -2,47 +2,51 @@
 import React, { useState } from 'react';
 import {
   Box,
+  Flex,
   Text,
-  Button,
   Link as ChakraLink,
-  Flex
+  Button,
+  Icon,
 } from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
-import { 
-  MdLocalGroceryStore, 
-  MdHome, 
-  MdShowChart, 
+import {
+  MdLocalGroceryStore,
+  MdHome,
+  MdShowChart,
   MdRestaurantMenu,
   MdInventory,
-  MdFileCopy
+  MdFileCopy,
 } from 'react-icons/md';
 
 export default function Sidebar({ isOpen, onClose, variant }) {
-  // States for collapsible menus
+  // Collapsible menu states
   const [isShitjetOpen, setIsShitjetOpen] = useState(false);
+  const [isRaporteDitoreOpen, setIsRaporteDitoreOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isRaporteOpen, setIsRaporteOpen] = useState(false);
   const [isRecetaOpen, setIsRecetaOpen] = useState(false);
-  const [isRaporteDitoreOpen, setIsRaporteDitoreOpen] = useState(false);
 
-  // For mobile (drawer variant), only render if open; on desktop, always render.
+  // For mobile (drawer), hide if not open; for desktop, always show
   const displaySidebar = variant === 'drawer' && !isOpen ? 'none' : 'block';
 
   return (
     <Box
+      // REMOVED ref={ref}
       position="fixed"
       left="0"
-      top="60px" // below the 60px header
-      w="200px"
+      top="60px" // exactly below the 60px header
+      w="350px"
       height="calc(100% - 60px)"
-      bg="gray.700"
+      bg="green.600"
       color="white"
       p={4}
       zIndex="1200"
+      // Slide off-screen if not open (push/drawer logic)
       transform={isOpen ? 'translateX(0)' : 'translateX(-100%)'}
       transition="transform 0.3s ease"
       display={displaySidebar}
+      overflowY="auto"
     >
       {/* Close button for mobile drawer */}
       {variant === 'drawer' && (
@@ -51,53 +55,95 @@ export default function Sidebar({ isOpen, onClose, variant }) {
         </Button>
       )}
 
-      {/* Home Page Link with Home Icon */}
-      <Flex mb={4} align="center">
-        <MdHome style={{ marginRight: '8px' }} />
+      {/* ============ HOME (Non-Collapsible) ============ */}
+      <Flex
+        className="mat-list-item-content"
+        align="center"
+        position="relative"
+        p={2}
+        borderRadius="md"
+        mb={3}
+        _hover={{ bg: 'gray.600' }}
+      >
+        <Box
+          className="mat-ripple mat-list-item-ripple"
+          position="absolute"
+          inset="0"
+          pointerEvents="none"
+        />
+        <Icon
+          as={MdHome}
+          className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
+          aria-hidden="true"
+          mr={2}
+          boxSize="32px"
+        />
         <ChakraLink
           as={Link}
           to="/home"
-          fontSize="lg"
+          fontSize="3xl"
           fontWeight="semibold"
+          className="mat-list-text"
           _hover={{ textDecoration: 'underline', color: 'teal.200' }}
         >
-             Home 
+          Home
         </ChakraLink>
       </Flex>
 
-      {/* Shitjet Folder */}
+      {/* ============ SHITJET (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
+          className="mat-list-item-content"
           align="center"
-          cursor="pointer"
-          onClick={() => setIsShitjetOpen(!isShitjetOpen)}
+          position="relative"
           p={2}
           borderRadius="md"
+          cursor="pointer"
           _hover={{ bg: 'gray.600' }}
+          onClick={() => setIsShitjetOpen(!isShitjetOpen)}
         >
-          <MdLocalGroceryStore style={{ marginRight: '8px' }} />
-          <Text fontWeight="semibold" fontSize="lg" flex="1">
+          <Box
+            className="mat-ripple mat-list-item-ripple"
+            position="absolute"
+            inset="0"
+            pointerEvents="none"
+          />
+          <Icon
+            as={MdLocalGroceryStore}
+            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
+            aria-hidden="true"
+            mr={2}
+            boxSize="32px"
+          />
+          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
             Shitjet
           </Text>
-          {isShitjetOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          <Icon
+            as={isShitjetOpen ? ChevronUpIcon : ChevronDownIcon}
+            className="mat-icon notranslate material-icons mat-icon-no-color"
+            transition="transform 0.2s"
+            boxSize="32px"
+          />
         </Flex>
         {isShitjetOpen && (
-          <Box pl={6} mt={2}>
-            <Box mb={2}>
+          <Box pl={8} mt={2}>
+            <Box mb={2} className="mat-list-item-content">
               <ChakraLink
                 as={Link}
                 to="/most-sold-items-by-price"
-                fontSize="md"
+                fontSize="lg"
+                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Shitjet Renditura
               </ChakraLink>
             </Box>
-            <Box>
+            <Box className="mat-list-item-content">
               <ChakraLink
                 as={Link}
                 to="/dashboard"
-                fontSize="md"
+                fontSize="lg"
+                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Shitjet Analitike
@@ -107,40 +153,60 @@ export default function Sidebar({ isOpen, onClose, variant }) {
         )}
       </Box>
 
-
-        {/* Raporte Ditore Folder */}
-        <Box mb={3}>
+      {/* ============ RAPORTE DITORE (Collapsible) ============ */}
+      <Box mb={3}>
         <Flex
+          className="mat-list-item-content"
           align="center"
-          cursor="pointer"
-          onClick={() => setIsRaporteDitoreOpen(!isRaporteDitoreOpen)}
+          position="relative"
           p={2}
           borderRadius="md"
+          cursor="pointer"
           _hover={{ bg: 'gray.600' }}
+          onClick={() => setIsRaporteDitoreOpen(!isRaporteDitoreOpen)}
         >
-          <MdFileCopy style={{ marginRight: '8px' }} />
-          <Text fontWeight="semibold" fontSize="lg" flex="1">
+          <Box
+            className="mat-ripple mat-list-item-ripple"
+            position="absolute"
+            inset="0"
+            pointerEvents="none"
+          />
+          <Icon
+            as={MdFileCopy}
+            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
+            aria-hidden="true"
+            mr={2}
+            boxSize="32px"
+          />
+          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
             Raporte Ditore
           </Text>
-          {isRaporteDitoreOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          <Icon
+            as={isRaporteDitoreOpen ? ChevronUpIcon : ChevronDownIcon}
+            className="mat-icon notranslate material-icons mat-icon-no-color"
+            transition="transform 0.2s"
+            boxSize="32px"
+          />
         </Flex>
         {isRaporteDitoreOpen && (
-          <Box pl={6} mt={2}>
-            <Box mb={2}>
+          <Box pl={8} mt={2}>
+            <Box mb={2} className="mat-list-item-content">
               <ChakraLink
                 as={Link}
                 to="/daily-expenses"
-                fontSize="md"
+                fontSize="lg"
+                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Xhiro Ditore
               </ChakraLink>
             </Box>
-            <Box>
+            <Box className="mat-list-item-content">
               <ChakraLink
                 as={Link}
                 to="/supplier"
-                fontSize="md"
+                fontSize="lg"
+                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Furnitor
@@ -150,99 +216,164 @@ export default function Sidebar({ isOpen, onClose, variant }) {
         )}
       </Box>
 
-      {/* Inventory Folder with New Icon */}
+      {/* ============ INVENTORY (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
+          className="mat-list-item-content"
           align="center"
-          cursor="pointer"
-          onClick={() => setIsInventoryOpen(!isInventoryOpen)}
+          position="relative"
           p={2}
           borderRadius="md"
+          cursor="pointer"
           _hover={{ bg: 'gray.600' }}
+          onClick={() => setIsInventoryOpen(!isInventoryOpen)}
         >
-          <MdInventory style={{ marginRight: '8px' }} />
-          <Text fontWeight="semibold" fontSize="lg" flex="1">
+          <Box
+            className="mat-ripple mat-list-item-ripple"
+            position="absolute"
+            inset="0"
+            pointerEvents="none"
+          />
+          <Icon
+            as={MdInventory}
+            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
+            aria-hidden="true"
+            mr={2}
+            boxSize="32px"
+          />
+          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
             Inventory
           </Text>
-          {isInventoryOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          <Icon
+            as={isInventoryOpen ? ChevronUpIcon : ChevronDownIcon}
+            className="mat-icon notranslate material-icons mat-icon-no-color"
+            transition="transform 0.2s"
+            boxSize="32px"
+          />
         </Flex>
         {isInventoryOpen && (
-          <Box pl={6} mt={2}>
-            <ChakraLink
-              as={Link}
-              to="/inventory"
-              fontSize="md"
-              _hover={{ textDecoration: 'underline', color: 'teal.200' }}
-            >
-              Inventory
-            </ChakraLink>
+          <Box pl={8} mt={2}>
+            <Box className="mat-list-item-content">
+              <ChakraLink
+                as={Link}
+                to="/inventory"
+                fontSize="lg"
+                className="mat-list-text"
+                _hover={{ textDecoration: 'underline', color: 'teal.200' }}
+              >
+                Inventory
+              </ChakraLink>
+            </Box>
           </Box>
         )}
       </Box>
 
-      {/* New Raporte Folder for Usage.js (Malli Shitur) with Graph Icon */}
+      {/* ============ RAPORTE (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
+          className="mat-list-item-content"
           align="center"
-          cursor="pointer"
-          onClick={() => setIsRaporteOpen(!isRaporteOpen)}
+          position="relative"
           p={2}
           borderRadius="md"
+          cursor="pointer"
           _hover={{ bg: 'gray.600' }}
+          onClick={() => setIsRaporteOpen(!isRaporteOpen)}
         >
-          <MdShowChart style={{ marginRight: '8px' }} />
-          <Text fontWeight="semibold" fontSize="lg" flex="1">
+          <Box
+            className="mat-ripple mat-list-item-ripple"
+            position="absolute"
+            inset="0"
+            pointerEvents="none"
+          />
+          <Icon
+            as={MdShowChart}
+            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
+            aria-hidden="true"
+            mr={2}
+            boxSize="32px"
+          />
+          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
             Raporte
           </Text>
-          {isRaporteOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          <Icon
+            as={isRaporteOpen ? ChevronUpIcon : ChevronDownIcon}
+            className="mat-icon notranslate material-icons mat-icon-no-color"
+            transition="transform 0.2s"
+            boxSize="32px"
+          />
         </Flex>
         {isRaporteOpen && (
-          <Box pl={6} mt={2}>
-            <ChakraLink
-              as={Link}
-              to="/usage"
-              fontSize="md"
-              _hover={{ textDecoration: 'underline', color: 'teal.200' }}
-            >
-              Malli Shitur
-            </ChakraLink>
+          <Box pl={8} mt={2}>
+            <Box className="mat-list-item-content">
+              <ChakraLink
+                as={Link}
+                to="/usage"
+                fontSize="lg"
+                className="mat-list-text"
+                _hover={{ textDecoration: 'underline', color: 'teal.200' }}
+              >
+                Malli Shitur
+              </ChakraLink>
+            </Box>
           </Box>
         )}
       </Box>
 
-      {/* Receta Folder with Recipe Icon */}
+      {/* ============ RECETA (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
+          className="mat-list-item-content"
           align="center"
-          cursor="pointer"
-          onClick={() => setIsRecetaOpen(!isRecetaOpen)}
+          position="relative"
           p={2}
           borderRadius="md"
+          cursor="pointer"
           _hover={{ bg: 'gray.600' }}
+          onClick={() => setIsRecetaOpen(!isRecetaOpen)}
         >
-          <MdRestaurantMenu style={{ marginRight: '8px' }} />
-          <Text fontWeight="semibold" fontSize="lg" flex="1">
+          <Box
+            className="mat-ripple mat-list-item-ripple"
+            position="absolute"
+            inset="0"
+            pointerEvents="none"
+          />
+          <Icon
+            as={MdRestaurantMenu}
+            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
+            aria-hidden="true"
+            mr={2}
+            boxSize="32px"
+          />
+          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
             Receta
           </Text>
-          {isRecetaOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          <Icon
+            as={isRecetaOpen ? ChevronUpIcon : ChevronDownIcon}
+            className="mat-icon notranslate material-icons mat-icon-no-color"
+            transition="transform 0.2s"
+            boxSize="32px"
+          />
         </Flex>
         {isRecetaOpen && (
-          <Box pl={6} mt={2}>
-            <Box mb={2}>
+          <Box pl={8} mt={2}>
+            <Box mb={2} className="mat-list-item-content">
               <ChakraLink
                 as={Link}
                 to="/article-ingredients"
-                fontSize="md"
+                fontSize="lg"
+                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Receta
               </ChakraLink>
             </Box>
-            <Box>
+            <Box className="mat-list-item-content">
               <ChakraLink
                 as={Link}
                 to="/missing-articles"
-                fontSize="md"
+                fontSize="lg"
+                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Receta Mungojn
@@ -251,8 +382,6 @@ export default function Sidebar({ isOpen, onClose, variant }) {
           </Box>
         )}
       </Box>
-
-    
     </Box>
   );
 }

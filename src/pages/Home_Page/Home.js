@@ -1,3 +1,5 @@
+// src/pages/Home_Page/Home.js
+
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
@@ -6,27 +8,27 @@ import {
   GridItem,
   Card,
   CardBody,
-  Button, // To toggle daily vs monthly
+  Button,
 } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { scaleOrdinal } from "d3-scale";
 import Papa from "papaparse";
+import moment from "moment";
 import { saveAs } from "file-saver";
 import { schemeSet3 } from "d3-scale-chromatic";
-import moment from "moment";
 
-// Internal components
+// Remove these lines:
+// import Header from "../../components/Sidebar/Header.js";
+// import Sidebar from "../../components/Sidebar/Sidebar.js";
+
 import CategoryTreemap from "./TREE_MAP/CategoryTreemap.jsx";
 import MetricsCard from "./METRIC_CARD_AND_GRAPH/MetricCard.jsx";
 import Filters from "./FILTERS/Filters.jsx";
 import SellerCategoriesChart from "./PIE_CHART_CATEGORIES/SellerCategoriesChart.jsx";
 
-// -----------------------------------------------------------------------------
 // GLOBAL SETTINGS
-// -----------------------------------------------------------------------------
-
 const colorScale = scaleOrdinal(schemeSet3);
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -36,13 +38,8 @@ function toDateString(date) {
   return moment(date).format("YYYY-MM-DD");
 }
 
-// -----------------------------------------------------------------------------
-// COMPONENT: Home (Main Dashboard)
-// -----------------------------------------------------------------------------
-const Home = () => {
-  // ----------------------------------------------------------
-  // Retrieve filter states from context
-  // ----------------------------------------------------------
+export default function Home() {
+  // Retrieve filter states from context (OutletContext)
   const {
     startDate,
     setStartDate,
@@ -56,35 +53,32 @@ const Home = () => {
     setSelectedArticleNames,
     selectedCategories,
     setSelectedCategories,
+    showFilters,
+    setShowFilters
   } = useOutletContext();
 
-  // ----------------------------------------------------------
-  // Local State for Additional Filter: selectedHours
-  // ----------------------------------------------------------
+  // Local filter: selectedHours
   const [selectedHours, setSelectedHours] = useState([]);
   const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
     value: i,
     label: i.toString().padStart(2, "0"),
   }));
 
-  // ----------------------------------------------------------
   // Metrics States
-  // ----------------------------------------------------------
   const [totalSales, setTotalSales] = useState(0);
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [avgArticlePrice, setAvgArticlePrice] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
 
-  // **Daily** aggregated data
+  // Daily and Monthly aggregated data
   const [dailySales, setDailySales] = useState([]);
-  // **Monthly** aggregated data (new)
   const [monthlySales, setMonthlySales] = useState([]);
 
-  // Pie Chart & Treemap Data
+  // Pie & Treemap data
   const [pieData, setPieData] = useState([]);
   const [categoryTreemapData, setCategoryTreemapData] = useState([]);
 
-  // We can also track average order value data if needed
+  // Average Order Value data
   const [avgOrderValueData, setAvgOrderValueData] = useState([]);
   const lineChartData = [
     {
@@ -96,74 +90,63 @@ const Home = () => {
     },
   ];
 
-  // **Toggle** for bar chart: "daily" or "monthly"
+  // Toggle for bar chart: "daily" or "monthly"
   const [barViewMode, setBarViewMode] = useState("daily");
 
-  // ----------------------------------------------------------
   // Dropdown Options
-  // ----------------------------------------------------------
   const [sellers, setSellers] = useState([]);
   const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
   const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [categories, setCategories] = useState([]);
 
   // ----------------------------------------------------------
-  // Build query for /sales/all-data (CSV download)
+  // buildAllDataQuery -> used for CSV download
   // ----------------------------------------------------------
   const buildAllDataQuery = () => {
     const queryParams = new URLSearchParams();
-
-    // If we have start/end date
     const start = toDateString(startDate);
     const end = toDateString(endDate);
+
     if (start) queryParams.append("startDate", start);
     if (end) queryParams.append("endDate", end);
 
-    // If we have sellers
     if (selectedSellers?.length) {
       queryParams.append(
         "sellers",
         selectedSellers.map(s => s.value).join(",")
       );
     }
-    // If we have sellerCategories
     if (selectedSellerCategories?.length) {
       queryParams.append(
         "sellerCategories",
         selectedSellerCategories.map(sc => sc.value).join(",")
       );
     }
-    // If we have articleNames
     if (selectedArticleNames?.length) {
       queryParams.append(
         "articleNames",
         selectedArticleNames.map(a => a.value).join(",")
       );
     }
-    // If we have categories
     if (selectedCategories?.length) {
       queryParams.append(
         "categories",
         selectedCategories.map(cat => cat.value).join(",")
       );
     }
-    // If we have hours
     if (selectedHours?.length) {
       queryParams.append(
         "hours",
         selectedHours.map(h => h.value).join(",")
       );
     }
-    // override limit/offset
     queryParams.append("limit", 1000000);
     queryParams.append("offset", 0);
 
     return queryParams.toString();
   };
 
-  // ----------------------------------------------------------
   // Handle Download CSV
-  // ----------------------------------------------------------
   const handleDownloadCsv = async () => {
     try {
       const query = buildAllDataQuery();
@@ -185,9 +168,7 @@ const Home = () => {
     }
   };
 
-  // ----------------------------------------------------------
-  // Helper function for hours filter
-  // ----------------------------------------------------------
+  // Hours filter query
   const getHoursQuery = () =>
     selectedHours.length > 0
       ? `&hours=${selectedHours.map(h => h.value).join(",")}`
@@ -196,8 +177,7 @@ const Home = () => {
   // ----------------------------------------------------------
   // Fetch Functions
   // ----------------------------------------------------------
-
-  // 1) fetchTotalSales
+  // (1) fetchTotalSales
   const fetchTotalSales = async () => {
     try {
       const start = toDateString(startDate);
@@ -222,7 +202,7 @@ const Home = () => {
     }
   };
 
-  // 2) fetchTotalQuantity
+  // (2) fetchTotalQuantity
   const fetchTotalQuantity = async () => {
     try {
       const start = toDateString(startDate);
@@ -247,7 +227,7 @@ const Home = () => {
     }
   };
 
-  // 3) fetchAvgArticlePrice
+  // (3) fetchAvgArticlePrice
   const fetchAvgArticlePrice = async () => {
     try {
       const start = toDateString(startDate);
@@ -272,7 +252,7 @@ const Home = () => {
     }
   };
 
-  // 4) fetchOrderCount
+  // (4) fetchOrderCount
   const fetchOrderCount = async () => {
     try {
       const start = toDateString(startDate);
@@ -297,7 +277,7 @@ const Home = () => {
     }
   };
 
-  // 5) fetchDailySales
+  // (5) fetchDailySales
   const fetchDailySales = async () => {
     try {
       const start = toDateString(startDate);
@@ -322,14 +302,13 @@ const Home = () => {
     }
   };
 
-  // 6) fetchMonthlySales (new)
+  // (6) fetchMonthlySales
   const fetchMonthlySales = async () => {
     try {
       const start = toDateString(startDate);
       const end = toDateString(endDate);
       if (!start || !end) return;
       const hoursQuery = getHoursQuery();
-      // We assume you created /sales/monthly-sales in your backend
       const url = `${API_URL}/sales/monthly-sales?startDate=${start}&endDate=${end}&sellers=${selectedSellers
         .map(s => s.value)
         .join(",")}&sellerCategories=${selectedSellerCategories
@@ -342,14 +321,13 @@ const Home = () => {
 
       const response = await fetch(url);
       const data = await response.json();
-      // data shape might be: [ { month: "2023-01", total: "12345" }, ... ]
       setMonthlySales(data || []);
     } catch (error) {
       console.error("Error fetching monthly sales:", error);
     }
   };
 
-  // 7) fetchSellerCategoriesTotal (Pie Chart)
+  // (7) fetchSellerCategoriesTotal (Pie Chart)
   const fetchSellerCategoriesTotal = async () => {
     try {
       const start = toDateString(startDate);
@@ -379,7 +357,7 @@ const Home = () => {
     }
   };
 
-  // 8) fetchCategoryTotals (Treemap)
+  // (8) fetchCategoryTotals (Treemap)
   const fetchCategoryTotals = async () => {
     try {
       const start = toDateString(startDate);
@@ -387,6 +365,7 @@ const Home = () => {
       if (!start || !end) return;
 
       const queryParams = new URLSearchParams({ startDate: start, endDate: end });
+
       if (selectedCategories?.length) {
         queryParams.append(
           "categories",
@@ -427,7 +406,9 @@ const Home = () => {
     }
   };
 
-  // -------------- FETCH for Dropdown Options --------------
+  // ----------------------------------------------------------
+  // Dropdown fetches (sellers, categories, etc.)
+  // ----------------------------------------------------------
   const fetchSellers = async () => {
     try {
       const response = await fetch(`${API_URL}/sales/sellers`);
@@ -538,8 +519,7 @@ const Home = () => {
   // ----------------------------------------------------------
   // useEffects
   // ----------------------------------------------------------
-
-  // On mount, load base dropdown data (sellers, categories, etc.)
+  // On mount, load base dropdown data
   useEffect(() => {
     fetchSellers();
     fetchSellerCategoriesOptions();
@@ -555,7 +535,7 @@ const Home = () => {
     fetchAvgArticlePrice();
     fetchOrderCount();
     fetchDailySales();
-    fetchMonthlySales(); // also fetch monthly aggregated
+    fetchMonthlySales();
     fetchSellerCategoriesTotal();
     fetchCategoryTotals();
 
@@ -572,7 +552,7 @@ const Home = () => {
     selectedHours,
   ]);
 
-  // Styling for the datepicker (optional)
+  // Optional styling for react-datepicker
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -600,10 +580,7 @@ const Home = () => {
     };
   }, []);
 
-  // ----------------------------------------------------------
   // Build bar chart data
-  // ----------------------------------------------------------
-  // dailySales => [ { date: "DD/MM", total: 123 }, ... ]
   const dailyBarData = (dailySales || [])
     .filter(item => item && item.date && item.total !== undefined)
     .map(item => ({
@@ -611,21 +588,16 @@ const Home = () => {
       total: Number(item.total),
     }));
 
-  // monthlySales => [ { month: "YYYY-MM", total: 9999 }, ... ]
   const monthlyBarData = (monthlySales || [])
     .filter(item => item && item.month && item.total !== undefined)
     .map(item => ({
-      // We'll just store the month string in "date" for convenience
       date: item.month,
       total: Number(item.total),
     }));
 
-  // Decide which dataset to show based on barViewMode
   const barData = barViewMode === "daily" ? dailyBarData : monthlyBarData;
 
-  // ----------------------------------------------------------
   // Custom Select Styles
-  // ----------------------------------------------------------
   const selectStyles = {
     control: (base, state) => ({
       ...base,
@@ -635,7 +607,7 @@ const Home = () => {
       fontWeight: "bold",
       minHeight: "40px",
     }),
-    menu: (base) => ({
+    menu: base => ({
       ...base,
       backgroundColor: "#2D3748",
     }),
@@ -645,21 +617,21 @@ const Home = () => {
       color: "#fff",
       fontWeight: "bold",
     }),
-    singleValue: (base) => ({
+    singleValue: base => ({
       ...base,
       color: "#fff",
       fontWeight: "bold",
     }),
-    multiValue: (base) => ({
+    multiValue: base => ({
       ...base,
       backgroundColor: "#4A5568",
     }),
-    multiValueLabel: (base) => ({
+    multiValueLabel: base => ({
       ...base,
       color: "#fff",
       fontWeight: "bold",
     }),
-    placeholder: (base) => ({
+    placeholder: base => ({
       ...base,
       color: "#A0AEC0",
       fontWeight: "bold",
@@ -670,30 +642,34 @@ const Home = () => {
   // Render
   // ----------------------------------------------------------
   return (
-    <Box minH="100vh" p={4} color="gray.100">
-      {/* FILTERS */}
-      <Filters
-        startDate={startDate}
-        setStartDate={setStartDate}
-        endDate={endDate}
-        setEndDate={setEndDate}
-        sellers={sellers}
-        selectedSellers={selectedSellers}
-        setSelectedSellers={setSelectedSellers}
-        sellerCategoriesOptions={sellerCategoriesOptions}
-        selectedSellerCategories={selectedSellerCategories}
-        setSelectedSellerCategories={setSelectedSellerCategories}
-        selectedHours={selectedHours}
-        setSelectedHours={setSelectedHours}
-        hoursOptions={hoursOptions}
-        selectStyles={selectStyles}
-        categories={categories}
-        selectedCategories={selectedCategories}
-        setSelectedCategories={setSelectedCategories}
-        articleNamesOptions={articleNamesOptions}
-        selectedArticleNames={selectedArticleNames}
-        setSelectedArticleNames={setSelectedArticleNames}
-      />
+    // Notice: we do NOT render Header or Sidebar here!
+    <Box minH="100vh" pt="80px" px={4} color="gray.100">
+
+      {/* The Filters panel: show/hide based on showFilters (from context) */}
+      {showFilters && (
+        <Filters
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          sellers={sellers}
+          selectedSellers={selectedSellers}
+          setSelectedSellers={setSelectedSellers}
+          sellerCategoriesOptions={sellerCategoriesOptions}
+          selectedSellerCategories={selectedSellerCategories}
+          setSelectedSellerCategories={setSelectedSellerCategories}
+          selectedHours={selectedHours}
+          setSelectedHours={setSelectedHours}
+          hoursOptions={hoursOptions}
+          selectStyles={selectStyles}
+          categories={categories}
+          selectedCategories={selectedCategories}
+          setSelectedCategories={setSelectedCategories}
+          articleNamesOptions={articleNamesOptions}
+          selectedArticleNames={selectedArticleNames}
+          setSelectedArticleNames={setSelectedArticleNames}
+        />
+      )}
 
       {/* METRICS + BAR CHART */}
       <MetricsCard
@@ -704,7 +680,7 @@ const Home = () => {
         barData={barData}
       />
 
-      {/* Buttons to toggle daily vs monthly */}
+      {/* Toggle Daily vs Monthly Chart */}
       <Box mt={4}>
         <Button
           onClick={() => setBarViewMode("daily")}
@@ -720,7 +696,6 @@ const Home = () => {
           Monthly View
         </Button>
       </Box>
-      
 
       {/* PIE + TREEMAP */}
       <Card boxShadow="md" borderRadius="md" mt={6}>
@@ -764,6 +739,4 @@ const Home = () => {
       </Card>
     </Box>
   );
-};
-
-export default Home;
+}

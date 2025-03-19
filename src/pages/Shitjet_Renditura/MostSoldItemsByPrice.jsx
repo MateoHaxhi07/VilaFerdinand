@@ -23,7 +23,7 @@ import {
 } from "@chakra-ui/react";
 import moment from "moment";
 
-import Filters from "./Filters03/Filters03.jsx"; // Adjust the path as needed
+import Filters from "./Filters03/Filters03.jsx"; // Adjust path if needed
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -78,7 +78,8 @@ function toDateString(dateObj) {
 
 function MostSoldItemsByPrice() {
   // -----------------------------------------------------------------
-  // 2) Destructure from context (date range & filter states)
+  // 2) Destructure from context (date range & filter states),
+  //    INCLUDING showFilters
   // -----------------------------------------------------------------
   const {
     startDate,
@@ -95,6 +96,9 @@ function MostSoldItemsByPrice() {
     setSelectedCategories,
     selectedHours,
     setSelectedHours,
+
+    // IMPORTANT: So we can conditionally render the Filters
+    showFilters,
   } = useOutletContext();
 
   // -----------------------------------------------------------------
@@ -392,28 +396,33 @@ function MostSoldItemsByPrice() {
   return (
     <Card bg="white" borderRadius="lg" boxShadow="lg" mb={6} p={4}>
       <CardBody>
-        {/* Filters */}
-        <Filters
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          setEndDate={setEndDate}
-          sellers={sellers}
-          selectedSellers={selectedSellers}
-          setSelectedSellers={setSelectedSellers}
-          sellerCategoriesOptions={sellerCategories}
-          selectedSellerCategories={selectedSellerCategories}
-          setSelectedSellerCategories={setSelectedSellerCategories}
-          categories={categories}
-          selectedCategories={selectedCategories}
-          setSelectedCategories={setSelectedCategories}
-          articleNamesOptions={articleNames}
-          selectedArticleNames={selectedArticleNames}
-          setSelectedArticleNames={setSelectedArticleNames}
-          selectedHours={selectedHours}
-          setSelectedHours={setSelectedHours}
-          selectStyles={customSelectStyles}
-        />
+        {/* 
+          (A) Conditionally render the same Filters 
+              you use on other pages, depending on showFilters
+        */}
+        {showFilters && (
+          <Filters
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            sellers={sellers}
+            selectedSellers={selectedSellers}
+            setSelectedSellers={setSelectedSellers}
+            sellerCategoriesOptions={sellerCategories}
+            selectedSellerCategories={selectedSellerCategories}
+            setSelectedSellerCategories={setSelectedSellerCategories}
+            categories={categories}
+            selectedCategories={selectedCategories}
+            setSelectedCategories={setSelectedCategories}
+            articleNamesOptions={articleNames}
+            selectedArticleNames={selectedArticleNames}
+            setSelectedArticleNames={setSelectedArticleNames}
+            selectedHours={selectedHours}
+            setSelectedHours={setSelectedHours}
+            selectStyles={customSelectStyles}
+          />
+        )}
 
         <Heading mb={1} textAlign="center">
           SHITJET RENDITURA SIPAS CMIMIT

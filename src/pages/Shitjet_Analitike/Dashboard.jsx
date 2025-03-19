@@ -19,16 +19,15 @@ import {
   useBreakpointValue,
   Spinner,
 } from "@chakra-ui/react";
-import moment from "moment-timezone";   // <-- Import moment-timezone
-import Filters from "./FILTER/Filter.jsx"; // Adjust path as needed
+import moment from "moment-timezone";
+import Filters from "./FILTER/Filter.jsx"; // Adjust path if needed
 
-// Use environment variable for API URL, or fallback
+// Use environment variable for API URL, or fallback to localhost
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-/** 
- * Custom react-select styles 
- * (If you need this for your <Filters> component. 
- * If not needed, you can remove.)
+/**
+ * Dark-themed react-select styles 
+ * (matching the style from MostSoldItemsByPrice)
  */
 const customSelectStyles = {
   control: (base, state) => ({
@@ -70,52 +69,49 @@ const customSelectStyles = {
   }),
 };
 
-const Dashboard = () => {
-  // --------------------------------------------------------------------------
-  // 1) Pull in shared filter state from your parent via React Router "outlet"
-  // --------------------------------------------------------------------------
+export default function Dashboard() {
+  // 1) Pull in shared filter states (including showFilters) from context
   const {
-    startDate, setStartDate,
-    endDate, setEndDate,
-    selectedSellers, setSelectedSellers,
-    selectedSellerCategories, setSelectedSellerCategories,
-    selectedArticleNames, setSelectedArticleNames,
-    selectedCategories, setSelectedCategories,
-    selectedHours, setSelectedHours,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    selectedSellers,
+    setSelectedSellers,
+    selectedSellerCategories,
+    setSelectedSellerCategories,
+    selectedArticleNames,
+    setSelectedArticleNames,
+    selectedCategories,
+    setSelectedCategories,
+    selectedHours,
+    setSelectedHours,
+    showFilters
   } = useOutletContext();
 
-  // --------------------------------------------------------------------------
   // 2) Local state: table data, loading, pagination
-  // --------------------------------------------------------------------------
   const [data, setData] = useState([]);
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // --------------------------------------------------------------------------
-  // 3) Local state: master dropdown arrays (sellers, categories, etc.)
-  // --------------------------------------------------------------------------
+  // 3) Local state: dropdown arrays (sellers, categories, etc.)
   const [sellers, setSellers] = useState([]);
   const [sellerCategories, setSellerCategories] = useState([]);
   const [articleNames, setArticleNames] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // --------------------------------------------------------------------------
-  // 4) Computed totals (optional)
-  // --------------------------------------------------------------------------
+  // 4) Computed totals
   const totalQuantity = data.reduce(
     (sum, row) => sum + Number(row.Quantity ?? row.quantity ?? 0),
     0
   );
   const totalSales = data.reduce(
-    (sum, row) =>
-      sum + Number(row.Total_Article_Price ?? row.total_price ?? 0),
+    (sum, row) => sum + Number(row.Total_Article_Price ?? row.total_price ?? 0),
     0
   );
 
-  // --------------------------------------------------------------------------
   // 5) [Optional] Insert a style override for the datepicker dark theme
-  // --------------------------------------------------------------------------
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -143,18 +139,14 @@ const Dashboard = () => {
     };
   }, []);
 
-  // --------------------------------------------------------------------------
-  // 6) Helper to build the “hours” query if selected
-  // --------------------------------------------------------------------------
-  const buildHoursQuery = () => {
+  // 6) Helper for "hours" query
+  function buildHoursQuery() {
     if (!selectedHours || selectedHours.length === 0) return "";
     return `&hours=${selectedHours.map((h) => h.value).join(",")}`;
-  };
+  }
 
-  // --------------------------------------------------------------------------
-  // 7) Fetch the "all-data" from the server
-  // --------------------------------------------------------------------------
-  const fetchData = async (limitValue, offsetValue) => {
+  // 7) Fetch table data from the server
+  async function fetchData(limitValue, offsetValue) {
     try {
       if (!startDate || !endDate) {
         console.log("No valid date range, skipping fetch");
@@ -163,46 +155,46 @@ const Dashboard = () => {
       }
       setLoading(true);
 
-      // ----
-      // Option A) Just pass date strings (YYYY-MM-DD) if your backend expects them. E.g.:
-      //   const startStr = moment(startDate).format("YYYY-MM-DD");
-      //   const endStr   = moment(endDate).format("YYYY-MM-DD");
-      //   let url = `${API_URL}/sales/all-data?startDate=${startStr}&endDate=${endStr}...`
-
-      // Option B) Keep your approach with local midnight => .toISOString()
-      //   so you get "2023-08-10T00:00:00.000Z" for your queries
-      // ----
+      // local midnight => local 23:59:59
       const localStart = new Date(
         startDate.getFullYear(),
         startDate.getMonth(),
         startDate.getDate(),
-        0, 0, 0
+        0,
+        0,
+        0
       ).toISOString();
 
       const localEnd = new Date(
         endDate.getFullYear(),
         endDate.getMonth(),
         endDate.getDate(),
-        23, 59, 59
+        23,
+        59,
+        59
       ).toISOString();
 
-      // Build your query
-      let url = `${API_URL}/sales/all-data?limit=${limitValue}&offset=${offsetValue}` +
-                `&startDate=${localStart}&endDate=${localEnd}`;
+      let url =
+        `${API_URL}/sales/all-data?limit=${limitValue}&offset=${offsetValue}` +
+        `&startDate=${localStart}&endDate=${localEnd}`;
 
       if (selectedSellers?.length) {
         url += `&sellers=${selectedSellers.map((s) => s.value).join(",")}`;
       }
       if (selectedSellerCategories?.length) {
-        url += `&sellerCategories=${selectedSellerCategories.map((sc) => sc.value).join(",")}`;
+        url += `&sellerCategories=${selectedSellerCategories
+          .map((sc) => sc.value)
+          .join(",")}`;
       }
       if (selectedArticleNames?.length) {
-        url += `&articleNames=${selectedArticleNames.map((a) => a.value).join(",")}`;
+        url += `&articleNames=${selectedArticleNames
+          .map((a) => a.value)
+          .join(",")}`;
       }
       if (selectedCategories?.length) {
         url += `&categories=${selectedCategories.map((c) => c.value).join(",")}`;
       }
-      // Append hours if needed
+      // hours
       url += buildHoursQuery();
 
       console.log("Fetching table data from:", url);
@@ -214,11 +206,9 @@ const Dashboard = () => {
       console.error("Error fetching data:", error);
       setLoading(false);
     }
-  };
+  }
 
-  // --------------------------------------------------------------------------
-  // 8) Whenever the filters change, reset offset to 0
-  // --------------------------------------------------------------------------
+  // 8) Reset offset to 0 whenever filters change
   useEffect(() => {
     setOffset(0);
   }, [
@@ -231,18 +221,24 @@ const Dashboard = () => {
     selectedHours,
   ]);
 
-  // --------------------------------------------------------------------------
-  // 9) Whenever offset/limit or filters change, fetch data
-  // --------------------------------------------------------------------------
+  // 9) Re-fetch data on offset/limit or filter changes
   useEffect(() => {
     fetchData(limit, offset);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [limit, offset, startDate, endDate, selectedSellers, selectedSellerCategories, selectedArticleNames, selectedCategories, selectedHours]);
+  }, [
+    limit,
+    offset,
+    startDate,
+    endDate,
+    selectedSellers,
+    selectedSellerCategories,
+    selectedArticleNames,
+    selectedCategories,
+    selectedHours,
+  ]);
 
-  // --------------------------------------------------------------------------
-  // 10) Fetch sellers, categories, etc. for the <Filters> (optional)
-  // --------------------------------------------------------------------------
-  const fetchDropdowns = async () => {
+  // 10) Fetch sellers, categories, etc. for the <Filters>
+  async function fetchDropdowns() {
     try {
       // Sellers
       const sellersResp = await fetch(`${API_URL}/sales/sellers`);
@@ -266,34 +262,28 @@ const Dashboard = () => {
     } catch (err) {
       console.error("Error fetching dropdown options:", err);
     }
-  };
+  }
 
   useEffect(() => {
     fetchDropdowns();
   }, []);
 
-  // --------------------------------------------------------------------------
-  // 11) Pagination handlers
-  // --------------------------------------------------------------------------
-  const handleLoadMore = () => {
+  // 11) Pagination
+  function handleLoadMore() {
     setOffset((prev) => prev + limit);
-  };
-  const handleLoadLess = () => {
+  }
+  function handleLoadLess() {
     setOffset((prev) => Math.max(0, prev - limit));
-  };
-  const handleLimitChange = (e) => {
+  }
+  function handleLimitChange(e) {
     setLimit(parseInt(e.target.value, 10));
     setOffset(0);
-  };
+  }
 
-  // --------------------------------------------------------------------------
-  // 12) Responsive check for mobile or desktop
-  // --------------------------------------------------------------------------
+  // 12) Check if mobile
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  // --------------------------------------------------------------------------
-  // 13) Handle loading or empty states
-  // --------------------------------------------------------------------------
+  // 13) Loading or no-data states
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="200px">
@@ -301,45 +291,48 @@ const Dashboard = () => {
       </Flex>
     );
   }
-
   if (!data || data.length === 0) {
     return (
-      <Box p={4}>
+      <Box minH="100vh" pt="80px" px={4}>
         <Heading mb={4}>SHITJET ANALITIKE</Heading>
         <Text>No data available for that range.</Text>
       </Box>
     );
   }
 
-  // --------------------------------------------------------------------------
-  // 14) Render the table or mobile cards
-  // --------------------------------------------------------------------------
+  // 14) Render with black Filter box & dark select styles
   return (
-    <Box p={4} align="center" marginBottom={4}>
-      {/* Filters at the top */}
-      <Filters
-        startDate={startDate}
-        setStartDate={setStartDate}
-        endDate={endDate}
-        setEndDate={setEndDate}
-        sellers={sellers}
-        selectedSellers={selectedSellers}
-        setSelectedSellers={setSelectedSellers}
-        sellerCategoriesOptions={sellerCategories}
-        selectedSellerCategories={selectedSellerCategories}
-        setSelectedSellerCategories={setSelectedSellerCategories}
-        categories={categories}
-        selectedCategories={selectedCategories}
-        setSelectedCategories={setSelectedCategories}
-        articleNamesOptions={articleNames}
-        selectedArticleNames={selectedArticleNames}
-        setSelectedArticleNames={setSelectedArticleNames}
-        selectedHours={selectedHours}
-        setSelectedHours={setSelectedHours}
-        selectStyles={customSelectStyles}
-      />
+    <Box minH="100vh" pt="80px" px={4}>
+      {/* Conditionally show Filters with a black box */}
+      {showFilters && (
+        <Box mb={6} bg="#2D3748" color="white" p={4} borderRadius="md">
+          <Filters
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            sellers={sellers}
+            selectedSellers={selectedSellers}
+            setSelectedSellers={setSelectedSellers}
+            sellerCategoriesOptions={sellerCategories}
+            selectedSellerCategories={selectedSellerCategories}
+            setSelectedSellerCategories={setSelectedSellerCategories}
+            categories={categories}
+            selectedCategories={selectedCategories}
+            setSelectedCategories={setSelectedCategories}
+            articleNamesOptions={articleNames}
+            selectedArticleNames={selectedArticleNames}
+            setSelectedArticleNames={setSelectedArticleNames}
+            selectedHours={selectedHours}
+            setSelectedHours={setSelectedHours}
+            selectStyles={customSelectStyles} 
+          />
+        </Box>
+      )}
 
-      <Heading mb={4}>SHITJET ANALITIKE</Heading>
+      <Heading mb={6} textAlign="center">
+        SHITJET ANALITIKE
+      </Heading>
 
       {isMobile ? (
         // ------------------ MOBILE "CARD" VIEW ------------------
@@ -353,19 +346,29 @@ const Dashboard = () => {
               bg="gray.50"
               boxShadow="sm"
             >
-              <Text><strong>Seller:</strong> {row.Seller}</Text>
-              <Text><strong>Article:</strong> {row.Article_Name}</Text>
-              <Text><strong>Quantity:</strong> {row.Quantity}</Text>
-              <Text><strong>Sales:</strong> {row.Total_Article_Price}</Text>
+              <Text>
+                <strong>Seller:</strong> {row.Seller}
+              </Text>
+              <Text>
+                <strong>Article:</strong> {row.Article_Name}
+              </Text>
+              <Text>
+                <strong>Quantity:</strong> {row.Quantity}
+              </Text>
+              <Text>
+                <strong>Sales:</strong> {row.Total_Article_Price}
+              </Text>
               <Text>
                 <strong>Datetime:</strong>{" "}
-                {moment.utc(row.Datetime)  // parse as UTC
-                  .tz("Europe/Tirane")      // convert to local zone
+                {moment
+                  .utc(row.Datetime)
+                  .subtract(1, "hours") // subtract 1 hour
+                  .tz("Europe/Tirane")
                   .format("YYYY-MM-DD HH:mm")}
               </Text>
             </Box>
           ))}
-          {/* Totals at the bottom (mobile) */}
+          {/* Totals (mobile) */}
           <Box borderTop="1px solid #ccc" pt={2} mt={4}>
             <Flex justifyContent="space-between">
               <Text fontWeight="bold">Total Quantity:</Text>
@@ -379,7 +382,7 @@ const Dashboard = () => {
         </VStack>
       ) : (
         // ------------------ DESKTOP TABLE VIEW ------------------
-        <TableContainer mt={6} overflowX="auto">
+        <TableContainer mt={4} overflowX="auto">
           <Table variant="striped" colorScheme="gray">
             <Thead>
               <Tr>
@@ -398,7 +401,9 @@ const Dashboard = () => {
                   <Td>{row.Quantity}</Td>
                   <Td>{row.Total_Article_Price}</Td>
                   <Td>
-                    {moment.utc(row.Datetime)
+                    {moment
+                      .utc(row.Datetime)
+                      .subtract(1, "hours")
                       .tz("Europe/Tirane")
                       .format("YYYY-MM-DD HH:mm")}
                   </Td>
@@ -418,8 +423,14 @@ const Dashboard = () => {
         </TableContainer>
       )}
 
-      {/* Pagination controls */}
-      <Flex mt={4} justifyContent="space-between" alignItems="center" width="100%" maxW="800px">
+      <Flex
+        mt={6}
+        justifyContent="space-between"
+        alignItems="center"
+        width="100%"
+        maxW="800px"
+        mx="auto"
+      >
         <Button onClick={handleLoadLess} isDisabled={offset === 0}>
           Previous
         </Button>
@@ -436,6 +447,4 @@ const Dashboard = () => {
       </Flex>
     </Box>
   );
-};
-
-export default Dashboard;
+}
