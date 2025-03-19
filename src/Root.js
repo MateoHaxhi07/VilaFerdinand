@@ -5,7 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home_Page/Home.js';
 import Dashboard from './pages/Shitjet_Analitike/Dashboard.jsx';
 import MostSoldItemsByPrice from './pages/Shitjet_Renditura/MostSoldItemsByPrice';
-import DailyExpenses from './pages/Xhiro_Ditore/DailyExpenses.js';
+import DailyExpenses from './pages/Xhiro_Ditore/DailyExpenses.js'; // We keep the import, but won't directly use it here
 import Supplier from './pages/Furnitor/Supplier.js';
 import ArticleIngredients from './pages/Receta/ArticleIngredients.js';
 import Usage from './pages/Malli_Shitur/Usage.js';
@@ -15,8 +15,12 @@ import NotAuthorized from './pages/Login_Page/NotAuthorized';
 import ProtectedRoute from './pages/Login_Page/ProtectedRoute.jsx';
 import Inventory from './pages/Inventory/Inventory.js';
 
-// Import the new Layout (with sidebar)
+// Layout with sidebar
 import Layout from './components/Sidebar/Layout.js';
+
+// 1) Import the new wrapper & the mobile version
+import DailyExpensesWrapper from './pages/Xhiro_Ditore/DailyExpensesWrapper.js';
+import DailyExpensesMobile from './pages/Xhiro_Ditore/DailyExpensesMobile.js';
 
 const Root = () => {
   // Check for a token in localStorage
@@ -31,7 +35,7 @@ const Root = () => {
 
         {/* Protected Routes - wrap them in <Layout> */}
         <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
-          {/* Example: /home route */}
+          {/* /home */}
           <Route
             path="/home"
             element={
@@ -61,15 +65,27 @@ const Root = () => {
             }
           />
 
-          {/* More protected routes */}
+          {/* 2) Add a brand-new route for the MOBILE version */}
+          <Route
+            path="/daily-expenses-mobile"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'economist']}>
+                <DailyExpensesMobile />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 3) Use the WRAPPER for /daily-expenses, which detects mobile */}
           <Route
             path="/daily-expenses"
             element={
               <ProtectedRoute allowedRoles={['admin', 'economist']}>
-                <DailyExpenses />
+                <DailyExpensesWrapper />
               </ProtectedRoute>
             }
           />
+
+          {/* More protected routes */}
           <Route
             path="/supplier"
             element={
