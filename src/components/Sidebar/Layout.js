@@ -1,5 +1,5 @@
 // src/components/Sidebar/Layout.js
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Box, useBreakpointValue } from '@chakra-ui/react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
@@ -14,6 +14,7 @@ export default function Layout() {
   // ----------------------------
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   // REMOVED: const sidebarRef = useRef(null);
+  const sidebarRef = useRef(null); // re-added for outside-click detection
 
   // Chakra UI breakpoint logic
   const variants = useBreakpointValue({ base: smVariant, md: mdVariant });
@@ -23,18 +24,32 @@ export default function Layout() {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  // REMOVED this entire outside-click logic:
-  /*
+  // Re-added outside-click logic, ignoring the toggle button if it has ID "sidebarToggleBtn"
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isSidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        setSidebarOpen(false);
+      // If sidebar is not open, do nothing
+      if (!isSidebarOpen) return;
+
+      // If the click is inside the sidebarRef, do nothing
+      if (sidebarRef.current && sidebarRef.current.contains(event.target)) {
+        return;
       }
+
+      // If the click is on or inside the toggle button, do nothing
+      const toggleBtn = document.getElementById('sidebarToggleBtn');
+      if (toggleBtn && toggleBtn.contains(event.target)) {
+        return;
+      }
+
+      // Otherwise, user clicked outside => close the sidebar
+      setSidebarOpen(false);
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isSidebarOpen]);
-  */
 
   // ----------------------------
   // 2) FILTERS State Management
@@ -88,16 +103,24 @@ export default function Layout() {
           ----------------------------
           It's hidden as a drawer on small screens or a sidebar on larger screens.
           We pass:
-          - isOpen: whether sidebar is shown
-          - onClose: function to close it
-          - variant: 'drawer' or 'sidebar' 
+          - sidebarRef  : to detect inside/outside clicks
+          - isOpen      : whether sidebar is shown
+          - onClose     : function to close it
+          - variant     : 'drawer' or 'sidebar' 
         */}
-      <Sidebar
-        // REMOVED ref={sidebarRef}
-        isOpen={isSidebarOpen}
-        onClose={toggleSidebar}
-        variant={variants?.navigation}
-      />
+    <Sidebar
+  // existing props
+  sidebarRef={sidebarRef}
+  isOpen={isSidebarOpen}
+  onClose={toggleSidebar}
+  variant={variants?.navigation}
+
+  // NEW: pass the filter states as normal props
+  startDate={startDate}
+  endDate={endDate}
+  selectedSellers={selectedSellers}
+  // ...
+/>
 
       {/* ----------------------------
           (C) Main Content Area

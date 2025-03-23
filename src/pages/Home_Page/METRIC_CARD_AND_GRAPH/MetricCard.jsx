@@ -10,6 +10,8 @@ import {
   GridItem,
   Heading,
   Box,
+  Flex,
+  Button,
 } from "@chakra-ui/react";
 import { ResponsiveBar } from "@nivo/bar";
 
@@ -19,6 +21,9 @@ const MetricsCard = ({
   avgArticlePrice,
   orderCount,
   barData,
+  // 1) Accept these new props for toggling
+  barViewMode,
+  setBarViewMode,
 }) => {
   return (
     <Card mb={6}>
@@ -113,66 +118,82 @@ const MetricsCard = ({
         </Grid>
 
         {/* Daily Sales Bar Chart */}
-
-        
         <Box height="400px">
-          
-        <ResponsiveBar
-  data={barData}
-  keys={["total"]}
-  indexBy="date"
-  margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
-  padding={0.3}
-  valueScale={{ type: "linear" }}
-  indexScale={{ type: "band", round: true }}
-  colors={() => "#009de0"}
-  borderColor={{ theme: "background" }}
-  tooltip={({ value, indexValue }) => (
-    <Box p="8px" bg="black" border="1px solid #ccc" borderRadius="md">
-      <strong style={{ color: "white", fontWeight: "bold" }}>{indexValue}</strong>
-      <br />
-      <Box as="span" color="white">
-        Totali Shitjeve:
-      </Box>{" "}
-      <Box as="span" fontWeight="bold" color="white">
-        {Number(value).toLocaleString()} ALL
-      </Box>
-    </Box>
-  )}
-  axisTop={null}
-  axisRight={null}
-  axisBottom={{
-    tickSize: 5,
-    tickPadding: 5,
-    tickRotation: 0,
-    legend: "",
-    legendOffset: 32,
-    legendPosition: "middle",
-  }}
-  axisLeft={{
-    tickSize: 5,
-    tickPadding: 5,
-    tickRotation: 0,
-    legend: "",
-    legendOffset: -40,
-    legendPosition: "middle",
-  }}
+          {/* NEW: Heading + Toggle Buttons above the bar chart */}
+          <Flex justifyContent="center" alignItems="center" flexDirection="column" mb={4}>
+  <Heading as="h3" size="md" color="black" textAlign="center" mb={4}>
+    Sales Over Time
+  </Heading>
+  <Box>
+    <Button
+      onClick={() => setBarViewMode("daily")}
+      colorScheme={barViewMode === "daily" ? "blue" : "gray"}
+      mr={2}
+    >
+      Daily View
+    </Button>
+    <Button
+      onClick={() => setBarViewMode("monthly")}
+      colorScheme={barViewMode === "monthly" ? "blue" : "gray"}
+    >
+      Monthly View
+    </Button>
+  </Box>
+</Flex>
 
-  /* The key line: disable labels */
-  enableLabel={false}
-
-  theme={{
-    background: "#ffffff",
-    axis: {
-      domain: { line: { stroke: "#000000" } },
-      ticks: {
-        line: { stroke: "#000000", strokeWidth: 1 },
-        text: { fontSize: 12, fontWeight: "bold", fill: "#000000" },
-      },
-      legend: { text: { fill: "#000000" } },
-    },
-  }}
-/>
+          <ResponsiveBar
+            data={barData}
+            keys={["total"]}
+            indexBy="date"
+            margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
+            padding={0.3}
+            valueScale={{ type: "linear" }}
+            indexScale={{ type: "band", round: true }}
+            colors={() => "#009de0"}
+            borderColor={{ theme: "background" }}
+            tooltip={({ value, indexValue }) => (
+              <Box p="8px" bg="black" border="1px solid #ccc" borderRadius="md">
+                <strong style={{ color: "white", fontWeight: "bold" }}>{indexValue}</strong>
+                <br />
+                <Box as="span" color="white">
+                  Totali Shitjeve:
+                </Box>{" "}
+                <Box as="span" fontWeight="bold" color="white">
+                  {Number(value).toLocaleString()} ALL
+                </Box>
+              </Box>
+            )}
+            axisTop={null}
+            axisRight={null}
+            axisBottom={{
+              tickSize: 5,
+              tickPadding: 5,
+              tickRotation: 0,
+              legend: "",
+              legendOffset: 32,
+              legendPosition: "middle",
+            }}
+            axisLeft={{
+              tickSize: 5,
+              tickPadding: 5,
+              tickRotation: 0,
+              legend: "",
+              legendOffset: -40,
+              legendPosition: "middle",
+            }}
+            enableLabel={false}
+            theme={{
+              background: "#ffffff",
+              axis: {
+                domain: { line: { stroke: "#000000" } },
+                ticks: {
+                  line: { stroke: "#000000", strokeWidth: 1 },
+                  text: { fontSize: 12, fontWeight: "bold", fill: "#000000" },
+                },
+                legend: { text: { fill: "#000000" } },
+              },
+            }}
+          />
         </Box>
       </CardBody>
     </Card>

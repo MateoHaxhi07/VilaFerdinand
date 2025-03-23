@@ -8,7 +8,10 @@ import {
   Button,
   Icon,
 } from '@chakra-ui/react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // <-- no longer importing useOutletContext
+import Papa from 'papaparse';
+import { saveAs } from 'file-saver';
+
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import {
   MdLocalGroceryStore,
@@ -19,34 +22,145 @@ import {
   MdFileCopy,
 } from 'react-icons/md';
 
-export default function Sidebar({ isOpen, onClose, variant }) {
-  // Collapsible menu states
+export default function Sidebar({
+  sidebarRef,
+  isOpen,
+  onClose,
+  variant,
+  // The filter states are now passed as props:
+  startDate,
+  endDate,
+  selectedSellers,
+  selectedSellerCategories,
+  selectedArticleNames,
+  selectedCategories,
+}) {
   const [isShitjetOpen, setIsShitjetOpen] = useState(false);
   const [isRaporteDitoreOpen, setIsRaporteDitoreOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isRaporteOpen, setIsRaporteOpen] = useState(false);
   const [isRecetaOpen, setIsRecetaOpen] = useState(false);
 
-  // For mobile (drawer), hide if not open; for desktop, always show
+  // Hide sidebar on small screens if not open; show on large screens
   const displaySidebar = variant === 'drawer' && !isOpen ? 'none' : 'block';
+
+  // Debug logging: see what the Sidebar has
+  console.log('[Sidebar] isOpen:', isOpen, 'variant:', variant);
+  console.log('[Sidebar] startDate:', startDate, 'endDate:', endDate);
+  console.log('[Sidebar] selectedSellers:', selectedSellers);
+  console.log('[Sidebar] selectedSellerCategories:', selectedSellerCategories);
+  console.log('[Sidebar] selectedArticleNames:', selectedArticleNames);
+  console.log('[Sidebar] selectedCategories:', selectedCategories);
+
+  // Convert Date to YYYY-MM-DD
+  const toDateString = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Build query from filters
+  const buildAllDataQuery = () => {
+    const queryParams = new URLSearchParams();
+    const start = toDateString(startDate);
+    const end = toDateString(endDate);
+
+    // Only append if they're non-empty
+    if (start) queryParams.append('startDate', start);
+    if (end) queryParams.append('endDate', end);
+
+    if (selectedSellers?.length) {
+      queryParams.append(
+        'sellers',
+        selectedSellers.map((s) => s.value).join(',')
+      );
+    }
+    if (selectedSellerCategories?.length) {
+      queryParams.append(
+        'sellerCategories',
+        selectedSellerCategories.map((sc) => sc.value).join(',')
+      );
+    }
+    if (selectedArticleNames?.length) {
+      queryParams.append(
+        'articleNames',
+        selectedArticleNames.map((a) => a.value).join(',')
+      );
+    }
+    if (selectedCategories?.length) {
+      queryParams.append(
+        'categories',
+        selectedCategories.map((cat) => cat.value).join(',')
+      );
+    }
+    // if (selectedHours?.length) {
+    //   queryParams.append(
+    //     'hours',
+    //     selectedHours.map(h => h.value).join(',')
+    //   );
+    // }
+
+    // Hardcode limit/offset or adapt as needed
+    queryParams.append('limit', 1000000);
+    queryParams.append('offset', 0);
+
+    // Debug
+    console.log('[Sidebar] buildAllDataQuery() =>', queryParams.toString());
+    return queryParams.toString();
+  };
+
+  // Fetch data & convert to CSV
+  const handleDownloadCsv = async () => {
+    console.log('[Sidebar] handleDownloadCsv CLICKED');
+
+    // 1) Check if we have valid startDate/endDate
+    if (!startDate || !endDate) {
+      alert('Please select a start and end date in the filters before downloading CSV.');
+      return;
+    }
+
+    try {
+      const query = buildAllDataQuery();
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const url = `${API_URL}/sales/all-data?${query}`;
+      console.log('[Sidebar] Downloading CSV from:', url);
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV data: ${response.statusText}`);
+      }
+      const data = await response.json();
+
+      // Convert JSON -> CSV with Papa
+      const csv = Papa.unparse(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, 'all_sales_data.csv');
+
+      console.log('[Sidebar] CSV download completed.');
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
+    }
+  };
 
   return (
     <Box
-      // REMOVED ref={ref}
+      ref={sidebarRef}
       position="fixed"
       left="0"
-      top="60px" // exactly below the 60px header
+      top="60px"
       w="350px"
       height="calc(100% - 60px)"
       bg="green.600"
       color="white"
       p={4}
       zIndex="1200"
-      // Slide off-screen if not open (push/drawer logic)
       transform={isOpen ? 'translateX(0)' : 'translateX(-100%)'}
       transition="transform 0.3s ease"
       display={displaySidebar}
       overflowY="auto"
+      
     >
       {/* Close button for mobile drawer */}
       {variant === 'drawer' && (
@@ -57,7 +171,6 @@ export default function Sidebar({ isOpen, onClose, variant }) {
 
       {/* ============ HOME (Non-Collapsible) ============ */}
       <Flex
-        className="mat-list-item-content"
         align="center"
         position="relative"
         p={2}
@@ -65,25 +178,12 @@ export default function Sidebar({ isOpen, onClose, variant }) {
         mb={3}
         _hover={{ bg: 'gray.600' }}
       >
-        <Box
-          className="mat-ripple mat-list-item-ripple"
-          position="absolute"
-          inset="0"
-          pointerEvents="none"
-        />
-        <Icon
-          as={MdHome}
-          className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
-          aria-hidden="true"
-          mr={2}
-          boxSize="32px"
-        />
+        <Icon as={MdHome} mr={2} boxSize="32px" />
         <ChakraLink
           as={Link}
           to="/home"
           fontSize="3xl"
           fontWeight="semibold"
-          className="mat-list-text"
           _hover={{ textDecoration: 'underline', color: 'teal.200' }}
         >
           Home
@@ -93,7 +193,6 @@ export default function Sidebar({ isOpen, onClose, variant }) {
       {/* ============ SHITJET (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
-          className="mat-list-item-content"
           align="center"
           position="relative"
           p={2}
@@ -102,48 +201,33 @@ export default function Sidebar({ isOpen, onClose, variant }) {
           _hover={{ bg: 'gray.600' }}
           onClick={() => setIsShitjetOpen(!isShitjetOpen)}
         >
-          <Box
-            className="mat-ripple mat-list-item-ripple"
-            position="absolute"
-            inset="0"
-            pointerEvents="none"
-          />
-          <Icon
-            as={MdLocalGroceryStore}
-            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
-            aria-hidden="true"
-            mr={2}
-            boxSize="32px"
-          />
-          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
+          <Icon as={MdLocalGroceryStore} mr={2} boxSize="32px" />
+          <Text fontWeight="semibold" fontSize="3xl" flex="1">
             Shitjet
           </Text>
           <Icon
             as={isShitjetOpen ? ChevronUpIcon : ChevronDownIcon}
-            className="mat-icon notranslate material-icons mat-icon-no-color"
             transition="transform 0.2s"
             boxSize="32px"
           />
         </Flex>
         {isShitjetOpen && (
           <Box pl={8} mt={2}>
-            <Box mb={2} className="mat-list-item-content">
+            <Box mb={2}>
               <ChakraLink
                 as={Link}
                 to="/most-sold-items-by-price"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Shitjet Renditura
               </ChakraLink>
             </Box>
-            <Box className="mat-list-item-content">
+            <Box>
               <ChakraLink
                 as={Link}
                 to="/dashboard"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Shitjet Analitike
@@ -156,7 +240,6 @@ export default function Sidebar({ isOpen, onClose, variant }) {
       {/* ============ RAPORTE DITORE (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
-          className="mat-list-item-content"
           align="center"
           position="relative"
           p={2}
@@ -165,48 +248,33 @@ export default function Sidebar({ isOpen, onClose, variant }) {
           _hover={{ bg: 'gray.600' }}
           onClick={() => setIsRaporteDitoreOpen(!isRaporteDitoreOpen)}
         >
-          <Box
-            className="mat-ripple mat-list-item-ripple"
-            position="absolute"
-            inset="0"
-            pointerEvents="none"
-          />
-          <Icon
-            as={MdFileCopy}
-            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
-            aria-hidden="true"
-            mr={2}
-            boxSize="32px"
-          />
-          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
+          <Icon as={MdFileCopy} mr={2} boxSize="32px" />
+          <Text fontWeight="semibold" fontSize="3xl" flex="1">
             Raporte Ditore
           </Text>
           <Icon
             as={isRaporteDitoreOpen ? ChevronUpIcon : ChevronDownIcon}
-            className="mat-icon notranslate material-icons mat-icon-no-color"
             transition="transform 0.2s"
             boxSize="32px"
           />
         </Flex>
         {isRaporteDitoreOpen && (
           <Box pl={8} mt={2}>
-            <Box mb={2} className="mat-list-item-content">
+            <Box mb={2}>
               <ChakraLink
                 as={Link}
                 to="/daily-expenses"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Xhiro Ditore
               </ChakraLink>
             </Box>
-            <Box className="mat-list-item-content">
+            <Box>
               <ChakraLink
                 as={Link}
                 to="/supplier"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Furnitor
@@ -219,7 +287,6 @@ export default function Sidebar({ isOpen, onClose, variant }) {
       {/* ============ INVENTORY (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
-          className="mat-list-item-content"
           align="center"
           position="relative"
           p={2}
@@ -228,37 +295,23 @@ export default function Sidebar({ isOpen, onClose, variant }) {
           _hover={{ bg: 'gray.600' }}
           onClick={() => setIsInventoryOpen(!isInventoryOpen)}
         >
-          <Box
-            className="mat-ripple mat-list-item-ripple"
-            position="absolute"
-            inset="0"
-            pointerEvents="none"
-          />
-          <Icon
-            as={MdInventory}
-            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
-            aria-hidden="true"
-            mr={2}
-            boxSize="32px"
-          />
-          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
+          <Icon as={MdInventory} mr={2} boxSize="32px" />
+          <Text fontWeight="semibold" fontSize="3xl" flex="1">
             Inventory
           </Text>
           <Icon
             as={isInventoryOpen ? ChevronUpIcon : ChevronDownIcon}
-            className="mat-icon notranslate material-icons mat-icon-no-color"
             transition="transform 0.2s"
             boxSize="32px"
           />
         </Flex>
         {isInventoryOpen && (
           <Box pl={8} mt={2}>
-            <Box className="mat-list-item-content">
+            <Box>
               <ChakraLink
                 as={Link}
                 to="/inventory"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Inventory
@@ -271,7 +324,6 @@ export default function Sidebar({ isOpen, onClose, variant }) {
       {/* ============ RAPORTE (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
-          className="mat-list-item-content"
           align="center"
           position="relative"
           p={2}
@@ -280,37 +332,23 @@ export default function Sidebar({ isOpen, onClose, variant }) {
           _hover={{ bg: 'gray.600' }}
           onClick={() => setIsRaporteOpen(!isRaporteOpen)}
         >
-          <Box
-            className="mat-ripple mat-list-item-ripple"
-            position="absolute"
-            inset="0"
-            pointerEvents="none"
-          />
-          <Icon
-            as={MdShowChart}
-            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
-            aria-hidden="true"
-            mr={2}
-            boxSize="32px"
-          />
-          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
+          <Icon as={MdShowChart} mr={2} boxSize="32px" />
+          <Text fontWeight="semibold" fontSize="3xl" flex="1">
             Raporte
           </Text>
           <Icon
             as={isRaporteOpen ? ChevronUpIcon : ChevronDownIcon}
-            className="mat-icon notranslate material-icons mat-icon-no-color"
             transition="transform 0.2s"
             boxSize="32px"
           />
         </Flex>
         {isRaporteOpen && (
           <Box pl={8} mt={2}>
-            <Box className="mat-list-item-content">
+            <Box>
               <ChakraLink
                 as={Link}
                 to="/usage"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Malli Shitur
@@ -323,7 +361,6 @@ export default function Sidebar({ isOpen, onClose, variant }) {
       {/* ============ RECETA (Collapsible) ============ */}
       <Box mb={3}>
         <Flex
-          className="mat-list-item-content"
           align="center"
           position="relative"
           p={2}
@@ -332,48 +369,33 @@ export default function Sidebar({ isOpen, onClose, variant }) {
           _hover={{ bg: 'gray.600' }}
           onClick={() => setIsRecetaOpen(!isRecetaOpen)}
         >
-          <Box
-            className="mat-ripple mat-list-item-ripple"
-            position="absolute"
-            inset="0"
-            pointerEvents="none"
-          />
-          <Icon
-            as={MdRestaurantMenu}
-            className="mat-icon notranslate routeIcon material-icons mat-icon-no-color"
-            aria-hidden="true"
-            mr={2}
-            boxSize="32px"
-          />
-          <Text className="mat-list-text" fontWeight="semibold" fontSize="3xl" flex="1">
+          <Icon as={MdRestaurantMenu} mr={2} boxSize="32px" />
+          <Text fontWeight="semibold" fontSize="3xl" flex="1">
             Receta
           </Text>
           <Icon
             as={isRecetaOpen ? ChevronUpIcon : ChevronDownIcon}
-            className="mat-icon notranslate material-icons mat-icon-no-color"
             transition="transform 0.2s"
             boxSize="32px"
           />
         </Flex>
         {isRecetaOpen && (
           <Box pl={8} mt={2}>
-            <Box mb={2} className="mat-list-item-content">
+            <Box mb={2}>
               <ChakraLink
                 as={Link}
                 to="/article-ingredients"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Receta
               </ChakraLink>
             </Box>
-            <Box className="mat-list-item-content">
+            <Box>
               <ChakraLink
                 as={Link}
                 to="/missing-articles"
                 fontSize="lg"
-                className="mat-list-text"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Receta Mungojn
@@ -381,6 +403,13 @@ export default function Sidebar({ isOpen, onClose, variant }) {
             </Box>
           </Box>
         )}
+      </Box>
+
+      {/* Download CSV Button */}
+      <Box mt={6}>
+        <Button onClick={handleDownloadCsv} colorScheme="blue" size="sm" width="100%">
+          Download CSV
+        </Button>
       </Box>
     </Box>
   );

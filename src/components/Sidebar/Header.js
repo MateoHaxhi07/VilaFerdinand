@@ -40,6 +40,7 @@ export default function Header({
         <Flex alignItems="center">
           {/* Sidebar (Hamburger) IconButton */}
           <IconButton
+            id="sidebarToggleBtn"           // <-- ADD THIS ID
             aria-label="Toggle Sidebar"
             icon={<HamburgerIcon boxSize={8} />}
             variant="ghost"

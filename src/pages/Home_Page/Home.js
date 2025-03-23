@@ -19,16 +19,14 @@ import moment from "moment";
 import { saveAs } from "file-saver";
 import { schemeSet3 } from "d3-scale-chromatic";
 
-// Remove these lines:
-// import Header from "../../components/Sidebar/Header.js";
-// import Sidebar from "../../components/Sidebar/Sidebar.js";
+// Import the combined All-in-one Card
+import AllGraphs from "./allgraphs.jsx";
 
-import CategoryTreemap from "./TREE_MAP/CategoryTreemap.jsx";
-import MetricsCard from "./METRIC_CARD_AND_GRAPH/MetricCard.jsx";
+import CategoryTreemap from "./TREE_MAP/CategoryTreemap.jsx"; // Possibly unused now, included if you still need
 import Filters from "./FILTERS/Filters.jsx";
 import SellerCategoriesChart from "./PIE_CHART_CATEGORIES/SellerCategoriesChart.jsx";
+// (We no longer import MetricsCard separately)
 
-// GLOBAL SETTINGS
 const colorScale = scaleOrdinal(schemeSet3);
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -58,6 +56,10 @@ export default function Home() {
   } = useOutletContext();
 
   // Local filter: selectedHours
+  const [sellers, setSellers] = useState([]);
+const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
+const [categories, setCategories] = useState([]);
+const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [selectedHours, setSelectedHours] = useState([]);
   const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
     value: i,
@@ -78,29 +80,15 @@ export default function Home() {
   const [pieData, setPieData] = useState([]);
   const [categoryTreemapData, setCategoryTreemapData] = useState([]);
 
-  // Average Order Value data
-  const [avgOrderValueData, setAvgOrderValueData] = useState([]);
-  const lineChartData = [
-    {
-      id: "Average Order Value",
-      data: avgOrderValueData.map(item => ({
-        x: item.order_date,
-        y: parseFloat(item.avg_order_value),
-      })),
-    },
-  ];
-
-  // Toggle for bar chart: "daily" or "monthly"
+  // For toggling bar chart: "daily" or "monthly"
   const [barViewMode, setBarViewMode] = useState("daily");
 
-  // Dropdown Options
-  const [sellers, setSellers] = useState([]);
-  const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
-  const [articleNamesOptions, setArticleNamesOptions] = useState([]);
-  const [categories, setCategories] = useState([]);
+  // We don't show the CSV button in Home now,
+  // because you said it's in the Sidebar.
 
   // ----------------------------------------------------------
-  // buildAllDataQuery -> used for CSV download
+  // buildAllDataQuery -> used for CSV download, if needed
+  // (If you only do CSV from the sidebar, you can remove it here.)
   // ----------------------------------------------------------
   const buildAllDataQuery = () => {
     const queryParams = new URLSearchParams();
@@ -146,28 +134,6 @@ export default function Home() {
     return queryParams.toString();
   };
 
-  // Handle Download CSV
-  const handleDownloadCsv = async () => {
-    try {
-      const query = buildAllDataQuery();
-      const url = `${API_URL}/sales/all-data?${query}`;
-      console.log("Downloading CSV from:", url);
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV data: ${response.statusText}`);
-      }
-      const data = await response.json();
-
-      // Convert JSON -> CSV with Papa
-      const csv = Papa.unparse(data);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      saveAs(blob, "all_sales_data.csv");
-    } catch (error) {
-      console.error("Error downloading CSV:", error);
-    }
-  };
-
   // Hours filter query
   const getHoursQuery = () =>
     selectedHours.length > 0
@@ -177,7 +143,6 @@ export default function Home() {
   // ----------------------------------------------------------
   // Fetch Functions
   // ----------------------------------------------------------
-  // (1) fetchTotalSales
   const fetchTotalSales = async () => {
     try {
       const start = toDateString(startDate);
@@ -202,7 +167,6 @@ export default function Home() {
     }
   };
 
-  // (2) fetchTotalQuantity
   const fetchTotalQuantity = async () => {
     try {
       const start = toDateString(startDate);
@@ -227,7 +191,6 @@ export default function Home() {
     }
   };
 
-  // (3) fetchAvgArticlePrice
   const fetchAvgArticlePrice = async () => {
     try {
       const start = toDateString(startDate);
@@ -252,7 +215,6 @@ export default function Home() {
     }
   };
 
-  // (4) fetchOrderCount
   const fetchOrderCount = async () => {
     try {
       const start = toDateString(startDate);
@@ -277,7 +239,6 @@ export default function Home() {
     }
   };
 
-  // (5) fetchDailySales
   const fetchDailySales = async () => {
     try {
       const start = toDateString(startDate);
@@ -302,7 +263,6 @@ export default function Home() {
     }
   };
 
-  // (6) fetchMonthlySales
   const fetchMonthlySales = async () => {
     try {
       const start = toDateString(startDate);
@@ -327,7 +287,6 @@ export default function Home() {
     }
   };
 
-  // (7) fetchSellerCategoriesTotal (Pie Chart)
   const fetchSellerCategoriesTotal = async () => {
     try {
       const start = toDateString(startDate);
@@ -357,7 +316,6 @@ export default function Home() {
     }
   };
 
-  // (8) fetchCategoryTotals (Treemap)
   const fetchCategoryTotals = async () => {
     try {
       const start = toDateString(startDate);
@@ -519,7 +477,6 @@ export default function Home() {
   // ----------------------------------------------------------
   // useEffects
   // ----------------------------------------------------------
-  // On mount, load base dropdown data
   useEffect(() => {
     fetchSellers();
     fetchSellerCategoriesOptions();
@@ -527,7 +484,6 @@ export default function Home() {
     fetchArticleNamesOptions();
   }, []);
 
-  // When filters change, refresh data
   useEffect(() => {
     if (!startDate || !endDate) return;
     fetchTotalSales();
@@ -552,7 +508,6 @@ export default function Home() {
     selectedHours,
   ]);
 
-  // Optional styling for react-datepicker
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -597,6 +552,8 @@ export default function Home() {
 
   const barData = barViewMode === "daily" ? dailyBarData : monthlyBarData;
 
+  // We have pieData & categoryTreemapData from fetchSellerCategoriesTotal & fetchCategoryTotals
+
   // Custom Select Styles
   const selectStyles = {
     control: (base, state) => ({
@@ -638,14 +595,10 @@ export default function Home() {
     }),
   };
 
-  // ----------------------------------------------------------
-  // Render
-  // ----------------------------------------------------------
   return (
-    // Notice: we do NOT render Header or Sidebar here!
-    <Box minH="100vh" pt="80px" px={4} color="gray.100">
-
-      {/* The Filters panel: show/hide based on showFilters (from context) */}
+    <Box bg="gray.100" minH="100vh" w="100%" color="gray.800">
+    {/* Optional top padding if you have a fixed header */}
+    <Box pt="80px" px={4}>
       {showFilters && (
         <Filters
           startDate={startDate}
@@ -671,72 +624,22 @@ export default function Home() {
         />
       )}
 
-      {/* METRICS + BAR CHART */}
-      <MetricsCard
+      {/* 
+        (A) We remove the separate <MetricsCard> and the separate Card for Pie/Treemap.
+        (B) We instead render our new all-in-one card:
+      */}
+      <AllGraphs
         totalSales={totalSales}
         totalQuantity={totalQuantity}
         avgArticlePrice={avgArticlePrice}
         orderCount={orderCount}
         barData={barData}
+        barViewMode={barViewMode}
+        setBarViewMode={setBarViewMode}
+        pieData={pieData}
+        categoryTreemapData={categoryTreemapData}
       />
-
-      {/* Toggle Daily vs Monthly Chart */}
-      <Box mt={4}>
-        <Button
-          onClick={() => setBarViewMode("daily")}
-          colorScheme={barViewMode === "daily" ? "blue" : "gray"}
-          mr={2}
-        >
-          Daily View
-        </Button>
-        <Button
-          onClick={() => setBarViewMode("monthly")}
-          colorScheme={barViewMode === "monthly" ? "blue" : "gray"}
-        >
-          Monthly View
-        </Button>
-      </Box>
-
-      {/* PIE + TREEMAP */}
-      <Card boxShadow="md" borderRadius="md" mt={6}>
-        <CardBody>
-          <Grid
-            templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
-            gap={6}
-            height={{ base: "auto", md: "600px" }}
-          >
-            {/* LEFT SIDE: CSV Download + Pie Chart */}
-            <GridItem
-              bg="white"
-              borderRadius="md"
-              overflow="hidden"
-              minH={{ base: "400px", md: "100%" }}
-            >
-              {/* Download CSV Button */}
-              <Box mt={4} ml={4}>
-                <button onClick={handleDownloadCsv}>Download CSV</button>
-              </Box>
-
-              {/* Pie Chart */}
-              <Box w="100%" h="100%" bg="white">
-                <SellerCategoriesChart pieData={pieData} />
-              </Box>
-            </GridItem>
-
-            {/* RIGHT SIDE: Treemap */}
-            <GridItem
-              bg="white"
-              borderRadius="md"
-              overflow="hidden"
-              minH={{ base: "400px", md: "100%" }}
-            >
-              <Box w="100%" h="100%" bg="white">
-                <CategoryTreemap data={categoryTreemapData} />
-              </Box>
-            </GridItem>
-          </Grid>
-        </CardBody>
-      </Card>
     </Box>
+  </Box>
   );
 }
