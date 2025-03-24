@@ -31,7 +31,7 @@ const Filters = ({
 }) => {
   return (
     <Card
-      bg="gray.800"
+      bg="gray.600"
 
       mb={6}
       mt={6}

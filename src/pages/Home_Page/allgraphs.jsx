@@ -1,22 +1,22 @@
 import React from "react";
 import {
-  Card,
-  CardBody,
+  Box,
   Stat,
   StatLabel,
   StatNumber,
-  StatHelpText,
   Grid,
   GridItem,
   Heading,
-  Box,
   Flex,
   Button,
 } from "@chakra-ui/react";
 import { ResponsiveBar } from "@nivo/bar";
 
+// Import your chart components
 import SellerCategoriesChart from "./PIE_CHART_CATEGORIES/SellerCategoriesChart";
 import CategoryTreemap from "./TREE_MAP/CategoryTreemap";
+
+
 
 export default function AllGraphs({
   // Metrics
@@ -35,103 +35,159 @@ export default function AllGraphs({
   categoryTreemapData,
 }) {
   return (
-    <Card mb={6} boxShadow="md" borderRadius="md">
-      <CardBody p={0} /* remove default padding */>
-
-        {/* 
-          (A) TOP SECTION (gray):
-              - 4 metrics
-              - daily/monthly toggle
-        */}
-        <Box bg="gray.100" p={4}>
-          {/* 4 Stats in a grid */}
+    <>
+      {/* TOP-LEVEL BOX (Removed the <Card> & <CardBody>, replaced with <Box>) */}
+      <Box
+        mb={6}
+        boxShadow="md"
+        borderRadius="md"
+        width="60%"
+        height="20%"
+        mx="auto"
+        bg="gray.100"
+        p={0}
+      >
+        {/* --- TOP SECTION (4 metrics + daily/monthly toggle) --- */}
+        <Box p={4}>
           <Grid
             templateColumns={{ base: "1fr", md: "repeat(4, 1fr)" }}
             gap={4}
             mb={6}
           >
-            {/* Total Sales */}
+            {/* 1) TOTAL SALES */}
             <GridItem
-              bgGradient="linear(to-r, green.300, teal.300)"
-              borderRadius="md"
-              p={4}
+              position="relative"
+              w="260px"
+              h="80px"
+               bg="linear-gradient(91deg, rgba(149,110,73,0.75) 0%, rgb(149,110,73) 100%)"
+              clipPath="polygon(
+                0% 0%, 
+                calc(100% - 30px) 0%, 
+                100% 50%, 
+                calc(100% - 30px) 100%, 
+                0% 100%
+              )"
+              pb={2}
             >
-              <Stat>
-                <StatLabel fontSize={{ base: "sm", md: "lg" }} color="black" fontWeight="bold">
-                  Total Sales
-                </StatLabel>
-                <StatNumber fontSize={{ base: "md", md: "xl" }} color="black" fontWeight="bold">
-                  {Number(totalSales).toLocaleString()} ALL
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
-                  Based on selected filters
-                </StatHelpText>
-              </Stat>
+              <Box p={4}>
+                <Stat>
+                  <StatLabel fontSize="lg" color="white" fontWeight="bold">
+                    Total Sales
+                  </StatLabel>
+                  <StatNumber fontSize="xl" color="white" fontWeight="bold">
+                    {Number(totalSales).toLocaleString()} ALL
+                  </StatNumber>
+                </Stat>
+              </Box>
             </GridItem>
 
-            {/* Total Quantity */}
+            {/* 2) TOTAL QUANTITY */}
             <GridItem
-              bgGradient="linear(to-r, green.300, teal.300)"
-              borderRadius="md"
-              p={4}
+              position="relative"
+              w="260px"
+              h="80px"
+              bgGradient="linear-gradient(91deg, rgba(49, 114, 176, 0.75) 0%, rgb(49, 114, 176), rgb(49, 114, 176));"
+              clipPath="polygon(
+                0% 0%, 
+                calc(100% - 30px) 0%, 
+                100% 50%, 
+                calc(100% - 30px) 100%, 
+                0% 100%
+              )"
+              pb={2}
             >
-              <Stat>
-                <StatLabel fontSize={{ base: "sm", md: "lg" }} color="black" fontWeight="bold">
-                  Total Quantity
-                </StatLabel>
-                <StatNumber fontSize={{ base: "md", md: "xl" }} color="black" fontWeight="bold">
-                  {Number(totalQuantity).toLocaleString()}
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
-                  Based on selected filters
-                </StatHelpText>
-              </Stat>
+              <Box p={4}>
+                <Stat>
+                  <StatLabel fontSize="lg" color="white" fontWeight="bold">
+                    Total Quantity
+                  </StatLabel>
+                  <StatNumber fontSize="xl" color="white" fontWeight="bold">
+                    {Number(totalQuantity).toLocaleString()}
+                  </StatNumber>
+                </Stat>
+              </Box>
             </GridItem>
 
-            {/* Average Article Price */}
+            {/* 3) AVERAGE ARTICLE PRICE */}
             <GridItem
-              bgGradient="linear(to-r, green.300, teal.300)"
-              borderRadius="md"
-              p={4}
+              position="relative"
+              w="260px"
+              h="80px"
+              bgGradient="linear-gradient(91deg, rgba(43, 131, 126, 0.75) 0%, rgb(43, 131, 126), rgb(43, 131, 126))"
+              clipPath="polygon(
+                0% 0%, 
+                calc(100% - 30px) 0%, 
+                100% 50%, 
+                calc(100% - 30px) 100%, 
+                0% 100%
+              )"
+              pb={2}
             >
-              <Stat>
-                <StatLabel fontSize={{ base: "sm", md: "lg" }} color="black" fontWeight="bold">
-                  Avg. Article Price
-                </StatLabel>
-                <StatNumber fontSize={{ base: "md", md: "xl" }} color="black" fontWeight="bold">
-                  {Number(avgArticlePrice).toLocaleString()} ALL
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
-                  totalSales / totalQuantity
-                </StatHelpText>
-              </Stat>
+              <Box p={4}>
+                <Stat>
+                  <StatLabel fontSize="lg" color="white" fontWeight="bold">
+                    Avg Article Price
+                  </StatLabel>
+                  <StatNumber fontSize="xl" color="white" fontWeight="bold">
+                    {Number(avgArticlePrice).toLocaleString()} ALL
+                  </StatNumber>
+                </Stat>
+              </Box>
             </GridItem>
 
-            {/* Orders */}
+            {/* 4) ORDERS */}
             <GridItem
-              bgGradient="linear(to-r, green.300, teal.300)"
-              borderRadius="md"
-              p={4}
+              position="relative"
+              w="260px"
+              h="80px"
+              bgGradient="linear-gradient(to right, rgb(115, 87, 144), rgba(115, 87, 144, 0.75));
+"
+              clipPath="polygon(
+                0% 0%, 
+                calc(100% - 30px) 0%, 
+                100% 50%, 
+                calc(100% - 30px) 100%, 
+                0% 100%
+              )"
+              pb={2}
             >
-              <Stat>
-                <StatLabel fontSize={{ base: "sm", md: "lg" }} color="black" fontWeight="bold">
-                  Orders
-                </StatLabel>
-                <StatNumber fontSize={{ base: "md", md: "xl" }} color="black" fontWeight="bold">
-                  {orderCount}
-                </StatNumber>
-                <StatHelpText fontSize="sm" color="black" fontWeight="bold">
-                  Unique orders
-                </StatHelpText>
-              </Stat>
+              <Box p={4}>
+                <Stat>
+                  <StatLabel fontSize="lg" color="white" fontWeight="bold">
+                    Orders
+                  </StatLabel>
+                  <StatNumber fontSize="xl" color="white" fontWeight="bold">
+                    {orderCount}
+                  </StatNumber>
+                </Stat>
+              </Box>
             </GridItem>
           </Grid>
 
-          {/* Toggle Buttons only (no chart) */}
+          {/* Toggle Buttons */}
           <Flex justifyContent="center" alignItems="center" flexDirection="column">
-            <Heading as="h3" size="md" color="black" textAlign="center" mb={4}>
-              Sales Over Time
-            </Heading>
+          <Box
+      as="header"
+      bg="rgb(180, 189, 208)"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="inline-flex"
+      alignItems="center"
+      justifyContent="center"
+      mb={4}            // spacing below the pill
+    >
+      <Heading
+        as="h3"
+        size="md"
+        color="black"
+        fontWeight="bold"
+        textAlign="center"
+        mb={0}           // remove heading's default bottom margin
+      >
+        Sales Over Time
+      </Heading>
+    </Box>
             <Box mb={2}>
               <Button
                 onClick={() => setBarViewMode("daily")}
@@ -150,12 +206,9 @@ export default function AllGraphs({
           </Flex>
         </Box>
 
-        {/* 
-          (B) MIDDLE SECTION (white):
-              - The Bar Chart
-        */}
-        <Box bg="white" p={4}>
-          <Box height="400px">
+        {/* MIDDLE SECTION: Bar Chart */}
+        <Box p={4}>
+          <Box height="400px" position="relative">
             <ResponsiveBar
               data={barData}
               keys={["total"]}
@@ -167,7 +220,12 @@ export default function AllGraphs({
               colors={() => "#009de0"}
               borderColor={{ theme: "background" }}
               tooltip={({ value, indexValue }) => (
-                <Box p="8px" bg="black" border="1px solid #ccc" borderRadius="md">
+                <Box
+                  p="8px"
+                  bg="black"
+                  border="1px solid #ccc"
+                  borderRadius="md"
+                >
                   <strong style={{ color: "white", fontWeight: "bold" }}>
                     {indexValue}
                   </strong>
@@ -186,26 +244,24 @@ export default function AllGraphs({
                 tickSize: 5,
                 tickPadding: 5,
                 tickRotation: 0,
-                legend: "",
-                legendOffset: 32,
-                legendPosition: "middle",
               }}
               axisLeft={{
                 tickSize: 5,
                 tickPadding: 5,
                 tickRotation: 0,
-                legend: "",
-                legendOffset: -40,
-                legendPosition: "middle",
               }}
               enableLabel={false}
               theme={{
-                background: "#ffffff",
+                background: "#f0f0f0",
                 axis: {
                   domain: { line: { stroke: "#000000" } },
                   ticks: {
                     line: { stroke: "#000000", strokeWidth: 1 },
-                    text: { fontSize: 12, fontWeight: "bold", fill: "#000000" },
+                    text: {
+                      fontSize: 12,
+                      fontWeight: "bold",
+                      fill: "#000000",
+                    },
                   },
                   legend: { text: { fill: "#000000" } },
                 },
@@ -213,41 +269,37 @@ export default function AllGraphs({
             />
           </Box>
         </Box>
+      </Box>
 
-        {/*
-          (C) BOTTOM SECTION (gray):
-              - Pie + Treemap side by side
-              - Remove 'bg="white"' from GridItems, so they match the gray parent.
-        */}
-        <Box bg="gray.100" p={4}>
-          <Grid
-            templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
-            gap={6}
-            height={{ base: "auto", md: "600px" }}
-          >
-            {/* LEFT: Pie */}
-            <GridItem
-              // remove bg="white"
-              borderRadius="md"
-              overflow="hidden"
-              minH={{ base: "400px", md: "100%" }}
-            >
+      {/* Spacer */}
+      <Box height={10} />
+
+      {/* TWO CARDS side by side (Pie + Treemap) */}
+      <Grid
+        width="60%"
+        mx="auto"
+        templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
+        gap={4}
+        mb={6}
+      >
+        {/* LEFT CARD: Pie Chart */}
+        <Box boxShadow="md" borderRadius="md" bg="gray.100" minH="400px">
+          <Box position="relative" height="100%">
+            <Box position="absolute" top="0" left="0" right="0" bottom="0">
               <SellerCategoriesChart pieData={pieData} />
-            </GridItem>
-
-            {/* RIGHT: Treemap */}
-            <GridItem
-              // remove bg="white"
-              borderRadius="md"
-              overflow="hidden"
-              minH={{ base: "400px", md: "100%" }}
-            >
-              <CategoryTreemap data={categoryTreemapData} />
-            </GridItem>
-          </Grid>
+            </Box>
+          </Box>
         </Box>
 
-      </CardBody>
-    </Card>
+        {/* RIGHT CARD: Treemap */}
+        <Box boxShadow="md" borderRadius="md" bg="gray.100" minH="400px">
+          <Box position="relative" height="100%">
+            <Box position="absolute" top="0" left="0" right="0" bottom="0">
+              <CategoryTreemap data={categoryTreemapData} />
+            </Box>
+          </Box>
+        </Box>
+      </Grid>
+    </>
   );
 }

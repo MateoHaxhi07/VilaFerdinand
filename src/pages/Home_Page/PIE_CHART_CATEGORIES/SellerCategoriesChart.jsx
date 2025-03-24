@@ -18,16 +18,27 @@ export default function SellerCategoriesChart({ pieData }) {
 
   return (
     <Box w="100%" h="100%">
-      <Heading
-        as="h2"
-        size="md"
-        mb={4}
-        color="black"
-        fontWeight="bold"
-        textAlign="center"
+      {/* The styled container matching .dLDigV */}
+      <Box
+        bg="rgb(180, 189, 208)"    // same background-color
+        borderRadius="18px"
+        display="flex"
+        px="16px"                  // horizontal padding (16px)
+        py="7.5px"                 // vertical padding (7.5px)
+        justifyContent="center"
+        alignItems="center"
+        mb={4}                     // optional margin bottom
       >
-        Top Seller Categories
-      </Heading>
+        <Heading
+          as="h2"
+          size="md"
+          color="black"
+          fontWeight="bold"
+          textAlign="center"
+        >
+          Categories
+        </Heading>
+      </Box>
 
       {/* 
         We removed the custom legend on the right 

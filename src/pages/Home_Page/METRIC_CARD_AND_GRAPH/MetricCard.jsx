@@ -27,9 +27,7 @@ const MetricsCard = ({
 }) => {
   return (
     <Card mb={6}>
-      <CardBody
-        bgGradient="linear(to-r, white.100, gray.100)"
-        boxShadow="lg"
+      <CardBody        boxShadow="lg"
         border="20px"
         borderColor="black.200"
         p={4}
@@ -121,9 +119,7 @@ const MetricsCard = ({
         <Box height="400px">
           {/* NEW: Heading + Toggle Buttons above the bar chart */}
           <Flex justifyContent="center" alignItems="center" flexDirection="column" mb={4}>
-  <Heading as="h3" size="md" color="black" textAlign="center" mb={4}>
-    Sales Over Time
-  </Heading>
+
   <Box>
     <Button
       onClick={() => setBarViewMode("daily")}
@@ -155,7 +151,7 @@ const MetricsCard = ({
               <Box p="8px" bg="black" border="1px solid #ccc" borderRadius="md">
                 <strong style={{ color: "white", fontWeight: "bold" }}>{indexValue}</strong>
                 <br />
-                <Box as="span" color="white">
+                <Box as="span" >
                   Totali Shitjeve:
                 </Box>{" "}
                 <Box as="span" fontWeight="bold" color="white">

@@ -22,9 +22,27 @@ const CategoryTreemap = ({ data }) => {
 
   return (
     <Box w="100%" h="100%">
-      <Heading as="h2" size="md" mb={4} color="black" fontWeight="bold" textAlign="center">
-        Category Treemap
-      </Heading>
+          {/* The styled container matching .dLDigV */}
+          <Box
+            bg="rgb(180, 189, 208)"    // same background-color
+            borderRadius="18px"
+            display="flex"
+            px="16px"                  // horizontal padding (16px)
+            py="7.5px"                 // vertical padding (7.5px)
+            justifyContent="center"
+            alignItems="center"
+            mb={4}                     // optional margin bottom
+          >
+            <Heading
+              as="h2"
+              size="md"
+              color="black"
+              fontWeight="bold"
+              textAlign="center"
+            >
+              Treemap
+            </Heading>
+          </Box>
 
       <Box w="100%" h="calc(100% - 3rem)">
         <ResponsiveTreeMap
@@ -35,7 +53,7 @@ const CategoryTreemap = ({ data }) => {
           margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
           colors={(node) => colorScale(node.value)}
           label={(node) => node.data.name}
-          labelSkipSize={15}
+          labelSkipSize={60}
           labelTextColor="#000"
           leavesOnly={true}  
           // Turn off parent labels entirely

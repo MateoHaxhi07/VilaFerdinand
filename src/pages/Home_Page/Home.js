@@ -15,6 +15,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { scaleOrdinal } from "d3-scale";
 import Papa from "papaparse";
+import t2 from "./t2.png";
+
 import moment from "moment";
 import { saveAs } from "file-saver";
 import { schemeSet3 } from "d3-scale-chromatic";
@@ -596,50 +598,54 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   };
 
   return (
-    <Box bg="gray.100" minH="100vh" w="100%" color="gray.800">
-    {/* Optional top padding if you have a fixed header */}
-    <Box pt="80px" px={4}>
-      {showFilters && (
-        <Filters
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          setEndDate={setEndDate}
-          sellers={sellers}
-          selectedSellers={selectedSellers}
-          setSelectedSellers={setSelectedSellers}
-          sellerCategoriesOptions={sellerCategoriesOptions}
-          selectedSellerCategories={selectedSellerCategories}
-          setSelectedSellerCategories={setSelectedSellerCategories}
-          selectedHours={selectedHours}
-          setSelectedHours={setSelectedHours}
-          hoursOptions={hoursOptions}
-          selectStyles={selectStyles}
-          categories={categories}
-          selectedCategories={selectedCategories}
-          setSelectedCategories={setSelectedCategories}
-          articleNamesOptions={articleNamesOptions}
-          selectedArticleNames={selectedArticleNames}
-          setSelectedArticleNames={setSelectedArticleNames}
-        />
-      )}
-
-      {/* 
-        (A) We remove the separate <MetricsCard> and the separate Card for Pie/Treemap.
-        (B) We instead render our new all-in-one card:
-      */}
-      <AllGraphs
-        totalSales={totalSales}
-        totalQuantity={totalQuantity}
-        avgArticlePrice={avgArticlePrice}
-        orderCount={orderCount}
-        barData={barData}
-        barViewMode={barViewMode}
-        setBarViewMode={setBarViewMode}
-        pieData={pieData}
-        categoryTreemapData={categoryTreemapData}
+    <Box
+      // Use your background image
+      backgroundImage={`url(${t2})`}
+      backgroundSize="cover"        // fill the container
+      backgroundPosition="center"   // center the image
+      backgroundRepeat="no-repeat"  // no tiling
+      minH="100vh"
+      w="100%"
+      color="gray.800"
+      pt="80px"
+      px={4}
+    >
+    {showFilters && (
+      <Filters
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
+        sellers={sellers}
+        selectedSellers={selectedSellers}
+        setSelectedSellers={setSelectedSellers}
+        sellerCategoriesOptions={sellerCategoriesOptions}
+        selectedSellerCategories={selectedSellerCategories}
+        setSelectedSellerCategories={setSelectedSellerCategories}
+        selectedHours={selectedHours}
+        setSelectedHours={setSelectedHours}
+        hoursOptions={hoursOptions}
+        selectStyles={selectStyles}
+        categories={categories}
+        selectedCategories={selectedCategories}
+        setSelectedCategories={setSelectedCategories}
+        articleNamesOptions={articleNamesOptions}
+        selectedArticleNames={selectedArticleNames}
+        setSelectedArticleNames={setSelectedArticleNames}
       />
-    </Box>
+    )}
+
+    <AllGraphs
+      totalSales={totalSales}
+      totalQuantity={totalQuantity}
+      avgArticlePrice={avgArticlePrice}
+      orderCount={orderCount}
+      barData={barData}
+      barViewMode={barViewMode}
+      setBarViewMode={setBarViewMode}
+      pieData={pieData}
+      categoryTreemapData={categoryTreemapData}
+    />
   </Box>
-  );
+);
 }

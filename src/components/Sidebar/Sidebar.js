@@ -7,6 +7,7 @@ import {
   Link as ChakraLink,
   Button,
   Icon,
+  Image
 } from '@chakra-ui/react';
 import { Link } from 'react-router-dom'; // <-- no longer importing useOutletContext
 import Papa from 'papaparse';
@@ -21,6 +22,11 @@ import {
   MdInventory,
   MdFileCopy,
 } from 'react-icons/md';
+import vfLogo from "./vf.png";
+
+
+
+
 
 export default function Sidebar({
   sidebarRef,
@@ -178,7 +184,14 @@ export default function Sidebar({
         mb={3}
         _hover={{ bg: 'gray.600' }}
       >
-        <Icon as={MdHome} mr={2} boxSize="32px" />
+           <Image
+            src={vfLogo}
+            alt="Villa Ferdinand Logo"
+            boxSize="40px"
+            objectFit="contain"
+            mr={2}
+            transform="scale(2.1)" // Scale the image to make it larger
+          />
         <ChakraLink
           as={Link}
           to="/home"

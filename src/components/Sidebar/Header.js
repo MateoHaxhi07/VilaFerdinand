@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Flex, IconButton, Text, Image } from "@chakra-ui/react";
 import { HamburgerIcon } from "@chakra-ui/icons";
 import { FaFilter } from "react-icons/fa";
-import vfLogo from "./vf.png";
+
 
 export default function Header({
   onToggleSidebar,   // function from parent (Layout) to toggle the sidebar
@@ -59,15 +59,6 @@ export default function Header({
           />
         </Flex>
 
-        {/* Center: Title */}
-        <Image
-          src={vfLogo}
-          alt="Villa Ferdinand Logo"
-          height="120px"
-          width="auto"
-          objectFit="contain"
-          animation="fade 7s ease-in-out infinite" // Add fade animation
-        />
 
         {/* Add this keyframes definition in your Chakra theme or inline */}
         <Box
