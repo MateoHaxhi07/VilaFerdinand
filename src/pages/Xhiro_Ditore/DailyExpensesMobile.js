@@ -138,6 +138,9 @@ export default function DailyExpensesMobile() {
       });
     }
   }
+  function formatWithCommas(text) {
+    return text.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
 
   function buildTableDataFromDB(dbRows) {
     const bySeller = {};
@@ -708,8 +711,8 @@ export default function DailyExpensesMobile() {
               XHIRO DITORE
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-              {totals.totalDaily.toFixed(0)}
-            </Text>
+  {`${Number(totals.totalDaily.toFixed(0)).toLocaleString()} ALL`}
+</Text>
           </Box>
         </GridItem>
 
@@ -730,11 +733,11 @@ export default function DailyExpensesMobile() {
         >
           <Box p={4}>
             <Text fontSize="lg" color="white" fontWeight="bold" mb={1}>
-              SHPENZIME TOTALI
+              SHPENZIME 
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-              {totals.totalExpenseCombined.toFixed(0)}
-            </Text>
+  {`${Number(totals.totalExpenseCombined.toFixed(0)).toLocaleString()} ALL`}
+</Text>
           </Box>
         </GridItem>
 
@@ -758,8 +761,8 @@ export default function DailyExpensesMobile() {
               CASH TOTAL
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-              {totals.totalCashDaily.toFixed(0)}
-            </Text>
+  {`${Number(totals.totalCashDaily.toFixed(0)).toLocaleString()} ALL`}
+</Text>
           </Box>
         </GridItem>
 
@@ -783,11 +786,11 @@ export default function DailyExpensesMobile() {
               DIFFERENCE
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-              {(
-                (totals.totalDaily || 0) -
-                ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
-              ).toFixed(0)}
-            </Text>
+  {`${Number(
+    (totals.totalDaily || 0) -
+    ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
+  ).toLocaleString()} ALL`}
+</Text>
           </Box>
         </GridItem>
       </Grid>
@@ -827,32 +830,58 @@ export default function DailyExpensesMobile() {
   </Text>
 </Box>
 
-                {/* Daily Total with tooltip for auto-fill */}
-                <Tooltip hasArrow placement="top" label={tooltipLabel}>
-                  <Input
-                    mb={2}
-                    value={row.dailyTotal}
-                    onChange={(e) => handleInputChange(rowIndex, "dailyTotal", e.target.value)}
-                    placeholder="Daily Total"
-                    size="sm"
-                    onDoubleClick={() => {
-                      if (existingSales !== undefined) {
-                        handleInputChange(rowIndex, "dailyTotal", existingSales.toString());
-                      }
-                    }}
-                  />
-                </Tooltip>
 
-                {/* Cash Daily Total */}
-                <Input
-                  mb={2}
-                  value={row.cashDailyTotal}
-                  onChange={(e) =>
-                    handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
-                  }
-                  placeholder="Cash Daily Total"
-                  size="sm"
-                />
+
+
+
+<HStack spacing={600} mb={4} align="center">
+  {/* Daily Total with tooltip for auto-fill */}
+  <Tooltip hasArrow placement="top" label={tooltipLabel}>
+    <Flex align="center">
+      <Text fontSize="lg" fontWeight="bold" mr={4}>
+        Daily Total:
+      </Text>
+      <Input
+        value={row.dailyTotal}
+        onChange={(e) => handleInputChange(rowIndex, "dailyTotal", e.target.value)}
+        placeholder="Enter Daily Total"
+        size="lg"
+        width="200px"
+        height="50px"
+        fontSize="lg"
+        onDoubleClick={() => {
+          if (existingSales !== undefined) {
+            handleInputChange(rowIndex, "dailyTotal", existingSales.toString());
+          }
+        }}
+      />
+    </Flex>
+  </Tooltip>
+
+  {/* Cash Daily Total */}
+  <Flex align="center" ml={50}> {/* Add margin-left here */}
+    <Text fontSize="lg" fontWeight="bold" mr={4}>
+      Cash Daily Total:
+    </Text>
+    <Input
+      value={row.cashDailyTotal}
+      onChange={(e) =>
+        handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
+      }
+      placeholder="Enter Cash Daily Total"
+      size="lg"
+      width="200px"
+      height="50px"
+      fontSize="lg"
+    />
+  </Flex>
+</HStack>
+
+
+
+
+
+
 
                 {/* Repeated expense sets */}
                 {Array.from({ length: expenseSetsCount }).map((_, expIndex) => {
@@ -881,10 +910,33 @@ export default function DailyExpensesMobile() {
                   );
                 })}
 
-                {/* Show row's expense total & difference */}
-                <Divider my={2} />
-                <Text>Expense Total: {rowExpenseTotal.toFixed(0)}</Text>
-                <Text>Difference: {diff.toFixed(0)}</Text>
+
+
+                
+
+<Divider my={2} />
+
+<HStack spacing={740} align="center" mb={2}>
+  {/* Expense Total */}
+  <Flex align="center">
+    <Text fontSize="lg" fontWeight="bold" mr={2}>
+      Expense Total:
+    </Text>
+    <Text fontSize="lg" fontWeight="bold">
+      {rowExpenseTotal.toFixed(0)}
+    </Text>
+  </Flex>
+
+  {/* Difference */}
+  <Flex align="center">
+    <Text fontSize="lg" fontWeight="bold" mr={2}>
+      Difference:
+    </Text>
+    <Text fontSize="lg" fontWeight="bold">
+      {diff.toFixed(0)}
+    </Text>
+  </Flex>
+</HStack>
               </CardBody>
             </Card>
           );
@@ -927,10 +979,10 @@ export default function DailyExpensesMobile() {
 
         <Flex mb={4} gap={4} justify="center" align="center">
           <Button colorScheme="green" onClick={handleAddCustomRow}>
-            SHTO BLERJE GJATE DITES
+            SHTO BLERJET DITES
           </Button>
           <Button colorScheme="purple" onClick={handleAutoPopulateCustomRows}>
-            SHTO BLERJET NGA XHIRO DITORE
+            SHTO BLERJET XHIRO DITORE
           </Button>
         </Flex>
 
