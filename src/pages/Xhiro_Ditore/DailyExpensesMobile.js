@@ -16,13 +16,14 @@ import {
   useToast,
   Card,
   CardBody,
-  Divider
+  Divider,
+  Grid,
+  GridItem
 } from "@chakra-ui/react";
 import { CalendarIcon, RepeatIcon, AddIcon } from "@chakra-ui/icons";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// The same constants from your original code
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const SELLERS = [
   "Kristian Llupo",
@@ -564,7 +565,7 @@ export default function DailyExpensesMobile() {
     }
   }
 
-  // Example: auto-populate from main table
+  // Auto-populate from main table
   function handleAutoPopulateCustomRows() {
     const aggregated = {};
     tableData.forEach((sellerRow) => {
@@ -681,25 +682,115 @@ export default function DailyExpensesMobile() {
         </Heading>
       </Box>
 
-      {/* (A) Summaries: placed in a Card right under the heading */}
-      <Card bg="white" borderRadius="md" boxShadow="md" mb={4}>
-        <CardBody>
-          <Text fontWeight="bold">XHIRO DITORE: {totals.totalDaily.toFixed(2)}</Text>
-          <Text fontWeight="bold">
-            SHPENZIME TOTALI: {totals.totalExpenseCombined.toFixed(2)}
-          </Text>
-          <Text fontWeight="bold">
-            CASH TOTAL: {totals.totalCashDaily.toFixed(2)}
-          </Text>
-          <Text fontWeight="bold">
-            DIFFERENCE:{" "}
-            {(
-              (totals.totalDaily || 0) -
-              ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
-            ).toFixed(2)}
-          </Text>
-        </CardBody>
-      </Card>
+      {/* (A) Summaries: arrow-shaped items in one row */}
+      <Grid
+        templateColumns={{ base: "1fr", md: "repeat(4, auto)" }}
+        gap={4}
+        mb={4}
+      >
+        {/* 1) XHIRO DITORE */}
+        <GridItem
+          position="relative"
+          w="260px"
+          h="80px"
+          bgGradient="linear-gradient(91deg, rgba(49,114,176, 0.75) 0%, rgb(49,114,176), rgb(49,114,176))"
+          clipPath="polygon(
+            0% 0%, 
+            calc(100% - 30px) 0%, 
+            100% 50%, 
+            calc(100% - 30px) 100%, 
+            0% 100%
+          )"
+          pb={2}
+        >
+          <Box p={4}>
+            <Text fontSize="lg" color="white" fontWeight="bold" mb={1}>
+              XHIRO DITORE
+            </Text>
+            <Text fontSize="xl" color="white" fontWeight="bold">
+              {totals.totalDaily.toFixed(0)}
+            </Text>
+          </Box>
+        </GridItem>
+
+        {/* 2) SHPENZIME TOTALI */}
+        <GridItem
+          position="relative"
+          w="260px"
+          h="80px"
+          bgGradient="linear-gradient(91deg, rgba(43,131,126, 0.75) 0%, rgb(43,131,126), rgb(43,131,126))"
+          clipPath="polygon(
+            0% 0%, 
+            calc(100% - 30px) 0%, 
+            100% 50%, 
+            calc(100% - 30px) 100%, 
+            0% 100%
+          )"
+          pb={2}
+        >
+          <Box p={4}>
+            <Text fontSize="lg" color="white" fontWeight="bold" mb={1}>
+              SHPENZIME TOTALI
+            </Text>
+            <Text fontSize="xl" color="white" fontWeight="bold">
+              {totals.totalExpenseCombined.toFixed(0)}
+            </Text>
+          </Box>
+        </GridItem>
+
+        {/* 3) CASH TOTAL */}
+        <GridItem
+          position="relative"
+          w="260px"
+          h="80px"
+          bgGradient="linear-gradient(to right, rgb(115,87,144), rgba(115,87,144, 0.75))"
+          clipPath="polygon(
+            0% 0%, 
+            calc(100% - 30px) 0%, 
+            100% 50%, 
+            calc(100% - 30px) 100%, 
+            0% 100%
+          )"
+          pb={2}
+        >
+          <Box p={4}>
+            <Text fontSize="lg" color="white" fontWeight="bold" mb={1}>
+              CASH TOTAL
+            </Text>
+            <Text fontSize="xl" color="white" fontWeight="bold">
+              {totals.totalCashDaily.toFixed(0)}
+            </Text>
+          </Box>
+        </GridItem>
+
+        {/* 4) DIFFERENCE */}
+        <GridItem
+          position="relative"
+          w="260px"
+          h="80px"
+          bgGradient="linear-gradient(91deg, rgba(149,110,73, 0.75) 0%, rgb(149,110,73), rgb(149,110,73))"
+          clipPath="polygon(
+            0% 0%, 
+            calc(100% - 30px) 0%, 
+            100% 50%, 
+            calc(100% - 30px) 100%, 
+            0% 100%
+          )"
+          pb={2}
+        >
+          <Box p={4}>
+            <Text fontSize="lg" color="white" fontWeight="bold" mb={1}>
+              DIFFERENCE
+            </Text>
+            <Text fontSize="xl" color="white" fontWeight="bold">
+              {(
+                (totals.totalDaily || 0) -
+                ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
+              ).toFixed(0)}
+            </Text>
+          </Box>
+        </GridItem>
+      </Grid>
 
       {/* (B) The main daily expenses list */}
       <VStack spacing={6} align="stretch">
@@ -713,16 +804,28 @@ export default function DailyExpensesMobile() {
 
           const existingSales = salesSums[row.seller];
           const tooltipLabel = existingSales
-            ? `Double-click to auto-fill. Found sales: ${existingSales.toFixed(2)}`
+            ? `Double-click to auto-fill. Found sales: ${existingSales.toFixed(0)}`
             : "No sales data found.";
 
           return (
             <Card key={rowIndex} bg="white" boxShadow="md">
               <CardBody>
-                {/* Seller & row totals */}
-                <Text fontWeight="bold" mb={1}>
-                  Seller: {row.seller}
-                </Text>
+{/* Seller & row totals */}
+<Box
+  bg="gray.200" // Gray background
+  borderRadius="18px" // Rounded corners
+  px="16px" // Horizontal padding
+  py="7.5px" // Vertical padding
+  display="flex"
+  width="100%"
+  justifyContent="center"
+  alignItems="center"
+  mb={4} // Margin bottom for spacing
+>
+  <Text fontSize="lg" color="black" fontWeight="bold">
+ {row.seller}
+  </Text>
+</Box>
 
                 {/* Daily Total with tooltip for auto-fill */}
                 <Tooltip hasArrow placement="top" label={tooltipLabel}>
@@ -780,8 +883,8 @@ export default function DailyExpensesMobile() {
 
                 {/* Show row's expense total & difference */}
                 <Divider my={2} />
-                <Text>Expense Total: {rowExpenseTotal.toFixed(2)}</Text>
-                <Text>Difference: {diff.toFixed(2)}</Text>
+                <Text>Expense Total: {rowExpenseTotal.toFixed(0)}</Text>
+                <Text>Difference: {diff.toFixed(0)}</Text>
               </CardBody>
             </Card>
           );
@@ -806,9 +909,21 @@ export default function DailyExpensesMobile() {
 
       {/* (C) The custom "modified-expenses" in a mobile card layout */}
       <Box mt={10} bg="white" p={4} borderRadius="md" boxShadow="md">
-        <Heading size="md" mb={4} textAlign="center">
-          Custom Purchases (Mobile View)
-        </Heading>
+      <Box
+  bg="rgb(180, 189, 208)" // Gray background similar to XHIRO DITORE
+  borderRadius="18px" // Rounded corners
+  px="16px" // Horizontal padding
+  py="7.5px" // Vertical padding
+  display="flex"
+  width="100%"
+  justifyContent="center"
+  alignItems="center"
+  mb={4} // Margin bottom for spacing
+>
+  <Heading as="h2" fontSize="26px" color="black" fontWeight="bold" mb={0}>
+    BLERJET GJATE DITES
+  </Heading>
+</Box>
 
         <Flex mb={4} gap={4} justify="center" align="center">
           <Button colorScheme="green" onClick={handleAddCustomRow}>
