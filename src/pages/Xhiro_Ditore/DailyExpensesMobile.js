@@ -631,27 +631,22 @@ export default function DailyExpensesMobile() {
     });
   }
 
-  // If data not loaded yet, you can show a spinner, etc.
-  // You can do: if some state is loading => show spinner
-  // (Your code might do it differently.)
-
-  // ---------------------------------------------------------------------------
-  // Render: The Mobile Layout
-  // ---------------------------------------------------------------------------
   return (
     <Box p={4}>
       <Fade in={true}>
         <Box
           p={6}
-          bgGradient="linear(to-r, green.600, teal.400)"
+          bgGradient="linear(to-r, gray.500, gray.700)"
           borderRadius="md"
           boxShadow="lg"
           border="1px solid"
           borderColor="whiteAlpha.200"
           textAlign="center"
+          mt={10}
+          mb={4}
         >
           <Heading size="md" mb={4} color="white" fontWeight="bold" textTransform="uppercase">
-            ZGJIDH DATEN PER XHIRON DITORE DHE BLERJET (MOBILE)
+            ZGJIDH DATEN
           </Heading>
           <Flex justify="center" align="center" gap={4}>
             <CalendarIcon boxSize={10} color="white" />
@@ -668,11 +663,45 @@ export default function DailyExpensesMobile() {
 
       <Box mt={6} />
 
-      {/* A) Main "Daily Expenses" in card form */}
-      <Heading size="md" mb={4} textAlign="center" mt={6}>
-        Daily Expenses (Mobile View)
-      </Heading>
+      {/* XHIRO DITORE pill heading */}
+      <Box
+        bg="rgb(180, 189, 208)"
+        borderRadius="18px"
+        px="16px"
+        py="7.5px"
+        display="flex"
+        width="100%"
+        justifyContent="center"
+        alignItems="center"
+        mb={4}
+        mt={6}
+      >
+        <Heading as="h2" fontSize="26px" color="black" fontWeight="bold" mb={0}>
+          XHIRO DITORE
+        </Heading>
+      </Box>
 
+      {/* (A) Summaries: placed in a Card right under the heading */}
+      <Card bg="white" borderRadius="md" boxShadow="md" mb={4}>
+        <CardBody>
+          <Text fontWeight="bold">XHIRO DITORE: {totals.totalDaily.toFixed(2)}</Text>
+          <Text fontWeight="bold">
+            SHPENZIME TOTALI: {totals.totalExpenseCombined.toFixed(2)}
+          </Text>
+          <Text fontWeight="bold">
+            CASH TOTAL: {totals.totalCashDaily.toFixed(2)}
+          </Text>
+          <Text fontWeight="bold">
+            DIFFERENCE:{" "}
+            {(
+              (totals.totalDaily || 0) -
+              ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
+            ).toFixed(2)}
+          </Text>
+        </CardBody>
+      </Card>
+
+      {/* (B) The main daily expenses list */}
       <VStack spacing={6} align="stretch">
         {tableData.map((row, rowIndex) => {
           const rowExpenseTotal = row.expenses
@@ -759,22 +788,6 @@ export default function DailyExpensesMobile() {
         })}
       </VStack>
 
-      {/* Summaries */}
-      <Box mt={6} p={3} bg="gray.50" borderRadius="md" boxShadow="sm">
-        <Text fontWeight="bold">Total Daily: {totals.totalDaily.toFixed(2)}</Text>
-        <Text fontWeight="bold">Total Cash Daily: {totals.totalCashDaily.toFixed(2)}</Text>
-        <Text fontWeight="bold">
-          Total Expenses: {totals.totalExpenseCombined.toFixed(2)}
-        </Text>
-        <Text fontWeight="bold">
-          Difference:{" "}
-          {(
-            (totals.totalDaily || 0) -
-            ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
-          ).toFixed(2)}
-        </Text>
-      </Box>
-
       {/* Buttons for the main daily expenses */}
       <Flex mt={4} gap={3} justify="center" wrap="wrap">
         <Button leftIcon={<AddIcon />} onClick={handleAddExpenseSet}>
@@ -791,7 +804,7 @@ export default function DailyExpensesMobile() {
         </Button>
       </Flex>
 
-      {/* (B) The custom "modified-expenses" in a mobile card layout */}
+      {/* (C) The custom "modified-expenses" in a mobile card layout */}
       <Box mt={10} bg="white" p={4} borderRadius="md" boxShadow="md">
         <Heading size="md" mb={4} textAlign="center">
           Custom Purchases (Mobile View)
@@ -893,7 +906,11 @@ export default function DailyExpensesMobile() {
                       {row.id ? "Update" : "Save"}
                     </Button>
                     {row.id && (
-                      <Button colorScheme="red" size="sm" onClick={() => handleDeleteCustomRow(index)}>
+                      <Button
+                        colorScheme="red"
+                        size="sm"
+                        onClick={() => handleDeleteCustomRow(index)}
+                      >
                         Delete
                       </Button>
                     )}

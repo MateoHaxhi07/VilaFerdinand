@@ -423,11 +423,29 @@ function MostSoldItemsByPrice() {
             selectStyles={customSelectStyles}
           />
         )}
-
-        <Heading mb={1} textAlign="center">
-          SHITJET RENDITURA SIPAS CMIMIT
-        </Heading>
-
+<Box
+  bg="rgb(180, 189, 208)"
+  borderRadius="18px"
+  px="16px"
+  py="7.5px"
+  display="flex"
+  width="100%"         // or some fixed width
+  justifyContent="center"
+  alignItems="center"
+  mb={4}
+  mt={6} // Add margin-top to create spacing above the heading
+>
+  <Heading
+  toppadding="10px"
+    as="h2"
+    fontSize="26px" 
+    color="black"
+    fontWeight="bold"
+    mb={0}
+  >
+    SHITJET RENDITURA 
+  </Heading>
+</Box>
         {isMobile ? (
           // MOBILE "cards"
           <VStack spacing={4} align="stretch">

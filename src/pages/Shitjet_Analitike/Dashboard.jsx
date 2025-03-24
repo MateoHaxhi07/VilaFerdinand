@@ -330,9 +330,29 @@ export default function Dashboard() {
         </Box>
       )}
 
-      <Heading mb={6} textAlign="center">
-        SHITJET ANALITIKE
-      </Heading>
+<Box
+  bg="rgb(180, 189, 208)"
+  borderRadius="18px"
+  px="16px"
+  py="7.5px"
+  display="flex"
+  width="100%"         // or some fixed width
+  justifyContent="center"
+  alignItems="center"
+  mb={4}
+  mt={6} // Add margin-top to create spacing above the heading
+>
+  <Heading
+  toppadding="10px"
+    as="h2"
+    fontSize="26px" 
+    color="black"
+    fontWeight="bold"
+    mb={0}
+  >
+    SHITJET ANALITIKE 
+  </Heading>
+</Box>
 
       {isMobile ? (
         // ------------------ MOBILE "CARD" VIEW ------------------

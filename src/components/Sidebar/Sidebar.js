@@ -230,7 +230,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/most-sold-items-by-price"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Shitjet Renditura
@@ -240,7 +240,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/dashboard"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Shitjet Analitike
@@ -277,7 +277,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/daily-expenses"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Xhiro Ditore
@@ -287,7 +287,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/supplier"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Furnitor
@@ -324,7 +324,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/inventory"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Inventory
@@ -361,7 +361,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/usage"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Malli Shitur
@@ -398,7 +398,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/article-ingredients"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Receta
@@ -408,7 +408,7 @@ export default function Sidebar({
               <ChakraLink
                 as={Link}
                 to="/missing-articles"
-                fontSize="lg"
+                fontSize="25px"
                 _hover={{ textDecoration: 'underline', color: 'teal.200' }}
               >
                 Receta Mungojn
