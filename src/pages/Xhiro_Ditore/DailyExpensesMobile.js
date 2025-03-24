@@ -72,7 +72,7 @@ export default function DailyExpensesMobile() {
   // The second "custom rows" table data
   const [customRows, setCustomRows] = useState([]);
 
-  // --------------- Dark styling for DatePicker ---------------
+  // Dark styling for the DatePicker
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -101,7 +101,7 @@ export default function DailyExpensesMobile() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // 1) Build TOTALS for main daily expenses
+  // Compute Totals
   // ---------------------------------------------------------------------------
   const totals = useMemo(() => {
     let totalDaily = 0;
@@ -120,7 +120,7 @@ export default function DailyExpensesMobile() {
   }, [tableData, expenseSetsCount]);
 
   // ---------------------------------------------------------------------------
-  // 2) Fetch & set main table data (Daily Expenses)
+  // Fetch daily_expenses
   // ---------------------------------------------------------------------------
   async function fetchExpenses(date) {
     const dateStr = formatLocalDate(date);
@@ -137,9 +137,6 @@ export default function DailyExpensesMobile() {
         status: "error",
       });
     }
-  }
-  function formatWithCommas(text) {
-    return text.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
   function buildTableDataFromDB(dbRows) {
@@ -202,7 +199,7 @@ export default function DailyExpensesMobile() {
   }
 
   // ---------------------------------------------------------------------------
-  // 3) Fetch customRows (modified expenses)
+  // Fetch customRows (modified_expenses)
   // ---------------------------------------------------------------------------
   async function fetchCustomRows(date) {
     const dateStr = formatLocalDate(date);
@@ -232,7 +229,7 @@ export default function DailyExpensesMobile() {
   }
 
   // ---------------------------------------------------------------------------
-  // 4) Fetch & sum sales data
+  // Fetch & sum sales data
   // ---------------------------------------------------------------------------
   async function fetchSalesData(date) {
     const dateStr = formatLocalDate(date);
@@ -265,7 +262,7 @@ export default function DailyExpensesMobile() {
   }
 
   // ---------------------------------------------------------------------------
-  // 5) Supplier options from aggregated (for custom rows)
+  // Supplier options (aggregated) for custom rows
   // ---------------------------------------------------------------------------
   async function fetchSupplierOptions() {
     try {
@@ -285,9 +282,7 @@ export default function DailyExpensesMobile() {
     fetchSupplierOptions();
   }, []);
 
-  // ---------------------------------------------------------------------------
   // On date change: fetch everything
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     fetchExpenses(selectedDate);
     fetchCustomRows(selectedDate);
@@ -295,9 +290,7 @@ export default function DailyExpensesMobile() {
     // eslint-disable-next-line
   }, [selectedDate]);
 
-  // ---------------------------------------------------------------------------
-  // 6) Input handlers for main table
-  // ---------------------------------------------------------------------------
+  // Input handlers for main table
   function handleInputChange(rowIndex, field, value) {
     setTableData((prev) => {
       const updated = [...prev];
@@ -305,7 +298,6 @@ export default function DailyExpensesMobile() {
       return updated;
     });
   }
-
   function handleExpenseChange(rowIndex, expIndex, field, value) {
     setTableData((prev) => {
       const updated = [...prev];
@@ -325,7 +317,6 @@ export default function DailyExpensesMobile() {
       });
     }
   }
-
   function handleRemoveExpenseSet() {
     if (expenseSetsCount > 1) {
       setExpenseSetsCount(expenseSetsCount - 1);
@@ -350,7 +341,6 @@ export default function DailyExpensesMobile() {
         .filter((ex) => ex.expense.trim() || ex.amount.trim() || ex.description.trim());
 
       if (usedExpenses.length === 0) {
-        // Just the daily totals
         entriesToSave.push({
           seller: row.seller,
           dailyTotal: row.dailyTotal,
@@ -374,7 +364,6 @@ export default function DailyExpensesMobile() {
     });
 
     try {
-      // delete old
       await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`, { method: "DELETE" });
 
       if (entriesToSave.length > 0) {
@@ -422,9 +411,7 @@ export default function DailyExpensesMobile() {
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // 7) The second "Custom Rows" logic
-  // ---------------------------------------------------------------------------
+  // Custom Rows Logic
   function handleAddCustomRow() {
     setCustomRows((prev) => [
       ...prev,
@@ -440,7 +427,6 @@ export default function DailyExpensesMobile() {
       },
     ]);
   }
-
   function handleCustomRowChange(index, field, value) {
     setCustomRows((prev) => {
       const updated = [...prev];
@@ -461,7 +447,6 @@ export default function DailyExpensesMobile() {
       return updated;
     });
   }
-
   async function handleSaveCustomRow(index) {
     const row = customRows[index];
     const dateStr = formatLocalDate(selectedDate);
@@ -481,7 +466,6 @@ export default function DailyExpensesMobile() {
 
     try {
       if (row.id) {
-        // Update
         const resp = await fetch(`${API_URL}/modified-expenses/${row.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -513,7 +497,6 @@ export default function DailyExpensesMobile() {
           return updated;
         });
       } else {
-        // Insert
         const payload = {
           selectedDate: dateStr,
           supplier: row.supplier,
@@ -551,7 +534,6 @@ export default function DailyExpensesMobile() {
       toast({ title: "Error", description: err.message, status: "error" });
     }
   }
-
   async function handleDeleteCustomRow(index) {
     const row = customRows[index];
     if (!row.id) {
@@ -568,7 +550,6 @@ export default function DailyExpensesMobile() {
     }
   }
 
-  // Auto-populate from main table
   function handleAutoPopulateCustomRows() {
     const aggregated = {};
     tableData.forEach((sellerRow) => {
@@ -685,7 +666,7 @@ export default function DailyExpensesMobile() {
         </Heading>
       </Box>
 
-      {/* (A) Summaries: arrow-shaped items in one row */}
+      {/* Summaries: arrow-shaped items in one row */}
       <Grid
         templateColumns={{ base: "1fr", md: "repeat(4, auto)" }}
         gap={4}
@@ -698,10 +679,10 @@ export default function DailyExpensesMobile() {
           h="80px"
           bgGradient="linear-gradient(91deg, rgba(49,114,176, 0.75) 0%, rgb(49,114,176), rgb(49,114,176))"
           clipPath="polygon(
-            0% 0%, 
-            calc(100% - 30px) 0%, 
-            100% 50%, 
-            calc(100% - 30px) 100%, 
+            0% 0%,
+            calc(100% - 30px) 0%,
+            100% 50%,
+            calc(100% - 30px) 100%,
             0% 100%
           )"
           pb={2}
@@ -711,33 +692,33 @@ export default function DailyExpensesMobile() {
               XHIRO DITORE
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-  {`${Number(totals.totalDaily.toFixed(0)).toLocaleString()} ALL`}
-</Text>
+              {`${Number(totals.totalDaily.toFixed(0)).toLocaleString()} ALL`}
+            </Text>
           </Box>
         </GridItem>
 
-        {/* 2) SHPENZIME TOTALI */}
+        {/* 2) SHPENZIME */}
         <GridItem
           position="relative"
           w="260px"
           h="80px"
           bgGradient="linear-gradient(91deg, rgba(43,131,126, 0.75) 0%, rgb(43,131,126), rgb(43,131,126))"
           clipPath="polygon(
-            0% 0%, 
-            calc(100% - 30px) 0%, 
-            100% 50%, 
-            calc(100% - 30px) 100%, 
+            0% 0%,
+            calc(100% - 30px) 0%,
+            100% 50%,
+            calc(100% - 30px) 100%,
             0% 100%
           )"
           pb={2}
         >
           <Box p={4}>
             <Text fontSize="lg" color="white" fontWeight="bold" mb={1}>
-              SHPENZIME 
+              SHPENZIME
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-  {`${Number(totals.totalExpenseCombined.toFixed(0)).toLocaleString()} ALL`}
-</Text>
+              {`${Number(totals.totalExpenseCombined.toFixed(0)).toLocaleString()} ALL`}
+            </Text>
           </Box>
         </GridItem>
 
@@ -748,10 +729,10 @@ export default function DailyExpensesMobile() {
           h="80px"
           bgGradient="linear-gradient(to right, rgb(115,87,144), rgba(115,87,144, 0.75))"
           clipPath="polygon(
-            0% 0%, 
-            calc(100% - 30px) 0%, 
-            100% 50%, 
-            calc(100% - 30px) 100%, 
+            0% 0%,
+            calc(100% - 30px) 0%,
+            100% 50%,
+            calc(100% - 30px) 100%,
             0% 100%
           )"
           pb={2}
@@ -761,8 +742,8 @@ export default function DailyExpensesMobile() {
               CASH TOTAL
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-  {`${Number(totals.totalCashDaily.toFixed(0)).toLocaleString()} ALL`}
-</Text>
+              {`${Number(totals.totalCashDaily.toFixed(0)).toLocaleString()} ALL`}
+            </Text>
           </Box>
         </GridItem>
 
@@ -773,10 +754,10 @@ export default function DailyExpensesMobile() {
           h="80px"
           bgGradient="linear-gradient(91deg, rgba(149,110,73, 0.75) 0%, rgb(149,110,73), rgb(149,110,73))"
           clipPath="polygon(
-            0% 0%, 
-            calc(100% - 30px) 0%, 
-            100% 50%, 
-            calc(100% - 30px) 100%, 
+            0% 0%,
+            calc(100% - 30px) 0%,
+            100% 50%,
+            calc(100% - 30px) 100%,
             0% 100%
           )"
           pb={2}
@@ -786,16 +767,16 @@ export default function DailyExpensesMobile() {
               DIFFERENCE
             </Text>
             <Text fontSize="xl" color="white" fontWeight="bold">
-  {`${Number(
-    (totals.totalDaily || 0) -
-    ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
-  ).toLocaleString()} ALL`}
-</Text>
+              {`${Number(
+                (totals.totalDaily || 0) -
+                ((totals.totalCashDaily || 0) + totals.totalExpenseCombined)
+              ).toLocaleString()} ALL`}
+            </Text>
           </Box>
         </GridItem>
       </Grid>
 
-      {/* (B) The main daily expenses list */}
+      {/* The main daily expenses list */}
       <VStack spacing={6} align="stretch">
         {tableData.map((row, rowIndex) => {
           const rowExpenseTotal = row.expenses
@@ -813,75 +794,65 @@ export default function DailyExpensesMobile() {
           return (
             <Card key={rowIndex} bg="white" boxShadow="md">
               <CardBody>
-{/* Seller & row totals */}
-<Box
-  bg="gray.200" // Gray background
-  borderRadius="18px" // Rounded corners
-  px="16px" // Horizontal padding
-  py="7.5px" // Vertical padding
-  display="flex"
-  width="100%"
-  justifyContent="center"
-  alignItems="center"
-  mb={4} // Margin bottom for spacing
->
-  <Text fontSize="lg" color="black" fontWeight="bold">
- {row.seller}
-  </Text>
-</Box>
+                {/* Seller header */}
+                <Box
+                  bg="gray.200"
+                  borderRadius="18px"
+                  px="16px"
+                  py="7.5px"
+                  display="flex"
+                  width="100%"
+                  justifyContent="center"
+                  alignItems="center"
+                  mb={4}
+                >
+                  <Text fontSize="lg" color="black" fontWeight="bold">
+                    {row.seller}
+                  </Text>
+                </Box>
 
+                {/* 
+                  Hard-coded text for "Daily Total" and "Cash Daily Total" 
+                  in labeled inputs 
+                */}
+                <HStack spacing={2} mb={2} alignItems="center">
+                  {/* Labeled "DAILY TOTAL" */}
+                  <Text flexShrink={0} fontWeight="bold">
+                    DAILY TOTAL:
+                  </Text>
+                  <Tooltip hasArrow placement="top" label={tooltipLabel}>
+                    <Input
+                      flex="1"
+                      size="sm"
+                      value={row.dailyTotal}
+                      onChange={(e) =>
+                        handleInputChange(rowIndex, "dailyTotal", e.target.value)
+                      }
+                      onDoubleClick={() => {
+                        if (existingSales !== undefined) {
+                          handleInputChange(
+                            rowIndex,
+                            "dailyTotal",
+                            existingSales.toString()
+                          );
+                        }
+                      }}
+                    />
+                  </Tooltip>
 
-
-
-
-<HStack spacing={600} mb={4} align="center">
-  {/* Daily Total with tooltip for auto-fill */}
-  <Tooltip hasArrow placement="top" label={tooltipLabel}>
-    <Flex align="center">
-      <Text fontSize="lg" fontWeight="bold" mr={4}>
-        Daily Total:
-      </Text>
-      <Input
-        value={row.dailyTotal}
-        onChange={(e) => handleInputChange(rowIndex, "dailyTotal", e.target.value)}
-        placeholder="Enter Daily Total"
-        size="lg"
-        width="200px"
-        height="50px"
-        fontSize="lg"
-        onDoubleClick={() => {
-          if (existingSales !== undefined) {
-            handleInputChange(rowIndex, "dailyTotal", existingSales.toString());
-          }
-        }}
-      />
-    </Flex>
-  </Tooltip>
-
-  {/* Cash Daily Total */}
-  <Flex align="center" ml={50}> {/* Add margin-left here */}
-    <Text fontSize="lg" fontWeight="bold" mr={4}>
-      Cash Daily Total:
-    </Text>
-    <Input
-      value={row.cashDailyTotal}
-      onChange={(e) =>
-        handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
-      }
-      placeholder="Enter Cash Daily Total"
-      size="lg"
-      width="200px"
-      height="50px"
-      fontSize="lg"
-    />
-  </Flex>
-</HStack>
-
-
-
-
-
-
+                  {/* Labeled "CASH DAILY TOTAL" */}
+                  <Text flexShrink={0} fontWeight="bold" ml={4}>
+                    CASH DAILY TOTAL:
+                  </Text>
+                  <Input
+                    flex="1"
+                    size="sm"
+                    value={row.cashDailyTotal}
+                    onChange={(e) =>
+                      handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
+                    }
+                  />
+                </HStack>
 
                 {/* Repeated expense sets */}
                 {Array.from({ length: expenseSetsCount }).map((_, expIndex) => {
@@ -910,33 +881,9 @@ export default function DailyExpensesMobile() {
                   );
                 })}
 
-
-
-                
-
-<Divider my={2} />
-
-<HStack spacing={740} align="center" mb={2}>
-  {/* Expense Total */}
-  <Flex align="center">
-    <Text fontSize="lg" fontWeight="bold" mr={2}>
-      Expense Total:
-    </Text>
-    <Text fontSize="lg" fontWeight="bold">
-      {rowExpenseTotal.toFixed(0)}
-    </Text>
-  </Flex>
-
-  {/* Difference */}
-  <Flex align="center">
-    <Text fontSize="lg" fontWeight="bold" mr={2}>
-      Difference:
-    </Text>
-    <Text fontSize="lg" fontWeight="bold">
-      {diff.toFixed(0)}
-    </Text>
-  </Flex>
-</HStack>
+                <Divider my={2} />
+                <Text>Expense Total: {rowExpenseTotal.toFixed(0)}</Text>
+                <Text>Difference: {diff.toFixed(0)}</Text>
               </CardBody>
             </Card>
           );
@@ -961,21 +908,21 @@ export default function DailyExpensesMobile() {
 
       {/* (C) The custom "modified-expenses" in a mobile card layout */}
       <Box mt={10} bg="white" p={4} borderRadius="md" boxShadow="md">
-      <Box
-  bg="rgb(180, 189, 208)" // Gray background similar to XHIRO DITORE
-  borderRadius="18px" // Rounded corners
-  px="16px" // Horizontal padding
-  py="7.5px" // Vertical padding
-  display="flex"
-  width="100%"
-  justifyContent="center"
-  alignItems="center"
-  mb={4} // Margin bottom for spacing
->
-  <Heading as="h2" fontSize="26px" color="black" fontWeight="bold" mb={0}>
-    BLERJET GJATE DITES
-  </Heading>
-</Box>
+        <Box
+          bg="rgb(180, 189, 208)"
+          borderRadius="18px"
+          px="16px"
+          py="7.5px"
+          display="flex"
+          width="100%"
+          justifyContent="center"
+          alignItems="center"
+          mb={4}
+        >
+          <Heading as="h2" fontSize="26px" color="black" fontWeight="bold" mb={0}>
+            BLERJET GJATE DITES
+          </Heading>
+        </Box>
 
         <Flex mb={4} gap={4} justify="center" align="center">
           <Button colorScheme="green" onClick={handleAddCustomRow}>
@@ -986,7 +933,6 @@ export default function DailyExpensesMobile() {
           </Button>
         </Flex>
 
-        {/* Each custom row is a Card */}
         <VStack spacing={4} align="stretch">
           {customRows.map((row, index) => {
             const suggestion = row.autoFillSuggestion;
