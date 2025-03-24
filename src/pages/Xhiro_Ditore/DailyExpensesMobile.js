@@ -12,7 +12,6 @@ import {
   Flex,
   Tooltip,
   Fade,
-  Spinner,
   useToast,
   Card,
   CardBody,
@@ -72,7 +71,7 @@ export default function DailyExpensesMobile() {
   // The second "custom rows" table data
   const [customRows, setCustomRows] = useState([]);
 
-  // Dark styling for the DatePicker
+  // Dark styling for DatePicker
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -290,7 +289,7 @@ export default function DailyExpensesMobile() {
     // eslint-disable-next-line
   }, [selectedDate]);
 
-  // Input handlers for main table
+  // Main table input handlers
   function handleInputChange(rowIndex, field, value) {
     setTableData((prev) => {
       const updated = [...prev];
@@ -341,6 +340,7 @@ export default function DailyExpensesMobile() {
         .filter((ex) => ex.expense.trim() || ex.amount.trim() || ex.description.trim());
 
       if (usedExpenses.length === 0) {
+        // Just daily totals
         entriesToSave.push({
           seller: row.seller,
           dailyTotal: row.dailyTotal,
@@ -364,8 +364,10 @@ export default function DailyExpensesMobile() {
     });
 
     try {
+      // delete old rows for the selected date
       await fetch(`${API_URL}/expenses/bulk?date=${dateStr}`, { method: "DELETE" });
 
+      // then insert new rows (if any)
       if (entriesToSave.length > 0) {
         const resp = await fetch(`${API_URL}/expenses/bulk`, {
           method: "POST",
@@ -411,7 +413,7 @@ export default function DailyExpensesMobile() {
     });
   }
 
-  // Custom Rows Logic
+  // Custom row logic for second table (modified_expenses)
   function handleAddCustomRow() {
     setCustomRows((prev) => [
       ...prev,
@@ -427,6 +429,7 @@ export default function DailyExpensesMobile() {
       },
     ]);
   }
+
   function handleCustomRowChange(index, field, value) {
     setCustomRows((prev) => {
       const updated = [...prev];
@@ -447,6 +450,7 @@ export default function DailyExpensesMobile() {
       return updated;
     });
   }
+
   async function handleSaveCustomRow(index) {
     const row = customRows[index];
     const dateStr = formatLocalDate(selectedDate);
@@ -466,6 +470,7 @@ export default function DailyExpensesMobile() {
 
     try {
       if (row.id) {
+        // update existing row
         const resp = await fetch(`${API_URL}/modified-expenses/${row.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -497,6 +502,7 @@ export default function DailyExpensesMobile() {
           return updated;
         });
       } else {
+        // insert new row
         const payload = {
           selectedDate: dateStr,
           supplier: row.supplier,
@@ -534,6 +540,7 @@ export default function DailyExpensesMobile() {
       toast({ title: "Error", description: err.message, status: "error" });
     }
   }
+
   async function handleDeleteCustomRow(index) {
     const row = customRows[index];
     if (!row.id) {
@@ -541,7 +548,9 @@ export default function DailyExpensesMobile() {
       return;
     }
     try {
-      const resp = await fetch(`${API_URL}/modified-expenses/${row.id}`, { method: "DELETE" });
+      const resp = await fetch(`${API_URL}/modified-expenses/${row.id}`, {
+        method: "DELETE",
+      });
       if (!resp.ok) throw new Error("Failed to delete custom row");
       toast({ title: "Success", description: "Custom row deleted", status: "success" });
       setCustomRows((prev) => prev.filter((_, i) => i !== index));
@@ -550,6 +559,7 @@ export default function DailyExpensesMobile() {
     }
   }
 
+  // Auto-populate from main table expenses
   function handleAutoPopulateCustomRows() {
     const aggregated = {};
     tableData.forEach((sellerRow) => {
@@ -619,30 +629,49 @@ export default function DailyExpensesMobile() {
   return (
     <Box p={4}>
       <Fade in={true}>
+        {/* A fancy gradient box for the date picker */}
         <Box
-          p={6}
-          bgGradient="linear(to-r, gray.500, gray.700)"
-          borderRadius="md"
-          boxShadow="lg"
-          border="1px solid"
-          borderColor="whiteAlpha.200"
-          textAlign="center"
-          mt={10}
-          mb={4}
+          p={4}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
         >
-          <Heading size="md" mb={4} color="white" fontWeight="bold" textTransform="uppercase">
-            ZGJIDH DATEN
-          </Heading>
-          <Flex justify="center" align="center" gap={4}>
-            <CalendarIcon boxSize={10} color="white" />
-            <DatePicker
-              selected={selectedDate}
-              onChange={setSelectedDate}
-              dateFormat="dd/MM/yyyy"
-              className="custom-datepicker"
-              portalId="datepicker-portal"
-            />
-          </Flex>
+          <Box
+            p={6}
+            bgGradient="linear(to-r, teal.400, teal.600)"
+            borderRadius="lg"
+            boxShadow="lg"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            textAlign="center"
+            mt={10}
+            mb={4}
+            display="inline-block"
+            _hover={{
+              transform: "scale(1.05)",
+              boxShadow: "0 0 20px rgba(0, 255, 255, 0.8)",
+            }}
+          >
+            <Heading
+              size="md"
+              mb={4}
+              color="white"
+              fontWeight="bold"
+              textTransform="uppercase"
+            >
+              ZGJIDH DATEN
+            </Heading>
+            <Flex justify="center" align="center" gap={4}>
+              <CalendarIcon boxSize={10} color="white" />
+              <DatePicker
+                selected={selectedDate}
+                onChange={setSelectedDate}
+                dateFormat="dd/MM/yyyy"
+                className="custom-datepicker"
+                portalId="datepicker-portal"
+              />
+            </Flex>
+          </Box>
         </Box>
       </Fade>
 
@@ -650,7 +679,7 @@ export default function DailyExpensesMobile() {
 
       {/* XHIRO DITORE pill heading */}
       <Box
-        bg="rgb(180, 189, 208)"
+        bg="rgb(255, 255, 255)"
         borderRadius="18px"
         px="16px"
         py="7.5px"
@@ -661,10 +690,7 @@ export default function DailyExpensesMobile() {
         mb={4}
         mt={6}
       >
-        <Heading as="h2" fontSize="26px" color="black" fontWeight="bold" mb={0}>
-          XHIRO DITORE
-        </Heading>
-      </Box>
+
 
       {/* Summaries: arrow-shaped items in one row */}
       <Grid
@@ -775,10 +801,24 @@ export default function DailyExpensesMobile() {
           </Box>
         </GridItem>
       </Grid>
+      </Box>
 
       {/* The main daily expenses list */}
+      <Box
+        bg="rgb(255, 255, 255)"
+        borderRadius="18px"
+        px="16px"
+        py="7.5px"
+        display="flex"
+        width="100%"
+        justifyContent="center"
+        alignItems="center"
+        mb={4}
+        mt={6}
+      >
       <VStack spacing={6} align="stretch">
         {tableData.map((row, rowIndex) => {
+          // Compute row totals:
           const rowExpenseTotal = row.expenses
             .slice(0, expenseSetsCount)
             .reduce((acc, cur) => acc + (parseFloat(cur.amount) || 0), 0);
@@ -786,6 +826,7 @@ export default function DailyExpensesMobile() {
             (parseFloat(row.dailyTotal) || 0) -
             ((parseFloat(row.cashDailyTotal) || 0) + rowExpenseTotal);
 
+          // For auto-fill tooltip:
           const existingSales = salesSums[row.seller];
           const tooltipLabel = existingSales
             ? `Double-click to auto-fill. Found sales: ${existingSales.toFixed(0)}`
@@ -795,100 +836,225 @@ export default function DailyExpensesMobile() {
             <Card key={rowIndex} bg="white" boxShadow="md">
               <CardBody>
                 {/* Seller header */}
-                <Box
-                  bg="gray.200"
-                  borderRadius="18px"
-                  px="16px"
-                  py="7.5px"
-                  display="flex"
-                  width="100%"
-                  justifyContent="center"
-                  alignItems="center"
-                  mb={4}
-                >
-                  <Text fontSize="lg" color="black" fontWeight="bold">
-                    {row.seller}
-                  </Text>
-                </Box>
+                <HStack justifyContent="center" w="100%" mb={4}>
+  <Box
+    bg="gray.200"
+    borderRadius="18px"
+    px="16px"
+    py="7.5px"
+    display="inline-block"
+    maxW="200px"
+    whiteSpace="normal"
+    overflowWrap="break-word"
+    wordBreak="break-word"
 
-                {/* 
-                  Hard-coded text for "Daily Total" and "Cash Daily Total" 
-                  in labeled inputs 
-                */}
-                <HStack spacing={2} mb={2} alignItems="center">
-                  {/* Labeled "DAILY TOTAL" */}
-                  <Text flexShrink={0} fontWeight="bold">
-                    DAILY TOTAL:
-                  </Text>
-                  <Tooltip hasArrow placement="top" label={tooltipLabel}>
-                    <Input
-                      flex="1"
-                      size="sm"
-                      value={row.dailyTotal}
-                      onChange={(e) =>
-                        handleInputChange(rowIndex, "dailyTotal", e.target.value)
-                      }
-                      onDoubleClick={() => {
-                        if (existingSales !== undefined) {
-                          handleInputChange(
-                            rowIndex,
-                            "dailyTotal",
-                            existingSales.toString()
-                          );
-                        }
-                      }}
-                    />
-                  </Tooltip>
+    textAlign="center"  // center text inside the box
+  >
+    <Text fontSize="lg" color="black" fontWeight="bold">
+      {row.seller}
+    </Text>
+  </Box>
+</HStack>
 
-                  {/* Labeled "CASH DAILY TOTAL" */}
-                  <Text flexShrink={0} fontWeight="bold" ml={4}>
-                    CASH DAILY TOTAL:
-                  </Text>
-                  <Input
-                    flex="1"
-                    size="sm"
-                    value={row.cashDailyTotal}
-                    onChange={(e) =>
-                      handleInputChange(rowIndex, "cashDailyTotal", e.target.value)
-                    }
-                  />
-                </HStack>
+                {/* DAILY & CASH in separate rows */}
+                <VStack spacing={4} alignItems="stretch" mb={4}>
+  {/* FIRST ROW: Daily Total */}
+  <HStack spacing={4} alignItems="center">
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Text fontSize="md" fontWeight="bold" color="black">
+        DAILY TOTAL:
+      </Text>
+    </Box>
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Input
+        size="sm"
+        value={row.dailyTotal}
+        onChange={(e) => handleInputChange(rowIndex, "dailyTotal", e.target.value)}
+        border="none"
+        bg="gray.200"
+        _focus={{ outline: "none" }}
+      />
+    </Box>
+  </HStack>
 
-                {/* Repeated expense sets */}
-                {Array.from({ length: expenseSetsCount }).map((_, expIndex) => {
-                  const ex = row.expenses[expIndex];
-                  return (
-                    <HStack key={expIndex} spacing={2} mb={2}>
-                      <Input
+  {/* SECOND ROW: Cash Total */}
+  <HStack spacing={4} alignItems="center">
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Text fontSize="md" fontWeight="bold" color="black">
+        CASH TOTAL:
+      </Text>
+    </Box>
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Input
+        size="sm"
+        value={row.cashDailyTotal}
+        onChange={(e) => handleInputChange(rowIndex, "cashDailyTotal", e.target.value)}
+        border="none"
+        bg="gray.200"
+        _focus={{ outline: "none" }}
+      />
+    </Box>
+  </HStack>
+
+  {/* THIRD ROW: Blerjet */}
+  <HStack spacing={4} alignItems="center">
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Text fontSize="md" fontWeight="bold" color="black">
+        BLERJET:
+      </Text>
+    </Box>
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Text>{rowExpenseTotal.toFixed(0)}</Text>
+    </Box>
+  </HStack>
+
+  {/* FOURTH ROW: Difference */}
+  <HStack spacing={4} alignItems="center">
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Text fontSize="md" fontWeight="bold" color="black">
+        DIFFERENCE:
+      </Text>
+    </Box>
+    <Box
+      bg="gray.200"
+      borderRadius="18px"
+      px="16px"
+      py="7.5px"
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flex="1"
+    >
+      <Text>{diff.toFixed(0)}</Text>
+    </Box>
+  </HStack>
+</VStack>
+
+                {/* Repeated expense sets: now each row has an Input for expense name & an Input for amount */}
+                <VStack spacing={4} alignItems="stretch" mt={3}>
+                  {row.expenses.slice(0, expenseSetsCount).map((expense, expIndex) => (
+                    <HStack key={expIndex} spacing={4} alignItems="center">
+                      {/* Expense Name: editable Input */}
+                      <Box
+                        bg="gray.200"
+                        borderRadius="18px"
+                        px="16px"
+                        py="7.5px"
+                        display="flex"
+                        justifyContent="center"
+                        alignItems="center"
                         flex="1"
-                        placeholder={`Expense ${expIndex + 1}`}
-                        size="sm"
-                        value={ex.expense}
-                        onChange={(e) =>
-                          handleExpenseChange(rowIndex, expIndex, "expense", e.target.value)
-                        }
-                      />
-                      <Input
+                      >
+                        <Input
+                          size="sm"
+                          placeholder={`Expense ${expIndex + 1}`}
+                          value={expense.expense}
+                          onChange={(e) =>
+                            handleExpenseChange(rowIndex, expIndex, "expense", e.target.value)
+                          }
+                          border="none"
+                          bg="gray.200"
+                          _focus={{ outline: "none" }}
+                        />
+                      </Box>
+
+                      {/* Amount Input */}
+                      <Box
+                        bg="gray.200"
+                        borderRadius="18px"
+                        px="16px"
+                        py="7.5px"
+                        display="flex"
+                        justifyContent="center"
+                        alignItems="center"
                         flex="1"
-                        placeholder="Amount"
-                        size="sm"
-                        value={ex.amount}
-                        onChange={(e) =>
-                          handleExpenseChange(rowIndex, expIndex, "amount", e.target.value)
-                        }
-                      />
+                      >
+                        <Input
+                          size="sm"
+                          placeholder="Amount"
+                          value={expense.amount}
+                          onChange={(e) =>
+                            handleExpenseChange(rowIndex, expIndex, "amount", e.target.value)
+                          }
+                          border="none"
+                          bg="gray.200"
+                          _focus={{ outline: "none" }}
+                        />
+                      </Box>
                     </HStack>
-                  );
-                })}
+                  ))}
+                </VStack>
 
                 <Divider my={2} />
-                <Text>Expense Total: {rowExpenseTotal.toFixed(0)}</Text>
-                <Text>Difference: {diff.toFixed(0)}</Text>
               </CardBody>
             </Card>
           );
         })}
       </VStack>
+      </Box>
 
       {/* Buttons for the main daily expenses */}
       <Flex mt={4} gap={3} justify="center" wrap="wrap">
@@ -907,6 +1073,18 @@ export default function DailyExpensesMobile() {
       </Flex>
 
       {/* (C) The custom "modified-expenses" in a mobile card layout */}
+      <Box
+        bg="rgb(255, 255, 255)"
+        borderRadius="18px"
+        px="16px"
+        py="7.5px"
+        display="flex"
+        width="100%"
+        justifyContent="center"
+        alignItems="center"
+        mb={4}
+        mt={6}
+      >
       <Box mt={10} bg="white" p={4} borderRadius="md" boxShadow="md">
         <Box
           bg="rgb(180, 189, 208)"
@@ -1034,6 +1212,7 @@ export default function DailyExpensesMobile() {
           })}
         </VStack>
       </Box>
+    </Box>
     </Box>
   );
 }
