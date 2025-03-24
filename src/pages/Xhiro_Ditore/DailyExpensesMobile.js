@@ -1111,106 +1111,121 @@ export default function DailyExpensesMobile() {
           </Button>
         </Flex>
 
-        <VStack spacing={4} align="stretch">
-          {customRows.map((row, index) => {
-            const suggestion = row.autoFillSuggestion;
-            const tooltipLabel = suggestion
-              ? `Double-click to autofill: ${suggestion}`
-              : undefined;
+        <VStack spacing={2} align="stretch">
+  {customRows.map((row, index) => {
+    const suggestion = row.autoFillSuggestion;
+    const tooltipLabel = suggestion
+      ? `Double-click to autofill: ${suggestion}`
+      : undefined;
 
-            return (
-              <Card key={index} bg="gray.50" boxShadow="sm">
-                <CardBody>
-                  <Text fontWeight="bold">Supplier</Text>
-                  <Tooltip
-                    hasArrow
-                    isDisabled={!suggestion}
-                    label={tooltipLabel}
-                    placement="top"
-                    isOpen={!!suggestion}
-                  >
-                    <Input
-                      mb={2}
-                      value={row.supplier}
-                      placeholder="Supplier"
-                      onChange={(e) =>
-                        handleCustomRowChange(index, "supplier", e.target.value)
-                      }
-                      onDoubleClick={() => {
-                        if (row.autoFillSuggestion) {
-                          handleCustomRowChange(index, "supplier", row.autoFillSuggestion);
-                        }
-                      }}
-                    />
-                  </Tooltip>
+    return (
+      <Card key={index} bg="gray.50" boxShadow="sm" p={2}>
+        <CardBody>
+          <Text fontWeight="bold" fontSize="sm" mb={1}>
+            Supplier
+          </Text>
+          <Tooltip
+            hasArrow
+            isDisabled={!suggestion}
+            label={tooltipLabel}
+            placement="top"
+            isOpen={!!suggestion}
+          >
+            <Input
+              mb={2}
+              value={row.supplier}
+              placeholder="Supplier"
+              size="sm" // Smaller input size
+              onChange={(e) =>
+                handleCustomRowChange(index, "supplier", e.target.value)
+              }
+              onDoubleClick={() => {
+                if (row.autoFillSuggestion) {
+                  handleCustomRowChange(index, "supplier", row.autoFillSuggestion);
+                }
+              }}
+            />
+          </Tooltip>
 
-                  <Text fontWeight="bold">Total Amount</Text>
-                  <Input
-                    mb={2}
-                    value={row.totalAmount || ""}
-                    placeholder="Total Amount"
-                    onChange={(e) =>
-                      handleCustomRowChange(index, "totalAmount", e.target.value)
-                    }
-                  />
+          <Text fontWeight="bold" fontSize="sm" mb={1}>
+            Total Amount
+          </Text>
+          <Input
+            mb={2}
+            value={row.totalAmount || ""}
+            placeholder="Total Amount"
+            size="sm" // Smaller input size
+            onChange={(e) =>
+              handleCustomRowChange(index, "totalAmount", e.target.value)
+            }
+          />
 
-                  <Text fontWeight="bold">Amount Paid</Text>
-                  <Input
-                    mb={2}
-                    value={row.amountPaid || ""}
-                    placeholder="Amount Paid"
-                    onChange={(e) =>
-                      handleCustomRowChange(index, "amountPaid", e.target.value)
-                    }
-                  />
+          <Text fontWeight="bold" fontSize="sm" mb={1}>
+            Amount Paid
+          </Text>
+          <Input
+            mb={2}
+            value={row.amountPaid || ""}
+            placeholder="Amount Paid"
+            size="sm" // Smaller input size
+            onChange={(e) =>
+              handleCustomRowChange(index, "amountPaid", e.target.value)
+            }
+          />
 
-                  <Text fontWeight="bold">Description</Text>
-                  <Input
-                    mb={2}
-                    value={row.description || ""}
-                    placeholder="Description"
-                    onChange={(e) =>
-                      handleCustomRowChange(index, "description", e.target.value)
-                    }
-                  />
+          <Text fontWeight="bold" fontSize="sm" mb={1}>
+            Description
+          </Text>
+          <Input
+            mb={2}
+            value={row.description || ""}
+            placeholder="Description"
+            size="sm" // Smaller input size
+            onChange={(e) =>
+              handleCustomRowChange(index, "description", e.target.value)
+            }
+          />
 
-                  <Text fontWeight="bold">Transaction Type</Text>
-                  <Select
-                    mb={2}
-                    placeholder="Select Transaction Type"
-                    value={row.transactionType || ""}
-                    onChange={(e) =>
-                      handleCustomRowChange(index, "transactionType", e.target.value)
-                    }
-                  >
-                    <option value="BLERJE">BLERJE</option>
-                    <option value="BORXHE">BORXHE</option>
-                  </Select>
+          <Text fontWeight="bold" fontSize="sm" mb={1}>
+            Transaction Type
+          </Text>
+          <Select
+            mb={2}
+            placeholder="Select Transaction Type"
+            value={row.transactionType || ""}
+            size="sm" // Smaller select size
+            onChange={(e) =>
+              handleCustomRowChange(index, "transactionType", e.target.value)
+            }
+          >
+            <option value="BLERJE">BLERJE</option>
+            <option value="BORXHE">BORXHE</option>
+          </Select>
 
-                  {/* Actions */}
-                  <Flex gap={2} justify="center" mt={2}>
-                    <Button
-                      colorScheme="blue"
-                      size="sm"
-                      onClick={() => handleSaveCustomRow(index)}
-                    >
-                      {row.id ? "Update" : "Save"}
-                    </Button>
-                    {row.id && (
-                      <Button
-                        colorScheme="red"
-                        size="sm"
-                        onClick={() => handleDeleteCustomRow(index)}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </Flex>
-                </CardBody>
-              </Card>
-            );
-          })}
-        </VStack>
+          {/* Actions */}
+          <Flex gap={2} justify="center" mt={2}>
+            <Button
+              colorScheme="blue"
+              size="xs" // Smaller button size
+              onClick={() => handleSaveCustomRow(index)}
+            >
+              {row.id ? "Update" : "Save"}
+            </Button>
+            {row.id && (
+              <Button
+                colorScheme="red"
+                size="xs" // Smaller button size
+                onClick={() => handleDeleteCustomRow(index)}
+              >
+                Delete
+              </Button>
+            )}
+          </Flex>
+        </CardBody>
+      </Card>
+    );
+  })}
+</VStack>
       </Box>
     </Box>
     </Box>
