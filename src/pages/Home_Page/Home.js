@@ -638,7 +638,7 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
       setBarViewMode={setBarViewMode}
       pieData={pieData}
       categoryTreemapData={categoryTreemapData}
-        // ADD THESE:
+        // ADD THESE carefullyu
   startDate={startDate}
   endDate={endDate}
   selectedSellers={selectedSellers}
