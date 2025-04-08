@@ -1,0 +1,71 @@
+
+
+
+
+psql pass:
+
+Mateo13141*
+port 5432
+
+to do list
+
+table of reviews with rating, date items ordered and comments
+inventory table
+flete hyrje - devpos
+
+
+
+
+
+
+
+
+
+
+Working GitHub Versions CMD 
+
+Add the folder if already not done with this code:
+
+git init
+
+Then we choose reposity url or make a new repositry and use that url, well be using exisiting One
+
+
+git remote add origin https://github.com/MateoHaxhi07/Restaurant_Dashboard
+
+
+
+First line uploads all changes made to all files on GitHub
+
+git add .
+
+
+Second thing we need to do is commit the changes on GitHub with this code and a message, which shows everything changed
+
+git commit -m "ADded test folder"
+
+
+Send your new version to GitHub:
+
+
+git push origin main
+
+
+
+
+Fourth  we need to creates a tag with a release version of all the files with changes and a message
+
+
+git tag -a v5.0.5 -m " App Updated Online SQL Database"
+
+
+
+Push the tag to GitHub to get older folder zip
+
+
+git push origin v1.0.0
+
+
+
+
+
