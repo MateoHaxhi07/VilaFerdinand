@@ -118,7 +118,7 @@ const createSalesTable = async () => {
     );
   `;
   try {
-    await pool.query(query);
+    await pool.query(query); 
     console.log("sales table created or already exists.");
   } catch (error) {
     console.error("Error creating sales table:", error);

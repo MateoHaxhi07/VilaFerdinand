@@ -41,5 +41,6 @@ def drop_all_tables(table_names):
             conn.close()
 
 if __name__ == "__main__":
+    tables_to_drop = {'sales'}
     tables_to_drop = ['sales']
     drop_all_tables(tables_to_drop)

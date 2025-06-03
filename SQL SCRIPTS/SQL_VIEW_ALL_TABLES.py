@@ -1,4 +1,4 @@
-import psycopg2
+import psycopg2 
 import urllib.parse as urlparse
 import os
 

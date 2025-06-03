@@ -1,8 +1,11 @@
+// Filters.jsx
+
 import React from "react";
 import { Box, Card, CardBody, Heading, Flex } from "@chakra-ui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
+import { selectStyles } from "./filterStyles";
 
 const Filters = ({
   // Existing props
@@ -19,27 +22,25 @@ const Filters = ({
   selectedHours,
   setSelectedHours,
   hoursOptions,
-  selectStyles,
 
   // *** NEW props for Category & Article Name ***
-  categories,                // array of {value, label}
+  categories,                // array of { value, label }
   selectedCategories,
   setSelectedCategories,
-  articleNamesOptions,       // array of {value, label}
+  articleNamesOptions,       // array of { value, label }
   selectedArticleNames,
   setSelectedArticleNames,
 }) => {
   return (
-    <Card
-      bg="gray.600"
-
-      mb={6}
-      mt={6}
-      borderRadius="md"
-      boxShadow="md"
-    >
+    <Card bg="gray.600" mb={6} mt={6} borderRadius="md" boxShadow="md">
       <CardBody>
-        <Heading size="lg" mb={4} color="white" align="center" fontWeight="bold">
+        <Heading
+          size="lg"
+          mb={4}
+          color="white"
+          align="center"
+          fontWeight="bold"
+        >
           Filters
         </Heading>
 
