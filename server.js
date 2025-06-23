@@ -1,32 +1,80 @@
+
+//#region 1)LOADING CONFIG
+
+
+
+
+// Load environment variables from .env (e.g., DATABASE_URL, JWT_SECRET)
 require("dotenv").config();
 
+// Core framework for HTTP routes
 const express = require("express");
+// Allows cross-origin requests (e.g., React on port 3000 → this server on port 5000)
 const cors = require("cors");
+// PostgreSQL client with connection pooling
 const { Pool } = require("pg");
+// Date parsing/manipulation helper
 const moment = require("moment");
+// Password hashing
 const bcrypt = require("bcrypt");
+// JSON Web Tokens for auth
 const jwt = require("jsonwebtoken");
+// File path utilities
 const path = require("path");
 
+
+
+//#endregion
+
+
+//#region 2)APP INITIALIZATION 
+
+
 const app = express();
+// Use PORT from env or default to 5000
 const port = process.env.PORT || 5000;
 
+// Allow React/UI to call these APIs
 app.use(cors());
+
+// Parse JSON bodies automatically (req.body)
 app.use(express.json());
+
+// Serve compiled React files from the 'build' folder
 app.use(express.static(path.join(__dirname, "build")));
 
+
+
+//#endregion
+
+
+//#region 3)DATABASE CONNECTION (PostgreSQL)
+
+// Create a pool of DB connections for reuse
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
+    // For hosted DBs without strict SSL validation
     rejectUnauthorized: false,
   },
 });
 
-/* ===============================
-   LOGIN & AUTHENTICATION
-   =============================== */
+//#endregion
 
-// Middleware to authenticate token
+
+//#region 4)AUTHENTICATION: HELPERS & ROUTES
+/**
+ * Purpose:
+ *   • Middleware to verify JWTs and protect routes
+ *   • Login & register routes for issuing/verifying tokens
+ * How it works:
+ *   • authenticateToken(): extracts Bearer token, jwt.verify(), attaches req.user
+ *   • authenticateAdmin(): calls authenticateToken then checks req.user.role
+ *   • /auth/login: bcrypt.compare(), jwt.sign()
+ *   • /auth/register: bcrypt.hash(), INSERT users
+ */
+
+
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -98,9 +146,19 @@ app.get("/protected", authenticateToken, (req, res) => {
   res.json({ message: "This is a protected route", user: req.user });
 });
 
-/* ===============================
-   SALES ENDPOINTS - SQL TABLE SALES
-   =============================== */
+//#endregion
+
+//#region 5)SALES ENDPOINTS & TABLE CREATION
+/**
+ * Purpose:
+ *   • Ensure sales table exists
+ *   • Provide 17 reporting endpoints under /sales/*
+ * How it works:
+ *   • createSalesTable(): runs CREATE TABLE IF NOT EXISTS
+ *   • parseDateRange(): parses & normalizes start/end dates (UTC)
+ *   • addHourFilter(): handles ?hours=… filters
+ *   • Each GET /sales/... route builds a SQL query dynamically, using GROUP BY, SUM, COUNT, optional filters.
+ */
 
 // Create table for 'sales' if it does not exist
 const createSalesTable = async () => {
@@ -1311,63 +1369,18 @@ app.get("/sales/comparison-daily-sales", async (req, res) => {
   END OF SALES ENDPOINTS
    =============================== */
 
+//#endregion
 
+//#region 6)DAILY EXPENSES ENDPOINTS
+/**
+ * Purpose:
+ *   • CRUD for daily_expenses table
+ * How it works:
+ *   • createDailyExpensesTable(): creates table
+ *   • POST /expenses/bulk: wraps multiple INSERTs in a transaction
+ *   • GET/DELETE/PUT for reading, removing, updating by date or ID
+ */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// -----------------------------------------------------------------------------
-// Create daily_expenses table if not exists
-// -----------------------------------------------------------------------------
 const createDailyExpensesTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS daily_expenses (
@@ -1560,14 +1573,6 @@ app.put("/expenses/bulk/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update expense" });
   }
 });
-
-
-
-
-
-
-
-
 
 
 // -----------------------------------------------------------------------------
@@ -1773,44 +1778,10 @@ app.get("/aggregated-modified-expenses", async (req, res) => {
   }
 });
 
+//#endregion
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//#region 7)ARTICLE_INGREDIENTS ENDPOINTS
 
 
 /******************************************************
@@ -2046,83 +2017,17 @@ app.delete("/article-ingredients/:article_name", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/******************************************************
- * report endpoint total ingredient usage for article names
- ******************************************************/
-
-
-
-
-
-
-
-
-
+//#endregion
+
+
+//#region 8)REPORT ENDPOINTS
+/**
+ * Purpose:
+ *   • Generate summary reports
+ * How it works:
+ *   • /report/ingredient-usage: JOIN sales + ingredients, calculate totals
+ *   • /report/missing-articles: find sold items without a recipe
+ */
 
 
 // GET /report/ingredient-usage - Report total ingredient usage based on sales
@@ -2206,88 +2111,13 @@ app.get("/report/ingredient-usage", async (req, res) => {
   } catch (err) {
     console.error("Error generating ingredient usage report:", err);
     res.status(500).json({ error: err.message });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   }
 });
+
+
 /******************************************************
  * MISSING ARTICLES PAGE
  ******************************************************/
-
-
-
-
-
-
 
 
 
@@ -2334,78 +2164,19 @@ app.get("/report/missing-articles", async (req, res) => {
 
 
 
+//#endregion
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ===============================
-   INVENTORY ENDPOINTS
-   =============================== */
-
+//#region 10)INVENTORY ENDPOINTS
+/**
+ * Purpose:
+ *   • CRUD for inventory snapshots
+ * How it works:
+ *   • GET by date, POST new, PUT update by ID, DELETE by ID
+ */
 
 
 
@@ -2514,33 +2285,22 @@ app.get("/report/missing-articles", async (req, res) => {
   });
 
 
+//#endregion
 
 
 
 
+//#region 11)SERVE REACT APP & START SERVER
+/**
+ * Purpose:
+ *   • Serve the React app and handle client-side routing
+ * How it works:
+ *   • express.static("build") serves all static files
+ *   • GET / and GET * return index.html so React Router can take over
+ *   • app.listen() starts the HTTP server on the specified port
+ */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ===============================
-   SERVING THE REACT APP
-   =============================== */
    app.use(express.static("build"));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
@@ -2554,3 +2314,4 @@ app.get("*", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+//#endregion
