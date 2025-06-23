@@ -27,6 +27,8 @@ const path = require("path");
 //#endregion
 
 
+
+
 //#region 2)APP INITIALIZATION 
 
 
@@ -48,6 +50,8 @@ app.use(express.static(path.join(__dirname, "build")));
 //#endregion
 
 
+
+
 //#region 3)DATABASE CONNECTION (PostgreSQL)
 
 // Create a pool of DB connections for reuse
@@ -60,6 +64,8 @@ const pool = new Pool({
 });
 
 //#endregion
+
+
 
 
 //#region 4)AUTHENTICATION: HELPERS & ROUTES
@@ -148,7 +154,10 @@ app.get("/protected", authenticateToken, (req, res) => {
 
 //#endregion
 
-//#region 5)SALES ENDPOINTS & TABLE CREATION
+
+
+
+//#region 5)SALES ENDPOINTS TABLE 
 /**
  * Purpose:
  *   • Ensure sales table exists
@@ -160,29 +169,6 @@ app.get("/protected", authenticateToken, (req, res) => {
  *   • Each GET /sales/... route builds a SQL query dynamically, using GROUP BY, SUM, COUNT, optional filters.
  */
 
-// Create table for 'sales' if it does not exist
-const createSalesTable = async () => {
-  const query = `
-    CREATE TABLE IF NOT EXISTS sales (
-      "Order_ID" TEXT,
-      "Seller" TEXT,
-      "Article_Name" TEXT,
-      "Category" TEXT,
-      "Quantity" NUMERIC,
-      "Article_Price" NUMERIC,
-      "Total_Article_Price" NUMERIC,
-      "Datetime" TIMESTAMP,
-      "Seller Category" TEXT
-    );
-  `;
-  try {
-    await pool.query(query); 
-    console.log("sales table created or already exists.");
-  } catch (error) {
-    console.error("Error creating sales table:", error);
-  }
-};
-createSalesTable();
 
 // Helper to parse date range from query (YYYY-MM-DD) -> UTC midnight boundaries
 function parseDateRange(req) {
@@ -1371,6 +1357,8 @@ app.get("/sales/comparison-daily-sales", async (req, res) => {
 
 //#endregion
 
+
+
 //#region 6)DAILY EXPENSES ENDPOINTS
 /**
  * Purpose:
@@ -1781,6 +1769,8 @@ app.get("/aggregated-modified-expenses", async (req, res) => {
 //#endregion
 
 
+
+
 //#region 7)ARTICLE_INGREDIENTS ENDPOINTS
 
 
@@ -2018,6 +2008,8 @@ app.delete("/article-ingredients/:article_name", async (req, res) => {
 });
 
 //#endregion
+
+
 
 
 //#region 8)REPORT ENDPOINTS

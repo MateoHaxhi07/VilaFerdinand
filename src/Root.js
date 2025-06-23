@@ -1,7 +1,10 @@
-// Root.js
 import { ChakraProvider } from "@chakra-ui/react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { RendituraFullPage, FullFunnelChart, ShitjetAnalitikeFullPage } from "./pages/Home_Page/allgraphs.jsx";
+import {
+  RendituraFullPage,
+  FullFunnelChart,
+  ShitjetAnalitikeFullPage,
+} from "./pages/Home_Page/Home.js";
 import Home from "./pages/Home_Page/Home.js";
 
 
