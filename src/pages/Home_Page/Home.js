@@ -1,38 +1,39 @@
 // src/pages/Home_Page/Home.js
 
+//#region Imports
+// React and routing utilities
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import {
-  Box,
-  Grid,
-  GridItem,
-  Card,
-  CardBody,
-  Button,
-} from "@chakra-ui/react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import Select from "react-select";
-import { scaleOrdinal } from "d3-scale";
-import Papa from "papaparse";
-import moment from "moment";
-import { saveAs } from "file-saver";
-import { schemeSet3 } from "d3-scale-chromatic";
+
+// Chakra UI components used throughout the dashboard
+import { Box } from "@chakra-ui/react";
+
+// Child components that render the graphs and filter controls
 import { AllGraphs } from "./allgraphs.jsx";
 import Filters from "./FILTERS/Filters.jsx";
 
+// Utility library for formatting dates
+import moment from "moment";
+//#endregion
 
-const colorScale = scaleOrdinal(schemeSet3);
+//#region Constants
+// Base URL for all backend requests
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+//#endregion
 
-// Helper to get YYYY-MM-DD from a Date
+//#region Helpers
+// Convert a Date object to YYYY-MM-DD for API queries
 function toDateString(date) {
   if (!date) return "";
   return moment(date).format("YYYY-MM-DD");
 }
+//#endregion
 
+//#region Home component
+// Main dashboard page displaying filters and graphs
 export default function Home() {
-  // Retrieve filter states from context (OutletContext)
+  //#region Outlet context
+  // Retrieve filter values from the parent layout so multiple pages share them
   const {
     startDate,
     setStartDate,
@@ -47,44 +48,47 @@ export default function Home() {
     selectedCategories,
     setSelectedCategories,
     showFilters,
-    setShowFilters
+    setShowFilters,
   } = useOutletContext();
+  //#endregion
 
-  // Local filter: selectedHours
+  //#region Local state
   const [sellers, setSellers] = useState([]);
-const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
-const [categories, setCategories] = useState([]);
-const [articleNamesOptions, setArticleNamesOptions] = useState([]);
+  const [sellerCategoriesOptions, setSellerCategoriesOptions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   const [selectedHours, setSelectedHours] = useState([]);
   const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
     value: i,
     label: i.toString().padStart(2, "0"),
   }));
 
-  // Metrics States
+  //#endregion
+
+  //#region Metrics state
+  // Totals and averages displayed in the dashboard cards
   const [totalSales, setTotalSales] = useState(0);
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [avgArticlePrice, setAvgArticlePrice] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
 
-  // Daily and Monthly aggregated data
+  // Time-series data for charts
   const [dailySales, setDailySales] = useState([]);
   const [monthlySales, setMonthlySales] = useState([]);
 
-  // Pie & Treemap data
+  // Data for pie and treemap visuals
   const [pieData, setPieData] = useState([]);
   const [categoryTreemapData, setCategoryTreemapData] = useState([]);
 
-  // For toggling bar chart: "daily" or "monthly"
+  // Toggle between daily and monthly bar charts
   const [barViewMode, setBarViewMode] = useState("daily");
 
-  // We don't show the CSV button in Home now,
-  // because you said it's in the Sidebar.
+  //#endregion
 
-  // ----------------------------------------------------------
-  // buildAllDataQuery -> used for CSV download, if needed
-  // (If you only do CSV from the sidebar, you can remove it here.)
-  // ----------------------------------------------------------
+  //#region Query builders
+  // We don't show the CSV button in Home now because the download is handled
+  // in the sidebar, but this helper can generate the full query string if
+  // needed for exporting data.
   const buildAllDataQuery = () => {
     const queryParams = new URLSearchParams();
     const start = toDateString(startDate);
@@ -134,10 +138,9 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
     selectedHours.length > 0
       ? `&hours=${selectedHours.map(h => h.value).join(",")}`
       : "";
+  //#endregion
 
-  // ----------------------------------------------------------
-  // Fetch Functions
-  // ----------------------------------------------------------
+  //#region Fetch functions
   const fetchTotalSales = async () => {
     try {
       const start = toDateString(startDate);
@@ -358,10 +361,9 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
       console.error("Error fetching category totals:", error);
     }
   };
+  //#endregion
 
-  // ----------------------------------------------------------
-  // Dropdown fetches (sellers, categories, etc.)
-  // ----------------------------------------------------------
+  //#region Dropdown fetches (sellers, categories, etc.)
   const fetchSellers = async () => {
     try {
       const response = await fetch(`${API_URL}/sales/sellers`);
@@ -469,9 +471,9 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
     }
   };
 
-  // ----------------------------------------------------------
-  // useEffects
-  // ----------------------------------------------------------
+  //#endregion
+
+  //#region useEffects
   useEffect(() => {
     fetchSellers();
     fetchSellerCategoriesOptions();
@@ -530,6 +532,9 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
     };
   }, []);
 
+  //#endregion
+
+  //#region Derived data
   // Build bar chart data
   const dailyBarData = (dailySales || [])
     .filter(item => item && item.date && item.total !== undefined)
@@ -590,6 +595,11 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
     }),
   };
 
+  //#endregion
+
+  //#endregion
+
+  //#region Render
   return (
     <Box
       // Use your background image
@@ -648,5 +658,6 @@ const [articleNamesOptions, setArticleNamesOptions] = useState([]);
   selectedHours={selectedHours}
     />
   </Box>
-);
+  );
 }
+//#endregion
